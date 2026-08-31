@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Archivo Black", "Haettenschweiler", "Arial Narrow", system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-turf-950: #07090c;
+  --color-turf-900: #0d1117;
+  --color-turf-800: #141a23;
+  --color-turf-700: #1e2733;
+  --color-turf-600: #2c3849;
+  --color-chalk: #f2f5f8;
+  --color-hazard: #ffd400;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  background-color: var(--color-turf-950);
+  color: var(--color-chalk);
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes flood {
+  0%   { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+@keyframes slotpop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  60%  { transform: scale(1.06); }
+  100% { transform: scale(1); opacity: 1; }
+}
