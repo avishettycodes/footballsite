@@ -279,13 +279,20 @@ for (const position of positions) {
    * weak link anchor has failed and the game is teaching people that care is optional.
    * That stays fatal.
    *
-   * human to sharp is a claim about my bot rather than about the game. Both play
-   * carefully; sharp just projects ahead. That projection is a point estimate, so at a
-   * position where the gates sit in the distribution's tail, a higher variance policy
-   * can beat an expectation-maximising one. That is a limitation of the instrument, not
-   * evidence that care stops paying, so it is reported rather than failed. Tuning the
-   * bot until it disappeared was tried, and every setting that fixed one position broke
-   * another.
+   * human to sharp is reported rather than failed, and the reason is not that the bot
+   * needs fixing. The assertion itself was false.
+   *
+   * Sharp maximises the expected rating. OPOY at tight end is a threshold sitting far
+   * out in the tail, and when a gate is that far away, chasing spikes genuinely beats
+   * maximising the mean. Both policies are careful. One of them is simply better suited
+   * to that particular gate, and neither is more careful than the other. So there was
+   * never a real claim that the more sophisticated policy must win every trophy.
+   *
+   * DO NOT try to fix the bot and promote this rung back to fatal. That was tried, and
+   * every forecast setting that fixed one position broke another, because the right
+   * amount of optimism depends on how far the gate is and how scarce the slot is. The
+   * rung is informational because the thing it asserted is not true, not because the
+   * instrument is imprecise.
    */
   const inversions: string[] = [];
   const notes: string[] = [];
@@ -316,7 +323,7 @@ for (const position of positions) {
     console.log('  skill ladder: PASS, care beats carelessness at every trophy');
   }
   for (const n of notes) {
-    console.log(`    note: ${n} (lookahead bot loses to variance in the tail, not a game issue)`);
+    console.log(`    note: ${n} (chasing spikes beats maximising the mean when a gate sits this far out)`);
   }
 
   const verdict = humanOk && sharpOk ? 'PASS' : 'FAIL';

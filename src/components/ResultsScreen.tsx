@@ -107,16 +107,28 @@ export function ResultsScreen({
             THE WEAK LINK
           </div>
           <p className="mt-1 text-[14px] leading-snug text-white/85">
-            His worst trait is{' '}
-            <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
-              {ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()} at{' '}
-              {career.breakdown.weakest.value}
-            </b>
-            {career.breakdown.weakest.value >= 88
-              ? '. There is no real hole anywhere on him, which is most of why the number held up.'
-              : career.breakdown.weakest.value >= 75
-                ? '. Half of the overall comes from your two worst numbers, so that soft spot cost you a few points.'
-                : '. Half of the overall comes from your two worst numbers, so a hole that size costs you far more than any one big number gave back.'}
+            {career.breakdown.weakest.value >= 90 ? (
+              <>
+                Nothing on him drops below{' '}
+                <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
+                  {career.breakdown.weakest.value}
+                </b>
+                . There is no hole to find, which is most of why the number held up.
+              </>
+            ) : (
+              <>
+                His softest number is{' '}
+                <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
+                  {ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()} at{' '}
+                  {career.breakdown.weakest.value}
+                </b>
+                {career.breakdown.weakest.value >= 86
+                  ? '. That is a soft spot rather than a hole, and it cost him a couple of points.'
+                  : career.breakdown.weakest.value >= 75
+                    ? '. Half of the overall comes from your two worst numbers, so that cost you a few points.'
+                    : '. Half of the overall comes from your two worst numbers, so a hole that size costs far more than any one big number gave back.'}
+              </>
+            )}
           </p>
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
             <span>AVERAGE OF THE EIGHT <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
@@ -124,6 +136,36 @@ export function ResultsScreen({
             <span>TRAITS AT 95+ <b className="text-white/75">{career.breakdown.eliteCount}</b></span>
           </div>
         </div>
+
+        {/* What he was actually great at, which the trophy case alone can miss entirely. */}
+        {(() => {
+          const keys = ATTRIBUTE_SETS[position];
+          const top = keys
+            .map((k) => ({ k, slot: slots[k] }))
+            .filter((x) => x.slot)
+            .sort((a, b) => (b.slot!.value - a.slot!.value))[0];
+          if (!top?.slot || top.slot.value < 90) return null;
+          const team = TEAMS_BY_ID[top.slot.teamId];
+          return (
+            <div className="mx-5 mb-4 rounded-lg border-l-4 border-hazard bg-turf-800 py-3 pr-4 pl-4">
+              <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">
+                WHAT HE WAS KNOWN FOR
+              </div>
+              <p className="mt-1 text-[14px] leading-snug text-white/85">
+                {top.slot.value >= 97
+                  ? 'Nobody in the league had better '
+                  : top.slot.value >= 93
+                    ? 'One of the best in football at '
+                    : 'He made his living on '}
+                <b className="text-hazard">{ATTRIBUTE_LABELS[top.k].toLowerCase()}</b>
+                {', a '}
+                <b style={{ color: ratingColor(top.slot.value) }}>{top.slot.value}</b>
+                {' you took off '}
+                {top.slot.playerName} in {team.city}.
+              </p>
+            </div>
+          );
+        })()}
 
         {/* THE HEIST. Every trait credited back to whoever you took it from. */}
         <div className="border-t border-white/10">
@@ -224,6 +266,12 @@ export function ResultsScreen({
               {earned.length === 0 && (
                 <div className="font-display text-xl text-white/40 uppercase">
                   He never won anything. He was a guy who was on a team.
+                </div>
+              )}
+              {earned.length > 0 && earned.length < 3 && position === 'TE' && (
+                <div className="w-full font-mono text-[11px] text-white/40">
+                  Tight end is the hard one. Getting this far with a seven slot build is
+                  more than it looks like.
                 </div>
               )}
             </div>

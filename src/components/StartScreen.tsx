@@ -51,6 +51,17 @@ export function StartScreen({ onStart, canResume, onResume }: Props) {
               <div className="font-mono text-[9px] opacity-60">
                 {live ? `${DATA_STATS.byPosition[pos]} MEN` : 'SOON'}
               </div>
+              {/*
+                Tight end really is harder, and saying so turns a broken promise into
+                the point. It is the only seven attribute position and it has by far the
+                fewest elite players in its history, so the top awards sit further away
+                than they do anywhere else.
+              */}
+              {pos === 'TE' && live && (
+                <div className="font-mono text-[8px] tracking-wider text-red-400">
+                  THE HARD ONE
+                </div>
+              )}
             </button>
           );
         })}
