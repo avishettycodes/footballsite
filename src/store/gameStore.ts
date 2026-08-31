@@ -72,6 +72,8 @@ export type RunState = {
   currentTeamId: string | null;
   /** Increments per spin so the reel component knows to re-animate. */
   spinNonce: number;
+  /** True when the reel just put you back on a roster you have already raided. */
+  repeatVisit: boolean;
   /** Set when a spin hit an exhausted pool and the game gave the spin back. */
   lastEventMessage: string | null;
   startedAt: number;
@@ -122,6 +124,7 @@ const emptyRun = (): RunState => ({
   phase: 'setup',
   currentTeamId: null,
   spinNonce: 0,
+  repeatVisit: false,
   lastEventMessage: null,
   startedAt: 0,
   creationName: '',
@@ -131,30 +134,42 @@ const emptyRun = (): RunState => ({
 /**
  * DEADLOCK RULE
  * -------------
- * Two constraints can strand a run: a player may be used once, and a slot may be
- * filled once. If the reel lands on a franchise whose entire pool is already spent,
- * there is nothing legal to take and the run would be dead.
+ * Two constraints can strand a run: a player may be used once, and a slot may be filled
+ * once. If the reel lands on a franchise whose entire pool is already spent, there is
+ * nothing legal to take and the run would be dead.
  *
  * The rule:
- *   1. Hard mode excludes already-visited franchises from the reel up front. That is
- *      a stated rule of the mode, so those panels are visibly greyed out rather than
- *      being a surprise.
- *   2. If the landing franchise's pool is exhausted (every player already used), the
- *      game announces it and respins for FREE — it does not cost a reroll.
- *   3. Otherwise you must take something. Not liking the pool is not a deadlock, it
- *      is the game. Escaping a live pool costs one of your rerolls.
+ *   1. If the landing franchise's pool is exhausted (every player already used), the
+ *      game announces it and respins for FREE. It does not cost a reroll, and the
+ *      respin is drawn from the franchises that still have somebody left, so one retry
+ *      is always enough.
+ *   2. Otherwise you must take something. Not liking the pool is not a deadlock, it is
+ *      the game. Escaping a live pool costs one of your rerolls, and hard mode does not
+ *      give you any.
  *
- * With 7–9 players per pool and at most 8 picks per run, case 2 requires landing on
- * the same franchise 8+ times. It is nearly unreachable, which is exactly why it gets
- * handled here instead of being discovered at 3am.
+ * HARD MODE USED TO CARRY HALF OF THIS AND NO LONGER DOES. It excluded already-visited
+ * franchises from the reel, which meant the exhausted-pool case was nearly unreachable:
+ * you could not land on the same roster twice, so you could not drain one. Repeats are
+ * now allowed in every mode, on purpose, because landing on the Browns twice and having
+ * to live with it is the funnier game. That puts the whole weight of the no-strand
+ * guarantee on rule 1 above, so it is worth being precise about why it holds.
+ *
+ * Draining one franchise takes 7 or more picks out of the same pool, and a run makes at
+ * most 8. So it is reachable now rather than impossible, which is the point of testing
+ * it. It still cannot strand: `eligible` is every franchise with an unused player, and
+ * rule 1 redraws from that set, so the only way to fail is for all 32 pools to be empty
+ * at once. That needs 200-odd picks in an 8-pick run. `npm run verify:run` fuzzes every
+ * position in both modes and asserts it never happens.
  */
 function drawTeam(state: RunState): { teamId: string | null; rngState: number; freeRespin: boolean } {
-  const { position, hardMode, usedPlayerIds, visitedTeamIds } = state;
+  const { position, usedPlayerIds } = state;
 
   const hasUnused = (teamId: string) =>
     getPool(position, teamId).some((p) => !usedPlayerIds.includes(p.id));
 
-  const allowed = TEAMS.filter((t) => !(hardMode && visitedTeamIds.includes(t.id))).map((t) => t.id);
+  // Every franchise is always in the wheel. Hard mode is about rerolls, not about
+  // crossing teams off, so a repeat is a legal and frequently funny outcome.
+  const allowed = TEAMS.map((t) => t.id);
   const eligible = allowed.filter(hasUnused);
 
   if (eligible.length === 0) return { teamId: null, rngState: state.rngState, freeRespin: false };
@@ -164,7 +179,7 @@ function drawTeam(state: RunState): { teamId: string | null; rngState: number; f
     return { teamId: first.value, rngState: first.state, freeRespin: false };
   }
 
-  // Exhausted pool — respin from eligible franchises only, at no cost.
+  // Exhausted pool. Respin from franchises that still have somebody, at no cost.
   const retry = nextPick(first.state, eligible);
   return { teamId: retry.value, rngState: retry.state, freeRespin: true };
 }
@@ -213,6 +228,7 @@ export const useGame = create<GameStore>()(
           currentTeamId: teamId,
           phase: 'spinning',
           spinNonce: state.spinNonce + 1,
+          repeatVisit: false,
           lastEventMessage: freeRespin
             ? 'Nobody was left on that roster, so you got that spin back for free.'
             : null,
@@ -223,9 +239,11 @@ export const useGame = create<GameStore>()(
       landSpin: () => {
         const state = get();
         if (state.phase !== 'spinning' || !state.currentTeamId) return;
+        const seenBefore = state.visitedTeamIds.includes(state.currentTeamId);
         set({
           phase: 'picking',
-          visitedTeamIds: state.visitedTeamIds.includes(state.currentTeamId)
+          repeatVisit: seenBefore,
+          visitedTeamIds: seenBefore
             ? state.visitedTeamIds
             : [...state.visitedTeamIds, state.currentTeamId],
         });
@@ -325,6 +343,7 @@ export const useGame = create<GameStore>()(
         hardMode: s.hardMode, slots: s.slots, pickOrder: s.pickOrder,
         usedPlayerIds: s.usedPlayerIds, visitedTeamIds: s.visitedTeamIds,
         rerollsLeft: s.rerollsLeft, phase: s.phase, currentTeamId: s.currentTeamId,
+        repeatVisit: s.repeatVisit,
         startedAt: s.startedAt, soundOn: s.soundOn,
         creationName: s.creationName, career: s.career,
       }),

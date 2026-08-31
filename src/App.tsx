@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { ATTRIBUTE_SETS, getTeam } from './data';
 import type { AttributeKey } from './data';
 import { useGame } from './store/gameStore';
-import { lock, primeAudio } from './lib/audio';
+import { audioState, lock, primeAudio, subscribeAudio } from './lib/audio';
 import { SlotMachine } from './components/SlotMachine';
 import { BuildSheet } from './components/BuildSheet';
 import { PoolPicker } from './components/PoolPicker';
@@ -14,6 +14,12 @@ export default function App() {
   const g = useGame();
   const [hover, setHover] = useState<AttributeKey | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  /**
+   * Whether a sound played right now would actually be heard. A tester could not tell
+   * the toggle apart from a browser that had simply never let the audio start, so the
+   * header says which of the two it is instead of showing one ambiguous speaker icon.
+   */
+  const audio = useSyncExternalStore(subscribeAudio, audioState);
 
   if (new URLSearchParams(window.location.search).has('debug')) return <DataInspector />;
 
@@ -47,12 +53,22 @@ export default function App() {
                 </span>
               </>
             )}
+            {g.soundOn && audio === 'blocked' && (
+              <span className="rounded bg-amber-500/20 px-2 py-1 font-bold tracking-wider text-amber-300">
+                TAP ONCE TO START THE SOUND
+              </span>
+            )}
             <button
-              onClick={g.toggleSound}
-              title="Tick sound"
-              className="rounded bg-white/8 px-2 py-1 text-white/60 hover:bg-white/15"
+              onClick={() => { primeAudio(); g.toggleSound(); }}
+              aria-pressed={g.soundOn}
+              title={g.soundOn ? 'Turn the sound off' : 'Turn the sound on'}
+              className={`rounded px-2 py-1 font-bold tracking-wider transition-colors ${
+                g.soundOn
+                  ? 'bg-hazard text-turf-950 hover:bg-hazard/85'
+                  : 'bg-white/8 text-white/45 hover:bg-white/15'
+              }`}
             >
-              {g.soundOn ? '🔊' : '🔇'}
+              {g.soundOn ? '🔊 SOUND ON' : '🔇 SOUND OFF'}
             </button>
           </div>
         </div>
@@ -93,7 +109,6 @@ export default function App() {
                     position={g.position}
                     targetTeamId={g.currentTeamId}
                     spinNonce={g.spinNonce}
-                    hardMode={g.hardMode}
                     visitedTeamIds={g.visitedTeamIds}
                     usedPlayerIds={g.usedPlayerIds}
                     soundOn={g.soundOn}
@@ -123,7 +138,7 @@ export default function App() {
                 >
                   <div>
                     <div className="font-mono text-[10px] tracking-[0.2em] text-white/60">
-                      YOU LANDED ON
+                      {g.repeatVisit ? 'YOU LANDED HERE AGAIN' : 'YOU LANDED ON'}
                     </div>
                     <h2 className="font-display text-2xl leading-none tracking-tight uppercase sm:text-3xl">
                       {team.city} {team.name}
@@ -154,7 +169,7 @@ export default function App() {
               <section className="rounded-lg border-2 border-hazard bg-hazard/10 px-5 py-10 text-center">
                 <h2 className="font-display text-3xl tracking-tight uppercase">Build complete</h2>
                 <p className="mt-2 font-mono text-[12px] text-white/60">
-                  Every slot is full. Time to find out what he did with his life.
+                  Every slot is full. Time to find out what he did with his career.
                 </p>
                 <button
                   onClick={g.runSimulation}
@@ -198,8 +213,6 @@ export default function App() {
                 slots={g.slots}
                 highlight={hover}
                 usedPlayerIds={g.usedPlayerIds}
-                hardMode={g.hardMode}
-                visitedTeamIds={g.visitedTeamIds}
               />
             </div>
           </aside>
@@ -218,8 +231,6 @@ export default function App() {
                   slots={g.slots}
                   highlight={hover}
                   usedPlayerIds={g.usedPlayerIds}
-                  hardMode={g.hardMode}
-                  visitedTeamIds={g.visitedTeamIds}
                 />
               </div>
             )}

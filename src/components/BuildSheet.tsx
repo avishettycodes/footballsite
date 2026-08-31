@@ -8,16 +8,12 @@ type Props = {
   slots: Partial<Record<AttributeKey, FilledSlot>>;
   highlight?: AttributeKey | null;
   usedPlayerIds?: string[];
-  hardMode?: boolean;
-  visitedTeamIds?: string[];
 };
 
 /** A slot is "covered" by a franchise if it still has an unused player with a good one. */
 const GOOD_ENOUGH = 90;
 
-export function BuildSheet({
-  position, slots, highlight, usedPlayerIds = [], hardMode = false, visitedTeamIds = [],
-}: Props) {
+export function BuildSheet({ position, slots, highlight, usedPlayerIds = [] }: Props) {
   const keys = ATTRIBUTE_SETS[position];
   const filled = keys.filter((k) => slots[k]);
   const open = keys.filter((k) => !slots[k]);
@@ -26,9 +22,9 @@ export function BuildSheet({
    * The sentence you actually want by the middle of a run. Counting in your head which
    * franchises can still solve durability is work the screen should be doing for you.
    */
-  const reachable = TEAMS.filter(
-    (t) => !(hardMode && visitedTeamIds.includes(t.id)),
-  );
+  // Every franchise stays in the wheel in both modes, so scarcity is now purely about
+  // who is left on the rosters rather than about which teams you have used up.
+  const reachable = TEAMS;
   const scarcity = open
     .map((key) => ({
       key,
@@ -117,7 +113,6 @@ export function BuildSheet({
           </p>
           <p className="mt-1 font-mono text-[10px] text-white/40">
             {open.length} spin{open.length === 1 ? '' : 's'} to go
-            {hardMode ? ` · ${reachable.length} teams left` : ''}
           </p>
           {risk > 0.2 && (
             <p className="mt-1.5 rounded bg-red-500/15 px-2 py-1 font-mono text-[10px] text-red-300">

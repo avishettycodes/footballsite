@@ -1,26 +1,41 @@
 /**
  * Drives the real Zustand store through complete runs and asserts the rules:
- * player-used-once, slot-filled-once, hard-mode no-repeat, and determinism by seed.
+ * player-used-once, slot-filled-once, zero rerolls in hard mode, and determinism by
+ * seed.
+ *
+ * THE FUZZ GOT BIGGER BECAUSE HARD MODE CHANGED SHAPE. Hard mode used to strike each
+ * visited franchise off the wheel, which made an exhausted pool almost unreachable: you
+ * could not land on the same roster twice, so you could not drain one. Repeats are now
+ * legal in both modes, so the free-respin rule in drawTeam() is the only thing standing
+ * between a run and a deadlock. That deserves more than 400 seeds on one position, so
+ * this now fuzzes every position in both modes and counts how often the free respin
+ * actually fires. Tight end is the one to watch, since it has seven slots and the
+ * thinnest pools, which is the shortest path to draining a roster.
  */
 import { useGame } from '../src/store/gameStore';
-import { ATTRIBUTE_SETS, getPool } from '../src/data';
-import type { AttributeKey } from '../src/data';
+import { ATTRIBUTE_SETS, PLAYERS, TEAMS, getPool, positionsWithData } from '../src/data';
+import type { AttributeKey, Position } from '../src/data';
 
-type Result = { picks: string[]; teams: string[]; ok: boolean; notes: string[] };
+type Result = { picks: string[]; teams: string[]; ok: boolean; notes: string[]; freeRespins: number };
 
-function playRun(seed: string, hardMode: boolean): Result {
+function playRun(seed: string, hardMode: boolean, position: Position = 'RB'): Result {
   const s = useGame.getState();
   s.abandonRun();
-  s.startRun({ position: 'RB', hardMode, seed });
+  s.startRun({ position, hardMode, seed });
 
   const notes: string[] = [];
   const picks: string[] = [];
   const teams: string[] = [];
+  let freeRespins = 0;
   let guard = 0;
 
   while (useGame.getState().phase !== 'complete' && guard++ < 100) {
     const g = useGame.getState();
-    if (g.phase === 'ready') { g.spin(); continue; }
+    if (g.phase === 'ready') {
+      g.spin();
+      if (useGame.getState().lastEventMessage) freeRespins++;
+      continue;
+    }
     if (g.phase === 'spinning') { g.landSpin(); continue; }
     if (g.phase === 'picking') {
       const state = useGame.getState();
@@ -49,13 +64,18 @@ function playRun(seed: string, hardMode: boolean): Result {
   const keys = ATTRIBUTE_SETS[g.position];
   const allFilled = keys.every((k) => g.slots[k]);
   const uniquePlayers = new Set(g.usedPlayerIds).size === g.usedPlayerIds.length;
-  const noRepeatTeams = !hardMode || new Set(teams).size === teams.length;
+  // Repeating a franchise is legal now, in both modes. What hard mode owes you is
+  // nothing: no rerolls, and no way to talk your way out of a roster you do not like.
+  const noRerollsInHardMode = !hardMode || g.rerollsLeft === 0;
 
   if (!allFilled) notes.push('not all slots filled');
   if (!uniquePlayers) notes.push('a player was used twice');
-  if (!noRepeatTeams) notes.push('hard mode repeated a franchise');
+  if (!noRerollsInHardMode) notes.push(`hard mode handed out ${g.rerollsLeft} rerolls`);
 
-  return { picks, teams, ok: allFilled && uniquePlayers && noRepeatTeams && notes.length === 0, notes };
+  return {
+    picks, teams, freeRespins, notes,
+    ok: allFilled && uniquePlayers && noRerollsInHardMode && notes.length === 0,
+  };
 }
 
 console.log('MEGATRON — run simulation\n');
@@ -71,12 +91,97 @@ console.log('\nhard-mode build:', hard.picks.join('  '));
 
 const deterministic = a.teams.join() === b.teams.join() && a.picks.join() === b.picks.join();
 
-// 400 random seeds, both modes — the deadlock rule must never strand a run.
+// Every position, both modes, 1500 seeds each. The deadlock rule must never strand a
+// run now that a franchise can come up as many times as the wheel feels like.
+const FUZZ = 1500;
 let stranded = 0;
-for (let i = 0; i < 400; i++) {
-  const r = playRun(`FUZZ-${i}`, i % 2 === 0);
-  if (!r.ok) { stranded++; if (stranded < 4) console.log('  FAIL', i, r.notes.join('; ')); }
+let freeRespins = 0;
+let repeatedRuns = 0;
+let fuzzed = 0;
+const perPosition: string[] = [];
+for (const position of positionsWithData()) {
+  let positionStranded = 0;
+  let positionRespins = 0;
+  let positionRepeats = 0;
+  for (let i = 0; i < FUZZ; i++) {
+    const hard = i % 2 === 0;
+    const r = playRun(`FUZZ-${position}-${i}`, hard, position);
+    fuzzed++;
+    positionRespins += r.freeRespins;
+    if (new Set(r.teams).size !== r.teams.length) positionRepeats++;
+    if (!r.ok) {
+      positionStranded++;
+      if (stranded + positionStranded < 4) {
+        console.log(`  FAIL ${position} ${hard ? 'hard' : 'normal'} seed ${i}: ${r.notes.join('; ')}`);
+      }
+    }
+  }
+  stranded += positionStranded;
+  freeRespins += positionRespins;
+  repeatedRuns += positionRepeats;
+  perPosition.push(
+    `  ${position}: ${positionRepeats}/${FUZZ} runs hit the same franchise twice, ` +
+    `${positionRespins} free respins, ${positionStranded} stranded`,
+  );
 }
+
+// --- the deadlock rule, forced ---------------------------------------------------
+/**
+ * The fuzz above never drains a roster, because a player who takes the best number on
+ * the board spreads his picks across the league. Six thousand runs produced zero free
+ * respins, which means the branch that stops a deadlock went completely untested by it.
+ * So provoke it directly.
+ *
+ * This marks every player at every franchise but one as already used, then spins a few
+ * hundred times. The wheel still draws from all 32, so almost every draw lands on a
+ * drained roster and the free respin is the only reason the game can carry on. Every
+ * landing must have somebody left on it, and none of them may cost a reroll.
+ */
+function forcedDeadlock(position: Position) {
+  const survivor = TEAMS[0].id;
+  const drained = PLAYERS
+    .filter((p) => p.position === position && p.teamId !== survivor)
+    .map((p) => p.id);
+
+  useGame.getState().abandonRun();
+  useGame.getState().startRun({ position, hardMode: true, seed: `DEADLOCK-${position}` });
+  useGame.setState({ usedPlayerIds: drained });
+
+  let frees = 0;
+  let landedEmpty = 0;
+  let gotStuck = 0;
+  let rerollsSpent = 0;
+  for (let i = 0; i < 300; i++) {
+    useGame.setState({ phase: 'ready', lastEventMessage: null });
+    useGame.getState().spin();
+    const st = useGame.getState();
+    if (st.phase === 'stuck') { gotStuck++; break; }
+    if (st.lastEventMessage) frees++;
+    if (st.rerollsLeft !== 0) rerollsSpent++;
+    const left = getPool(position, st.currentTeamId!).filter(
+      (p) => !st.usedPlayerIds.includes(p.id),
+    );
+    if (left.length === 0) landedEmpty++;
+  }
+  return { frees, landedEmpty, gotStuck, rerollsSpent, survivor };
+}
+
+const forced = positionsWithData().map((pos) => ({ pos, r: forcedDeadlock(pos) }));
+const deadlockHolds = forced.every(
+  ({ r }) => r.landedEmpty === 0 && r.gotStuck === 0 && r.frees > 0,
+);
+
+/**
+ * And the last resort. With NOTHING left anywhere the game cannot invent a roster, so it
+ * has to say so rather than hand back a null franchise. This is the one case that is
+ * supposed to be unreachable in a real run, which is exactly why it gets asserted.
+ */
+useGame.getState().abandonRun();
+useGame.getState().startRun({ position: 'RB', hardMode: true, seed: 'NOBODY-LEFT' });
+useGame.setState({ usedPlayerIds: PLAYERS.filter((p) => p.position === 'RB').map((p) => p.id) });
+useGame.getState().spin();
+const everythingGone = useGame.getState();
+const failsLoudly = everythingGone.phase === 'stuck' && Boolean(everythingGone.lastEventMessage);
 
 // --- Super Bowl roll properties -------------------------------------------------
 // 1. Rolling is idempotent: re-running the simulation cannot change the outcome,
@@ -124,11 +229,24 @@ const betterBuildBetterOdds = good.superBowl.odds > bad.superBowl.odds;
 console.log(`\nnormal run completes:   ${a.ok ? 'PASS' : 'FAIL — ' + a.notes.join('; ')}`);
 console.log(`hard run completes:     ${hard.ok ? 'PASS' : 'FAIL — ' + hard.notes.join('; ')}`);
 console.log(`same seed, same run:    ${deterministic ? 'PASS' : 'FAIL'}`);
-console.log(`400 fuzz runs, 0 stuck: ${stranded === 0 ? 'PASS' : `FAIL (${stranded} stranded)`}`);
+console.log(`${fuzzed} fuzz runs, 0 stuck: ${stranded === 0 ? 'PASS' : `FAIL (${stranded} stranded)`}`);
+console.log(perPosition.join('\n'));
+console.log(`  ${repeatedRuns} of ${fuzzed} runs landed on a franchise more than once, and ${freeRespins} spins came back free`);
+console.log(`forced deadlock survived: ${deadlockHolds ? 'PASS' : 'FAIL'}`);
+for (const { pos, r } of forced) {
+  console.log(
+    `  ${pos}: only ${r.survivor} has anybody left, ${r.frees}/300 spins came back free, ` +
+    `${r.landedEmpty} landed on an empty roster, ${r.rerollsSpent} cost a reroll`,
+  );
+}
+console.log(`empty league fails loudly: ${failsLoudly ? 'PASS' : 'FAIL'}`);
 console.log(`SB roll idempotent:     ${idempotent ? 'PASS' : 'FAIL — refreshing re-rolls the ring'}`);
 console.log(`SB coin shared by seed: ${sameCoin ? 'PASS' : 'FAIL'} (roll ${good.superBowl.roll.toFixed(4)})`);
 console.log(`  best build ${good.overall} OVR, ${(good.superBowl.odds * 100).toFixed(0)}% -> ${good.superBowl.won ? 'RING' : 'no ring'}`);
 console.log(`  worst build ${bad.overall} OVR, ${(bad.superBowl.odds * 100).toFixed(0)}% -> ${bad.superBowl.won ? 'RING' : 'no ring'}`);
 console.log(`better build, better odds: ${betterBuildBetterOdds ? 'PASS' : 'FAIL'}`);
 
-process.exit(a.ok && hard.ok && deterministic && stranded === 0 && idempotent && sameCoin && betterBuildBetterOdds ? 0 : 1);
+process.exit(
+  a.ok && hard.ok && deterministic && stranded === 0 && deadlockHolds && failsLoudly &&
+  idempotent && sameCoin && betterBuildBetterOdds ? 0 : 1,
+);

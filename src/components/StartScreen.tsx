@@ -25,7 +25,7 @@ export function StartScreen({ onStart, canResume, onResume }: Props) {
         >
           <div className="font-display text-xl tracking-tight uppercase">Pick up where you left off</div>
           <div className="font-mono text-[11px] text-white/55">
-            You walked out on a half finished guy. Go back and give him the rest of himself.
+            You walked out on a half finished player. Go back and give him the rest of himself.
           </div>
         </button>
       )}
@@ -48,9 +48,7 @@ export function StartScreen({ onStart, canResume, onResume }: Props) {
               }`}
             >
               {pos}
-              <div className="font-mono text-[9px] opacity-60">
-                {live ? `${DATA_STATS.byPosition[pos]} MEN` : 'SOON'}
-              </div>
+              {!live && <div className="font-mono text-[9px] opacity-60">SOON</div>}
               {/*
                 Tight end really is harder, and saying so turns a broken promise into
                 the point. It is the only seven attribute position and it has by far the
@@ -80,8 +78,8 @@ export function StartScreen({ onStart, canResume, onResume }: Props) {
           </div>
           <div className="font-mono text-[11px] text-white/50">
             {hardMode
-              ? 'No rerolls at all, and once a team comes up it never comes back. You live with whatever you spin.'
-              : 'You get three rerolls, and the same team can turn up more than once.'}
+              ? 'No rerolls at all. Every franchise stays in the wheel the whole way, so you can land on the Browns twice and you get to live with it.'
+              : 'Three rerolls, and every franchise stays in the wheel the whole way.'}
           </div>
         </div>
         <div
@@ -95,8 +93,8 @@ export function StartScreen({ onStart, canResume, onResume }: Props) {
 
       <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">3 · Seed (optional)</h2>
       <p className="font-mono text-[11px] text-white/45">
-        The same seed always gives you the same spins, so you can send one to a friend and
-        see who builds the better guy.
+        The same seed always gives you the same spins. Send one to somebody and you both
+        face the identical wheel, so it comes down to who builds the better player.
       </p>
       <div className="mt-2 flex gap-2">
         <input
@@ -117,7 +115,7 @@ export function StartScreen({ onStart, canResume, onResume }: Props) {
         onClick={() => onStart({ position, hardMode, seed: seed || undefined })}
         className="mt-8 w-full rounded-lg bg-hazard py-5 font-display text-3xl tracking-tight text-turf-950 uppercase transition-transform hover:scale-[1.02] active:scale-100"
       >
-        Build a guy
+        Build a player
       </button>
     </div>
   );

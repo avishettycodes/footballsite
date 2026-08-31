@@ -33,7 +33,6 @@ type Props = {
   position: Position;
   targetTeamId: string;
   spinNonce: number;
-  hardMode: boolean;
   visitedTeamIds: string[];
   usedPlayerIds: string[];
   soundOn: boolean;
@@ -41,7 +40,7 @@ type Props = {
 };
 
 export function SlotMachine({
-  position, targetTeamId, spinNonce, hardMode, visitedTeamIds, usedPlayerIds, soundOn, onLanded,
+  position, targetTeamId, spinNonce, visitedTeamIds, usedPlayerIds, soundOn, onLanded,
 }: Props) {
   const reelRef = useRef<HTMLDivElement>(null);
   const [reel, setReel] = useState<Team[]>([]);
@@ -132,7 +131,10 @@ export function SlotMachine({
       >
         <div ref={reelRef} className="will-change-transform">
           {reel.map((team, i) => {
-            const locked = hardMode && visitedTeamIds.includes(team.id) && i < REEL_LEN - 1;
+            // Nothing is locked out of the wheel any more. A franchise you have already
+            // raided still comes around, which is the point, so it is marked rather than
+            // greyed out. Only a genuinely empty roster is dimmed.
+            const raided = visitedTeamIds.includes(team.id) && i < REEL_LEN - 1;
             const empty = getPool(position, team.id).every((p) => usedPlayerIds.includes(p.id));
             return (
               <div
@@ -142,7 +144,7 @@ export function SlotMachine({
                   height: ITEM_H,
                   backgroundColor: team.primary,
                   boxShadow: `inset 0 -4px 0 ${team.secondary}`,
-                  opacity: locked || empty ? 0.32 : 1,
+                  opacity: empty ? 0.32 : 1,
                 }}
               >
                 <div className="min-w-0">
@@ -150,7 +152,7 @@ export function SlotMachine({
                     {team.city} {team.name}
                   </div>
                   <div className="font-mono text-[10px] tracking-[0.2em] text-white/60">
-                    {locked ? 'ALREADY BEEN HERE' : empty ? 'NOBODY LEFT' : `${getPool(position, team.id).length} ${position}`}
+                    {empty ? 'NOBODY LEFT' : raided ? 'BEEN HERE ALREADY' : `${getPool(position, team.id).length} ${position}`}
                   </div>
                 </div>
                 <div className="font-display text-4xl leading-none text-white/35 sm:text-5xl">
