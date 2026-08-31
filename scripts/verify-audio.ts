@@ -16,7 +16,15 @@
  *   is not a quiet sound, it is no sound. Every sound the game can play has to carry at
  *   least one voice that reaches a small speaker at a gain you would notice.
  *
- * Neither check listens to anything. Both fail loudly.
+ *   THE IPHONE MUTE SWITCH. Both of the above were verified in desktop Chrome, which
+ *   does not have one, and the tester still heard nothing. iOS silences a page's audio
+ *   outright when the ringer switch is off unless the page says its audio is the point.
+ *   So: navigator.audioSession must be set to playback where it exists, a silent looping
+ *   media element must carry the older devices that have no such API, and neither may
+ *   happen before a gesture or while the sound is switched off, since claiming that
+ *   session stops whatever else the phone was playing.
+ *
+ * None of these checks listens to anything. They all fail loudly.
  */
 
 type Rec = { kind: string; detail: string };
@@ -53,6 +61,23 @@ class FakeCtx {
   createGain() { const g = new FakeNode('gain') as FakeNode & { gain: FakeParam }; g.gain = new FakeParam('gain'); return g; }
   resume() { this.state = 'running'; this.currentTime = 1.5; this.onstatechange?.(); return Promise.resolve(); }
   suspend() { this.state = 'suspended'; this.onstatechange?.(); return Promise.resolve(); }
+}
+
+/** iOS 16.4+ exposes this. Starts as auto, exactly like a real page. */
+const fakeSession = { type: 'auto' };
+Object.defineProperty(globalThis, 'navigator', {
+  value: { audioSession: fakeSession }, configurable: true, writable: true,
+});
+
+/** The pre-16.4 lever: a silent looping media element. */
+const played: FakeAudio[] = [];
+class FakeAudio {
+  loop = false;
+  attrs: Record<string, string> = {};
+  playCount = 0;
+  constructor(public src: string) {}
+  setAttribute(k: string, v: string) { this.attrs[k] = v; }
+  play() { this.playCount++; played.push(this); return Promise.resolve(); }
 }
 
 const fakeWindow = {
@@ -96,10 +121,27 @@ check('silent before a gesture, and drops rather than queues',
   `${events.filter((e) => e.kind === 'start').length} notes queued against a frozen clock`);
 check('still no context without a gesture', created === 0, `${created} created`);
 
+check('no audio session claimed before a gesture', fakeSession.type === 'auto',
+  `session is ${fakeSession.type} with nothing tapped yet`);
+
+// 3b. Sound off means no context and no session at all. Claiming the playback session
+//     stops whatever else the phone is playing, and doing that to somebody who turned
+//     the sound off would be worse than the silence this file is here to fix.
+audio.setSoundEnabled(false);
+fire('pointerdown');
+check('a tap with the sound off opens nothing', created === 0, `${created} created`);
+check('a tap with the sound off claims no session', fakeSession.type === 'auto',
+  `session is ${fakeSession.type}`);
+audio.setSoundEnabled(true);
+
 // 4. A tap anywhere on the page opens and resumes it.
 fire('pointerdown');
 check('a tap anywhere opens the context', created === 1, `${created} created`);
 check('audioState is ready after a tap', audio.audioState() === 'ready', `state: ${audio.audioState()}`);
+check('the gesture declares a playback session', fakeSession.type === 'playback',
+  `session is now ${fakeSession.type}`);
+check('no media element where the session API exists', played.length === 0,
+  `${played.length} silent elements playing for no reason`);
 
 // 5. Now every sound has to actually reach the destination.
 for (const [name, voices] of Object.entries(audio.ALL_SOUNDS)) {
@@ -140,6 +182,31 @@ check('the next tap anywhere brings it back',
   events.filter((e) => e.kind === 'start').length === audio.ALL_SOUNDS.thunk.length,
   `state: ${audio.audioState()}, ${events.filter((e) => e.kind === 'start').length} notes`);
 check('recovering reuses the one context', created === 1, `${created} contexts created in total`);
+
+// 7b. THE INTERRUPTION SAFARI DOES NOT COME BACK FROM. An interrupted context can park
+//     in a state resume() refuses to leave, and a context that will not come back is
+//     worse than no context at all, because every later note is dropped against it. It
+//     has to be thrown away so the next tap can build a fresh one.
+await live.suspend();
+live.resume = () => Promise.reject(new Error('interrupted'));
+fire('pointerdown');
+await new Promise((r) => setTimeout(r, 0));
+check('a context that will not resume is thrown away', audio.audioState() === 'blocked',
+  `state: ${audio.audioState()}`);
+
+// 7c. THE OLDER IPHONE. No navigator.audioSession before Safari 16.4, so the only lever
+//     is a silent looping media element played from inside the gesture, which moves the
+//     page onto the media channel and takes WebAudio with it.
+Object.defineProperty(globalThis, 'navigator', { value: {}, configurable: true, writable: true });
+(globalThis as unknown as { Audio: unknown }).Audio = FakeAudio;
+fire('touchend');
+check('a dropped context is rebuilt by the next tap', created === 2, `${created} created in total`);
+const silent = played[0];
+check('older iOS gets a silent media element instead', played.length === 1 && silent?.playCount === 1,
+  played.length ? `${played.length} element(s), played ${silent?.playCount} time(s)` : 'nothing playing');
+check('that element is silence, looping, and inline',
+  Boolean(silent) && silent.loop && silent.src.startsWith('data:audio/wav;base64,') && 'playsinline' in silent.attrs,
+  silent ? `loop=${silent.loop} inline=${'playsinline' in silent.attrs} src=${silent.src.slice(0, 28)}...` : 'no element');
 
 // 8. Sanity on the envelope: nothing may be scheduled with a zero or negative duration,
 //    and an exponential ramp cannot target zero.

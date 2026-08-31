@@ -1,7 +1,7 @@
 /**
  * Tiny WebAudio blip generator. No files, no fetch, a click is an oscillator.
  *
- * TWO THINGS THIS FILE LEARNED FROM A REAL DEVICE, both of which made it silent.
+ * THREE THINGS THIS FILE LEARNED FROM A REAL DEVICE, all of which made it silent.
  *
  * 1. THE SUSPEND LATCH. An AudioContext created or suspended outside a user gesture
  *    stays suspended, and its clock stays frozen at zero, so every note scheduled
@@ -19,6 +19,22 @@
  *    90Hz, so on a phone those two were not quiet, they were absent. Every sound now
  *    has to carry at least one voice that reaches a small speaker, which is what
  *    reachesASmallSpeaker() below means and what verify:audio enforces.
+ *
+ * 3. AN IPHONE HAS A MUTE SWITCH AND WEBAUDIO OBEYS IT. Fixing 1 and 2 was verified in
+ *    desktop Chrome, which has no such switch, so a third cause survived both passes and
+ *    the same tester still heard nothing. By default a page's audio goes out on iOS as
+ *    the "auto" session, which behaves like the ambient one for WebAudio: the ringer
+ *    switch silences it outright, no matter what the page does, and the page cannot even
+ *    tell. Nothing in the code is wrong when this happens, which is what makes it so
+ *    hard to find from a laptop. Two ways out, and this file takes both. Safari 16.4 and
+ *    later expose navigator.audioSession, where declaring "playback" means the audio is
+ *    the point of the page and outlives the switch. Older iOS has no such API, and the
+ *    only lever is the one the platform gives a media player: a silent looping <audio>
+ *    element, playing from inside the same gesture, which moves the whole page onto the
+ *    media channel and takes WebAudio with it.
+ *
+ *    Claiming that session interrupts whatever the phone was already playing, so it is
+ *    claimed only when the sound is actually on. See setSoundEnabled().
  *
  * Sounds are DATA rather than code so the verifier can read the same numbers the game
  * plays. See scripts/verify-audio.ts.
@@ -114,7 +130,73 @@ export const ALL_SOUNDS: Record<string, Voice[]> = {
 
 let ctx: AudioContext | null = null;
 let armed = false;
+let enabled = true;
+let keepAlive: HTMLAudioElement | null = null;
 const watchers = new Set<() => void>();
+
+/**
+ * Whether the game is allowed to open audio at all.
+ *
+ * A context is not free on a phone. Opening one claims an audio session, and the
+ * playback session this file asks for on iOS stops other apps. Somebody who turned the
+ * sound off should not lose what they were listening to, so with the sound off no
+ * context is ever created. An existing one is left alone rather than closed, because
+ * closing and reopening is the thing iOS is worst at.
+ */
+export function setSoundEnabled(on: boolean) {
+  enabled = on;
+}
+
+/** iOS 16.4+. Declaring playback is what survives the ringer switch. */
+type AudioSessionish = { type: string };
+function audioSession(): AudioSessionish | null {
+  const nav = globalThis.navigator as unknown as { audioSession?: AudioSessionish } | undefined;
+  return nav?.audioSession ?? null;
+}
+
+/**
+ * 50ms of true silence as a WAV, built here rather than shipped, so there is no asset to
+ * fetch and nothing to go missing. 8-bit PCM silence is 128 rather than 0.
+ */
+function silentWav(): string {
+  const samples = 400;
+  const bytes = new Uint8Array(44 + samples).fill(128);
+  const view = new DataView(bytes.buffer);
+  const ascii = (at: number, text: string) => {
+    for (let i = 0; i < text.length; i++) view.setUint8(at + i, text.charCodeAt(i));
+  };
+  ascii(0, 'RIFF'); view.setUint32(4, 36 + samples, true); ascii(8, 'WAVEfmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, 8000, true); view.setUint32(28, 8000, true);
+  view.setUint16(32, 1, true); view.setUint16(34, 8, true);
+  ascii(36, 'data'); view.setUint32(40, samples, true);
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return `data:audio/wav;base64,${btoa(binary)}`;
+}
+
+/**
+ * The pre-16.4 iOS lever. A looping media element playing from inside a gesture puts the
+ * page on the media channel, and WebAudio rides along, so the ringer switch stops
+ * mattering. Skipped entirely where navigator.audioSession exists, since declaring the
+ * session outright is the same fix without a media element running for the whole visit.
+ */
+function claimPlaybackSession() {
+  const session = audioSession();
+  if (session) {
+    try { if (session.type !== 'playback') session.type = 'playback'; } catch { /* read-only */ }
+    return;
+  }
+  if (keepAlive || typeof Audio === 'undefined') return;
+  try {
+    keepAlive = new Audio(silentWav());
+    keepAlive.loop = true;
+    keepAlive.setAttribute('playsinline', '');
+    void keepAlive.play().catch(() => { keepAlive = null; });
+  } catch {
+    keepAlive = null;
+  }
+}
 
 function audioCtor(): typeof AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -137,6 +219,8 @@ function open(): AudioContext | null {
   if (!ctx) {
     const Ctor = audioCtor();
     if (!Ctor) return null;
+    // Before the context exists, so the very first note is already on the right channel.
+    claimPlaybackSession();
     ctx = new Ctor();
     ctx.onstatechange = notify;
   }
@@ -148,8 +232,15 @@ function open(): AudioContext | null {
  * page, since it does nothing once the context is already running.
  */
 export function unlock() {
+  // With the sound off, never open one. An open one is still worth rescuing.
+  if (!enabled && !ctx) return;
   const ac = open();
-  if (ac && ac.state !== 'running') void ac.resume().then(notify, notify);
+  if (ac && ac.state !== 'running') {
+    // Safari parks an interrupted context in a state resume() can refuse to leave, and
+    // a context that will not come back is worse than no context. Drop it and let the
+    // next tap build a fresh one.
+    void ac.resume().then(notify, () => { if (ctx === ac) ctx = null; notify(); });
+  }
   notify();
 }
 

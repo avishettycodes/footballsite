@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { ATTRIBUTE_SETS, TEAMS, getPool } from '../data';
 import type { AttributeKey, Player, Position } from '../data';
-import { hashSeed, makeSeed, nextPick, seedFromUrl } from '../lib/rng';
+import { hashSeed, makeSeed, nextPick } from '../lib/rng';
 import { simulateCareer } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
 
@@ -194,8 +194,15 @@ export const useGame = create<GameStore>()(
       toggleSound: () => set((s) => ({ soundOn: !s.soundOn })),
       resumeRun: () => set({ entered: true }),
 
+      /**
+       * The seed passed in is the only seed. It used to fall back to `?seed=` in the
+       * URL when the field was empty, which meant clearing the box on somebody's seed
+       * link replayed that same link anyway, forever, while the placeholder said
+       * RANDOM. The start screen reads the URL for you and shows what it found, so an
+       * empty field here means exactly what it looks like.
+       */
       startRun: ({ position, hardMode, seed }) => {
-        const finalSeed = seed || seedFromUrl() || makeSeed();
+        const finalSeed = seed || makeSeed();
         set({
           ...emptyRun(),
           runId: `${Date.now().toString(36)}-${finalSeed}`,

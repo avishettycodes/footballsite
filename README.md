@@ -27,6 +27,19 @@ Hard mode means no rerolls. Every franchise stays in the wheel the whole way in 
 modes, so landing on the same roster twice is a legal and fairly common outcome, and in
 hard mode you have no way to talk your way out of it.
 
+QUIT in the header walks out of a run from anywhere, including mid spin, and asks first.
+It deletes the build and the autosave with it, which is why it asks.
+
+## On a phone
+
+Test the layout at 390px with the display font FORCED to `system-ui`, not with whatever
+your Mac happens to have. Nothing here loads a webfont, so `--font-display` falls through
+Archivo Black and Haettenschweiler to Arial Narrow, and macOS has Arial Narrow while iOS
+does not. A phone therefore renders the whole game in San Francisco, roughly 13% wider,
+and that is entirely why NAME YOUR PLAYER came off a tester's iPhone reading NAME YOUR
+PLAY while it fit on the machine it was built on. Anything sized so that the narrow
+fallback just barely fits is already broken on the device most people are holding.
+
 The results screen never tells you what a trophy required. It says how close he came in
 words instead. Learning the shape of the thresholds by playing is the point, and 17-0
 does not print its own rulebook either.
@@ -49,7 +62,8 @@ Attribute KEYS in the data files are load-bearing across every player row, the s
 weights and the whole verification suite. The words on screen come from
 `ATTRIBUTE_LABELS` in `src/data/types.ts`, so a label that reads wrong gets fixed there
 rather than by renaming a key. That is why the key is still `hands` while the screen says
-CATCHING, and still `processing` while the screen says READS.
+CATCHING, still `processing` while the screen says READS, and still `burst` while the
+screen says ACCELERATION.
 
 ## Deploying
 
@@ -70,14 +84,18 @@ Set `VITE_FEEDBACK_URL` to a form link and a feedback line appears in the footer
 npm run verify
 ```
 
-That runs five suites, and they check more than types.
+That runs six suites, and they check more than types.
 
 - **data** looks for duplicate ids, out of range values and thin pools, and it flags
   dead cards, meaning players with no elite trait and no funny weakness. It also measures
   correlation between attributes, so if speed and deep threat ever collapse into the same
   pick, you hear about it.
-- **rng** proves the `?seed=` contract. The same seed replays exactly, different seeds
-  diverge, and a run serialized mid-game resumes on the same sequence.
+- **rng** proves the `?seed=` contract on both sides of the generator. The same seed
+  replays exactly, different seeds diverge, and a run serialized mid-game resumes on the
+  same sequence. It also proves the round trip through a phone, because that is the half
+  that actually broke: whatever the results screen copies has to come back out of the
+  seed box as the same seed, and a paste with no seed in it has to be rejected out loud
+  rather than filed down into a legal seed that plays a different game.
 - **run** drives the real store through complete games and fuzzes 1500 seeds per
   position across both difficulty modes to prove no run can strand. Because a greedy
   player never actually drains a roster, it also forces the deadlock case on purpose,
@@ -87,13 +105,19 @@ That runs five suites, and they check more than types.
   asserts that every accolade gets more likely as you move up that ladder. If careless
   play ever out-earns careful play, it fails.
 - **audio** checks the sound without anybody having to hear it. A tester reported total
-  silence on a phone with the toggle either way, and there were two separate causes. An
-  AudioContext created or suspended without a user gesture behind it stays suspended with
-  its clock frozen, so notes queue at zero instead of playing, and only a gesture can
-  bring it back. And a phone speaker gives you almost nothing under 500Hz, so the old
-  70Hz landing thud and 90Hz heartbeat were not quiet, they were absent. This drives the
-  real module against a fake WebAudio to prove the recovery path works, and walks the
-  voice table to prove every sound still carries on a small speaker.
+  silence on a phone with the toggle either way, and there turned out to be three
+  separate causes. An AudioContext created or suspended without a user gesture behind it
+  stays suspended with its clock frozen, so notes queue at zero instead of playing, and
+  only a gesture can bring it back. A phone speaker gives you almost nothing under 500Hz,
+  so the old 70Hz landing thud and 90Hz heartbeat were not quiet, they were absent. And
+  an iPhone silences a page's audio when the ringer switch is off unless the page says
+  its audio is the point, which is why the first two fixes both verified clean in desktop
+  Chrome and the tester still heard nothing. This drives the real module against a fake
+  WebAudio to prove the recovery path works, walks the voice table to prove every sound
+  carries on a small speaker, and asserts the playback session is declared on the first
+  gesture, never at import and never while the sound is switched off.
+- **copy** reads only what a player sees, and fails on em dashes, stacked descriptors,
+  overlong blurbs and two cards making the same joke.
 
 `src/lib/scoring.ts` is fenced. The weights and gates in there are calibrated against
 measured distributions, so if `verify:scoring` fails after new data lands, the data is

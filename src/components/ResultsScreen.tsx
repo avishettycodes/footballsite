@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import type { Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { GATES, accoladeDefs, superBowlOdds } from '../lib/scoring';
+import { GATES, accoladeDefs } from '../lib/scoring';
 import type { AccoladeId, CareerResult } from '../lib/scoring';
 import { deflate, fanfare, heartbeat } from '../lib/audio';
 import { ratingColor } from './AttributeBar';
@@ -58,7 +58,7 @@ function missedBecause(id: AccoladeId, career: CareerResult, durability: number)
         ? 'He was not on the field enough to chase it.'
         : nearness(GATES.recordOverall - career.overall);
     case 'superBowl':
-      return 'The coin did not come up for him.';
+      return 'A ring is the one thing you cannot build for him.';
     case 'hof':
       return 'Not enough on the mantelpiece to get him in.';
   }
@@ -68,10 +68,9 @@ export function ResultsScreen({
   position, slots, career, seed, hardMode, creationName, onName, onRestart, soundOn,
 }: Props) {
   const [stage, setStage] = useState<Stage>('overall');
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [counter, setCounter] = useState(0);
   const defs = accoladeDefs(position);
-  const odds = superBowlOdds(career.overall);
 
   // Count the overall up. Cosmetic only — reads career.overall, never rolls anything.
   useEffect(() => {
@@ -103,40 +102,88 @@ export function ResultsScreen({
 
   const earned = defs.filter((d) => career.accolades[d.id]);
   const missed = defs.filter((d) => !career.accolades[d.id]);
+  const shareUrl = `${window.location.origin}${window.location.pathname}?seed=${seed}`;
+
+  /**
+   * WHAT THIS BUTTON USED TO PUT ON THE CLIPBOARD, under the label COPY SEED, was a two
+   * line sentence with a link somewhere inside it. Paste that into the seed box and it
+   * came out as a legal 32 character seed that plays a different game, which is most of
+   * what "seeds r also broken" turned out to mean. It now copies the link and nothing
+   * else, and the seed box knows how to read a link.
+   *
+   * It also used to fire and forget, so it said COPIED whether or not anything reached
+   * the clipboard. navigator.clipboard does not exist at all on a plain http origin,
+   * which is exactly how a phone reaches a laptop's dev server, and it can reject on a
+   * denied permission anywhere. So the write is awaited and a failure says so, with the
+   * link printed underneath to hold and copy by hand.
+   */
+  async function copyLink() {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('no clipboard on this origin');
+      await navigator.clipboard.writeText(shareUrl);
+      setCopy('copied');
+    } catch {
+      setCopy('failed');
+    }
+    window.setTimeout(() => setCopy('idle'), 4000);
+  }
 
   return (
     <div className="mx-auto max-w-3xl">
       {/* SHARE CARD */}
       <div className="overflow-hidden rounded-xl border-2 border-white/15 bg-turf-900">
-        <div className="flex items-center justify-between bg-hazard px-4 py-1.5">
-          <span className="font-display text-sm tracking-[0.2em] text-turf-950 uppercase">
+        {/* Both halves of this bar wrapped onto two lines each on a phone. */}
+        <div className="flex items-center justify-between gap-2 bg-hazard px-4 py-1.5">
+          <span className="truncate font-display text-[11px] tracking-[0.15em] text-turf-950 uppercase sm:text-sm sm:tracking-[0.2em]">
             Megatron · Career Report
           </span>
-          <span className="font-mono text-[10px] font-bold text-turf-950">
-            {hardMode ? 'HARD MODE · ' : ''}{seed}
+          <span className="shrink-0 font-mono text-[10px] font-bold whitespace-nowrap text-turf-950">
+            {hardMode ? 'HARD · ' : ''}{seed}
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 px-5 py-5">
+        {/*
+          NAME YOUR PLAYER used to come off an iPhone reading NAME YOUR PLAY, and the
+          reason it never showed up on a Mac is the font stack. Nothing here loads a
+          webfont, so --font-display falls through Archivo Black and Haettenschweiler to
+          Arial Narrow, which macOS has and iOS does not. A phone lands on system-ui
+          instead, and the same string that measures 227px in Arial Narrow measures 256px
+          in San Francisco against 242px of input. Fifteen pixels of headroom on the
+          machine it was built on, fourteen pixels short on the machine it was played on.
+
+          So the size is no longer a bet on which font showed up. It starts at 24px on a
+          phone, where the widest fallback still leaves room to spare, and the overall
+          column shrinks to match rather than taking the width first.
+        */}
+        <div className="flex items-end justify-between gap-3 px-5 py-5 sm:gap-4">
           <div className="min-w-0 flex-1">
+            {/*
+              A long name is the same bug as the long placeholder, so it gets the same
+              treatment. THE ALL AMERICAN NIGHTMARE needs 324px at 24px and there are
+              243px to give it, and a name you cannot read back is not worth typing.
+            */}
             <input
               value={creationName}
               onChange={(e) => onName(e.target.value)}
               placeholder="NAME YOUR PLAYER"
-              className="w-full bg-transparent font-display text-3xl leading-none tracking-tighter uppercase placeholder:text-white/25 focus:outline-none sm:text-5xl"
+              className={`w-full bg-transparent font-display leading-none tracking-tighter uppercase placeholder:text-white/25 focus:outline-none sm:text-4xl md:text-5xl ${
+                creationName.length > 20 ? 'text-base' : creationName.length > 14 ? 'text-lg' : 'text-2xl'
+              }`}
             />
-            <div className="mt-1 font-mono text-[11px] tracking-[0.2em] text-white/40">
+            <div className="mt-1.5 font-mono text-[10px] tracking-[0.15em] text-white/40 sm:text-[11px] sm:tracking-[0.2em]">
               {position} · BUILT OUT OF {new Set(Object.values(slots).map((s) => s?.teamId)).size} TEAMS
             </div>
           </div>
-          <div className="text-center">
+          <div className="shrink-0 text-center">
             <div
-              className="font-display text-6xl leading-none tabular-nums sm:text-7xl"
+              className="font-display text-5xl leading-none tabular-nums sm:text-7xl"
               style={{ color: ratingColor(stage === 'overall' ? counter : career.overall) }}
             >
               {stage === 'overall' ? counter : career.overall}
             </div>
-            <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">OVERALL</div>
+            <div className="font-mono text-[10px] tracking-[0.15em] text-white/40 sm:tracking-[0.2em]">
+              OVERALL
+            </div>
           </div>
         </div>
 
@@ -258,7 +305,7 @@ export function ResultsScreen({
           {stage === 'rolling' && (
             <div className="text-center">
               <div className="font-mono text-[11px] tracking-[0.2em] text-white/45">
-                SUPER BOWL ODDS · {(odds * 100).toFixed(0)}%
+                SUPER BOWL SUNDAY
               </div>
               <div className="mt-2 font-display text-3xl tracking-tight text-white/80 uppercase">
                 <span className="inline-block animate-pulse">The ring is being decided</span>
@@ -279,19 +326,24 @@ export function ResultsScreen({
                 {career.superBowl.won ? 'Super Bowl Champion' : 'Never won the big one'}
               </div>
               {/*
-                This used to read "39% odds · rolled 88.1", and a tester asked why it
-                said 88 when his average was 93. Two bare numbers side by side, one a
-                rating and one a coin, and nothing on screen saying which was which. The
-                coin is now a sentence about a coin, so it cannot be read as a rating.
+                THIRD VERSION OF THIS LINE, AND THE LAST ONE WITH ANY MATHS IN IT.
+
+                It started as "39% odds · rolled 88.1", which a tester read as a rating.
+                Rewriting it as a sentence about a coin fixed the ambiguity and kept the
+                arithmetic, so the same tester flagged it again, this time on a win. Two
+                rounds of feedback on one sentence is the game telling you the numbers
+                were never the problem worth solving.
+
+                A broadcast does not read you the odds after the whistle. It tells you
+                what happened. The roll is still what decides it, it is simply no longer
+                read out, exactly like every gate on this screen.
               */}
               <div className="mt-1 font-mono text-[11px] text-white/45">
-                He needed the coin to come in under {(odds * 100).toFixed(0)} out of 100.
-                It came up {(career.superBowl.roll * 100).toFixed(0)}.
                 {career.superBowl.won
-                  ? ' He got there.'
+                  ? 'He got his ring, and nobody can take that off him now.'
                   : career.overall >= 92
-                    ? ' Ninety plus overall and no ring. That one stings.'
-                    : ' He was never really in it.'}
+                    ? 'A career that good and no ring. That is the one that stings.'
+                    : 'He was never really in it.'}
               </div>
             </div>
           )}
@@ -365,28 +417,40 @@ export function ResultsScreen({
       )}
 
       {stage === 'done' && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            onClick={onRestart}
-            className="flex-1 rounded-lg bg-hazard px-6 py-4 font-display text-2xl tracking-tight text-turf-950 uppercase transition-transform hover:scale-[1.02]"
-          >
-            Build another player
-          </button>
-          <button
-            onClick={() => {
-              const url = `${window.location.origin}${window.location.pathname}?seed=${seed}`;
-              void navigator.clipboard?.writeText(
-                `${creationName || 'My player'} came out at ${career.overall} overall with ${earned.length} accolade(s). ` +
-                `Same seed gives you the same spins, so see if you can do better: ${url}`,
-              );
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 2600);
-            }}
-            className="rounded-lg border-2 border-white/25 px-6 py-4 font-display text-2xl tracking-tight uppercase hover:bg-white/10"
-          >
-            {copied ? 'Copied' : 'Copy seed'}
-          </button>
-        </div>
+        <>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={onRestart}
+              className="flex-1 rounded-lg bg-hazard px-6 py-4 font-display text-2xl tracking-tight text-turf-950 uppercase transition-transform hover:scale-[1.02]"
+            >
+              Build another player
+            </button>
+            <button
+              onClick={copyLink}
+              className={`rounded-lg border-2 px-6 py-4 font-display text-2xl tracking-tight uppercase ${
+                copy === 'failed'
+                  ? 'border-red-500/60 text-red-300'
+                  : 'border-white/25 hover:bg-white/10'
+              }`}
+            >
+              {copy === 'copied' ? 'Copied' : copy === 'failed' ? 'Would not copy' : 'Copy link'}
+            </button>
+          </div>
+
+          {/*
+            Always on screen, not only when the copy fails. It is the seed in a form you
+            can read out loud, hold to copy, or check against the one somebody sent you.
+          */}
+          <p className="mt-2 text-center font-mono text-[10px] break-all text-white/35 select-all">
+            {shareUrl}
+          </p>
+          {copy === 'failed' && (
+            <p className="mt-1 text-center font-mono text-[10px] text-red-400">
+              This browser would not let the page write to the clipboard. Hold the link
+              above and copy it by hand.
+            </p>
+          )}
+        </>
       )}
     </div>
   );

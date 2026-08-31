@@ -1,8 +1,8 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ATTRIBUTE_SETS, getTeam } from './data';
 import type { AttributeKey } from './data';
 import { useGame } from './store/gameStore';
-import { audioState, lock, primeAudio, subscribeAudio } from './lib/audio';
+import { audioState, lock, primeAudio, setSoundEnabled, subscribeAudio } from './lib/audio';
 import { SlotMachine } from './components/SlotMachine';
 import { BuildSheet } from './components/BuildSheet';
 import { PoolPicker } from './components/PoolPicker';
@@ -14,6 +14,8 @@ export default function App() {
   const g = useGame();
   const [hover, setHover] = useState<AttributeKey | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** Confirm step for walking out on a run. See the quit control in the header. */
+  const [quitting, setQuitting] = useState(false);
   /**
    * Whether a sound played right now would actually be heard. A tester could not tell
    * the toggle apart from a browser that had simply never let the audio start, so the
@@ -21,8 +23,18 @@ export default function App() {
    */
   const audio = useSyncExternalStore(subscribeAudio, audioState);
 
+  /**
+   * With the sound off, never open an audio context at all. On iOS opening one claims
+   * the playback audio session, which is what stops the ringer switch muting the game,
+   * and it is also what interrupts whatever the phone was already playing. Nobody who
+   * turned the sound off should lose their podcast to a silent game.
+   */
+  useEffect(() => { setSoundEnabled(g.soundOn); }, [g.soundOn]);
+
   if (new URLSearchParams(window.location.search).has('debug')) return <DataInspector />;
 
+  /** A run is live from the first spin screen until the report is closed. */
+  const inRun = g.entered && g.phase !== 'setup';
   const pool = g.currentTeamId ? g.currentPool() : [];
   const team = g.currentTeamId ? getTeam(g.currentTeamId) : null;
   const filledCount = ATTRIBUTE_SETS[g.position].filter((k) => g.slots[k]).length;
@@ -32,13 +44,21 @@ export default function App() {
     <div className="min-h-full">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-turf-900/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <button onClick={g.abandonRun} className="text-left">
+          <button
+            onClick={() => (inRun ? setQuitting(true) : g.abandonRun())}
+            className="text-left"
+          >
             <h1 className="font-display text-2xl leading-none tracking-tighter uppercase sm:text-3xl">
               Mega<span className="text-hazard">tron</span>
             </h1>
           </button>
 
-          <div className="flex items-center gap-2 font-mono text-[10px]">
+          {/*
+            Wraps rather than overflows. With a run live, the sound blocked and the quit
+            button up, this row is 404px of chips inside a 390px phone, and a header that
+            cannot wrap simply cuts the last one off the screen.
+          */}
+          <div className="flex flex-wrap items-center justify-end gap-2 font-mono text-[10px]">
             {g.phase !== 'setup' && g.entered && (
               <>
                 <span className="hidden rounded bg-white/8 px-2 py-1 text-white/60 sm:inline">
@@ -53,13 +73,37 @@ export default function App() {
                 </span>
               </>
             )}
+            {/* Short on purpose. At full length it took a whole extra row of a phone header. */}
             {g.soundOn && audio === 'blocked' && (
               <span className="rounded bg-amber-500/20 px-2 py-1 font-bold tracking-wider text-amber-300">
-                TAP ONCE TO START THE SOUND
+                TAP FOR SOUND
               </span>
             )}
+            {/*
+              There was no way out of a run except finishing it. The logo went home, but
+              nothing said so and it did it on one tap with the build still on screen, so
+              it was a trap rather than an exit. This is the exit, it is reachable during
+              a spin, and it asks first.
+            */}
+            {inRun && (
+              <button
+                onClick={() => setQuitting(true)}
+                title="Walk away from this run"
+                className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-red-500/25 hover:text-red-300"
+              >
+                QUIT
+              </button>
+            )}
             <button
-              onClick={() => { primeAudio(); g.toggleSound(); }}
+              onClick={() => {
+                // Enable BEFORE priming. With the sound off no context is opened at all,
+                // so switching it on has to lift that inside the same tap or the browser
+                // will not let the context start until you tap something else.
+                const next = !g.soundOn;
+                setSoundEnabled(next);
+                if (next) primeAudio();
+                g.toggleSound();
+              }}
               aria-pressed={g.soundOn}
               title={g.soundOn ? 'Turn the sound off' : 'Turn the sound on'}
               className={`rounded px-2 py-1 font-bold tracking-wider transition-colors ${
@@ -236,6 +280,50 @@ export default function App() {
             )}
           </div>
         </main>
+      )}
+
+      {/*
+        Confirm, because this is the one button in the app that destroys something. The
+        slot count is in the sentence on purpose: seven of eight filled reads very
+        differently from one of eight, and it is the number that changes your mind.
+      */}
+      {quitting && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Abandon this run"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-turf-950/85 px-4 backdrop-blur-sm"
+          onClick={() => setQuitting(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border-2 border-white/20 bg-turf-900 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-display text-2xl tracking-tight uppercase">
+              {g.phase === 'results' ? 'Close the report?' : 'Walk away from him?'}
+            </h2>
+            <p className="mt-2 font-mono text-[11px] leading-relaxed text-white/55">
+              {g.phase === 'results'
+                ? 'The report goes away and the run goes with it. Copy the link first if you want to keep the seed.'
+                : `He is ${filledCount} of ${totalSlots} slots built. Leaving deletes him, and the seed goes too. There is no picking this one back up.`}
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                autoFocus
+                onClick={() => setQuitting(false)}
+                className="flex-1 rounded-lg bg-hazard px-4 py-3 font-display text-lg tracking-wide text-turf-950 uppercase"
+              >
+                {g.phase === 'results' ? 'Stay here' : 'Keep playing'}
+              </button>
+              <button
+                onClick={() => { setQuitting(false); g.abandonRun(); }}
+                className="rounded-lg border-2 border-red-500/60 px-4 py-3 font-display text-lg tracking-wide text-red-300 uppercase hover:bg-red-500/15"
+              >
+                Abandon
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <footer className="mt-8 border-t border-white/10 px-4 py-6 text-center font-mono text-[10px] leading-relaxed text-white/30">

@@ -64,8 +64,8 @@ export const OL_ATTRIBUTES: AttributeKey[] = ['passBlock', 'runBlock', 'strength
  * These are the words on screen and nothing else. The attribute KEYS underneath are
  * load-bearing across a thousand player rows, the scoring weights and every verification
  * suite, so a label that reads wrong gets fixed here rather than by renaming a key.
- * "hands" is CATCHING and "processing" is READS because that is what football people
- * actually say, and neither key moved an inch.
+ * "hands" is CATCHING, "processing" is READS and "burst" is ACCELERATION because that is
+ * what football people actually say, and not one of those keys moved an inch.
  */
 export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   armStrength: 'ARM STRENGTH',
@@ -76,7 +76,7 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   processing: 'READS',
   clutch: 'CLUTCH',
   speed: 'SPEED',
-  burst: 'BURST',
+  burst: 'ACCELERATION',
   juke: 'JUKE',
   power: 'POWER',
   vision: 'VISION',
@@ -96,10 +96,17 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   durability: 'DURABILITY',
 };
 
-/** Three-letter labels for tight spaces. */
+/**
+ * Short labels for tight spaces. Display only, same as the table above.
+ *
+ * ACC appears twice, for accuracy and for acceleration, and that is deliberate rather
+ * than an oversight. Both are what a football card calls them, and no screen can show
+ * the two together: accuracy only exists on a quarterback and acceleration only on a
+ * running back, so nothing ever renders both sets at once.
+ */
 export const ATTRIBUTE_ABBR: Record<AttributeKey, string> = {
   armStrength: 'ARM', accuracy: 'ACC', deepBall: 'DEEP', pocketPresence: 'PKT',
-  mobility: 'MOB', processing: 'RDS', clutch: 'CLT', speed: 'SPD', burst: 'BRS',
+  mobility: 'MOB', processing: 'RDS', clutch: 'CLT', speed: 'SPD', burst: 'ACC',
   juke: 'JKE', power: 'PWR', vision: 'VIS', contactBalance: 'BAL', hands: 'CAT',
   routeRunning: 'RTE', release: 'RLS', contestedCatch: 'CTC', yac: 'YAC',
   deepThreat: 'DPT', blocking: 'BLK', catchRadius: 'RAD', passBlock: 'PBK',
