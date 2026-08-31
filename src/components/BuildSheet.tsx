@@ -1,4 +1,4 @@
-import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
+import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS, TEAMS_BY_ID, getPool } from '../data';
 import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
 import { ratingColor } from './AttributeBar';
@@ -7,11 +7,48 @@ type Props = {
   position: Position;
   slots: Partial<Record<AttributeKey, FilledSlot>>;
   highlight?: AttributeKey | null;
+  usedPlayerIds?: string[];
+  hardMode?: boolean;
+  visitedTeamIds?: string[];
 };
 
-export function BuildSheet({ position, slots, highlight }: Props) {
+/** A slot is "covered" by a franchise if it still has an unused player with a good one. */
+const GOOD_ENOUGH = 90;
+
+export function BuildSheet({
+  position, slots, highlight, usedPlayerIds = [], hardMode = false, visitedTeamIds = [],
+}: Props) {
   const keys = ATTRIBUTE_SETS[position];
   const filled = keys.filter((k) => slots[k]);
+  const open = keys.filter((k) => !slots[k]);
+
+  /**
+   * The sentence you actually want by the middle of a run. Counting in your head which
+   * franchises can still solve durability is work the screen should be doing for you.
+   */
+  const reachable = TEAMS.filter(
+    (t) => !(hardMode && visitedTeamIds.includes(t.id)),
+  );
+  const scarcity = open
+    .map((key) => ({
+      key,
+      teams: reachable.filter((t) =>
+        getPool(position, t.id).some(
+          (p) => !usedPlayerIds.includes(p.id) && (p.attributes[key] ?? 0) >= GOOD_ENOUGH,
+        ),
+      ).length,
+    }))
+    .sort((a, b) => a.teams - b.teams);
+  const hardest = scarcity[0];
+
+  /**
+   * A bare count does not tell you whether you are in trouble. Sixteen franchises with
+   * three spins left is comfortable; four franchises with two spins left is not. This is
+   * the chance that no franchise able to solve your hardest slot ever comes up again.
+   */
+  const risk = hardest && reachable.length
+    ? Math.pow((reachable.length - hardest.teams) / reachable.length, open.length)
+    : 0;
   const avg = filled.length
     ? Math.round(filled.reduce((sum, k) => sum + (slots[k]?.value ?? 0), 0) / filled.length)
     : 0;
@@ -64,6 +101,33 @@ export function BuildSheet({ position, slots, highlight }: Props) {
           );
         })}
       </ul>
+
+      {hardest && (
+        <div className="border-t border-white/10 px-4 py-3">
+          <div className="font-mono text-[10px] tracking-[0.15em] text-white/45">
+            HARDEST SLOT LEFT
+          </div>
+          <p className="mt-1 text-[12px] leading-snug text-white/80">
+            <b className="text-hazard">{ATTRIBUTE_LABELS[hardest.key]}</b>
+            {hardest.teams === 0
+              ? '. Nobody left anywhere has a good one. Take the best you can find.'
+              : hardest.teams === 1
+                ? '. Exactly one franchise can still solve it.'
+                : `. ${hardest.teams} franchises can still solve it.`}
+          </p>
+          <p className="mt-1 font-mono text-[10px] text-white/40">
+            {open.length} spin{open.length === 1 ? '' : 's'} to go
+            {hardMode ? ` · ${reachable.length} teams left` : ''}
+          </p>
+          {risk > 0.2 && (
+            <p className="mt-1.5 rounded bg-red-500/15 px-2 py-1 font-mono text-[10px] text-red-300">
+              {risk > 0.6
+                ? 'You are probably not getting a good one. Start planning around it.'
+                : 'Getting tight. There is a real chance it never comes up again.'}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between border-t border-white/10 px-4 py-3">
         <span className="font-mono text-[10px] tracking-[0.15em] text-white/45">AVG SO FAR</span>

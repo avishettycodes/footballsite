@@ -24,6 +24,19 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
         {pool.map((player) => {
           const spent = usedPlayerIds.includes(player.id);
           const team = getTeam(player.teamId);
+          /*
+            Every card is a pitch and a punchline, and an unmarked row of eight bars is
+            neither. Marking the best and worst makes "elite at one thing, hopeless at
+            another" readable in the second you spend looking at it, which is the whole
+            reason a 38 is funny rather than just short.
+          */
+          const ranked = [...keys].sort(
+            (a, b) => (player.attributes[b] ?? 0) - (player.attributes[a] ?? 0),
+          );
+          const bestKey = ranked[0];
+          const worstKey = ranked[ranked.length - 1];
+          const bestValue = player.attributes[bestKey] ?? 0;
+          const worstValue = player.attributes[worstKey] ?? 0;
           return (
             <article
               key={player.id}
@@ -45,6 +58,18 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
               <p className="px-4 pt-1 text-[12px] leading-snug text-white/55 italic">
                 {spent ? 'You already took something off him. Move on.' : player.blurb}
               </p>
+              {!spent && (
+                <p className="px-4 pt-1.5 font-mono text-[10px] tracking-wide">
+                  <span style={{ color: ratingColor(bestValue) }}>
+                    ▲ {ATTRIBUTE_LABELS[bestKey]} {bestValue}
+                  </span>
+                  {worstValue <= 60 && (
+                    <span className="ml-3 text-red-400">
+                      ▼ {ATTRIBUTE_LABELS[worstKey]} {worstValue}
+                    </span>
+                  )}
+                </p>
+              )}
 
               <div className="mt-2 grid grid-cols-2 gap-1 px-3 pb-3">
                 {keys.map((key) => {
@@ -70,6 +95,7 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
                       title={taken ? 'You already filled that slot' : ATTRIBUTE_LABELS[key]}
                     >
                       <span className="truncate font-mono text-[9px] tracking-wider">
+                        {key === bestKey && !disabled && !active ? '▲ ' : ''}
                         {ATTRIBUTE_LABELS[key]}
                       </span>
                       <span

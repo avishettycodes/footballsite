@@ -193,7 +193,14 @@ export default function App() {
           {/* Sidebar on desktop, drawer on phones. */}
           <aside className={`hidden ${g.phase === 'results' ? '' : 'lg:block'}`}>
             <div className="sticky top-20">
-              <BuildSheet position={g.position} slots={g.slots} highlight={hover} />
+              <BuildSheet
+                position={g.position}
+                slots={g.slots}
+                highlight={hover}
+                usedPlayerIds={g.usedPlayerIds}
+                hardMode={g.hardMode}
+                visitedTeamIds={g.visitedTeamIds}
+              />
             </div>
           </aside>
 
@@ -206,7 +213,14 @@ export default function App() {
             </button>
             {sheetOpen && (
               <div className="mt-2">
-                <BuildSheet position={g.position} slots={g.slots} highlight={hover} />
+                <BuildSheet
+                  position={g.position}
+                  slots={g.slots}
+                  highlight={hover}
+                  usedPlayerIds={g.usedPlayerIds}
+                  hardMode={g.hardMode}
+                  visitedTeamIds={g.visitedTeamIds}
+                />
               </div>
             )}
           </div>
