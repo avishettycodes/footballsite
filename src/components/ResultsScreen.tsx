@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import type { Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { accoladeDefs, superBowlOdds } from '../lib/scoring';
-import type { CareerResult } from '../lib/scoring';
+import { GATES, accoladeDefs, superBowlOdds } from '../lib/scoring';
+import type { AccoladeId, CareerResult } from '../lib/scoring';
 import { deflate, fanfare, heartbeat } from '../lib/audio';
 import { ratingColor } from './AttributeBar';
 
@@ -21,6 +21,48 @@ type Props = {
 
 /** Reveal stages. The OUTCOME is already decided — this only paces the telling. */
 type Stage = 'overall' | 'rolling' | 'ring' | 'done';
+
+/**
+ * How close he came, in words, never in numbers.
+ *
+ * This screen used to print the requirement straight off the accolade definition, so
+ * "WHAT HE MISSED OUT ON" read "Offensive Player of the Year: Overall 94+ with 4 traits
+ * at 95 or better". That turns a game into a spec sheet. Nobody tells you what 17-0 or
+ * 82-0 needs either, and finding out by playing is the whole appeal.
+ *
+ * The gates are still READ here to work out how near he was. They are simply never
+ * shown. The requirement strings on the definitions stay where they are, unused by the
+ * UI, because they are what the calibration script reports against.
+ */
+function nearness(gap: number): string {
+  if (gap <= 1) return 'He missed it by a hair.';
+  if (gap <= 3) return 'He was close, and close is not what the voters reward.';
+  if (gap <= 7) return 'Close enough to argue about at the bar. Not close enough to win it.';
+  return 'He was never in that conversation.';
+}
+
+function missedBecause(id: AccoladeId, career: CareerResult, durability: number): string {
+  switch (id) {
+    case 'proBowl':
+      return nearness(GATES.proBowl - career.overall);
+    case 'allPro':
+      return nearness(GATES.allPro - career.overall);
+    case 'mvp':
+      return nearness(GATES.mvp - career.overall);
+    case 'opoy':
+      return career.overall >= GATES.opoy
+        ? 'The rating was there. They wanted more of him at the very top of the league.'
+        : nearness(GATES.opoy - career.overall);
+    case 'record':
+      return durability < GATES.recordDurability
+        ? 'He was not on the field enough to chase it.'
+        : nearness(GATES.recordOverall - career.overall);
+    case 'superBowl':
+      return 'The coin did not come up for him.';
+    case 'hof':
+      return 'Not enough on the mantelpiece to get him in.';
+  }
+}
 
 export function ResultsScreen({
   position, slots, career, seed, hardMode, creationName, onName, onRestart, soundOn,
@@ -80,7 +122,7 @@ export function ResultsScreen({
             <input
               value={creationName}
               onChange={(e) => onName(e.target.value)}
-              placeholder="NAME YOUR GUY"
+              placeholder="NAME YOUR PLAYER"
               className="w-full bg-transparent font-display text-3xl leading-none tracking-tighter uppercase placeholder:text-white/25 focus:outline-none sm:text-5xl"
             />
             <div className="mt-1 font-mono text-[11px] tracking-[0.2em] text-white/40">
@@ -134,7 +176,7 @@ export function ResultsScreen({
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
             <span>AVERAGE OF THE EIGHT <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
             <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
-            <span>TRAITS AT 95+ <b className="text-white/75">{career.breakdown.eliteCount}</b></span>
+            <span>ELITE TRAITS <b className="text-white/75">{career.breakdown.eliteCount}</b></span>
           </div>
         </div>
 
@@ -236,13 +278,20 @@ export function ResultsScreen({
               <div className="mt-1 font-display text-2xl tracking-tight uppercase sm:text-3xl">
                 {career.superBowl.won ? 'Super Bowl Champion' : 'Never won the big one'}
               </div>
+              {/*
+                This used to read "39% odds · rolled 88.1", and a tester asked why it
+                said 88 when his average was 93. Two bare numbers side by side, one a
+                rating and one a coin, and nothing on screen saying which was which. The
+                coin is now a sentence about a coin, so it cannot be read as a rating.
+              */}
               <div className="mt-1 font-mono text-[11px] text-white/45">
-                {(odds * 100).toFixed(0)}% odds · rolled {(career.superBowl.roll * 100).toFixed(1)}
+                He needed the coin to come in under {(odds * 100).toFixed(0)} out of 100.
+                It came up {(career.superBowl.roll * 100).toFixed(0)}.
                 {career.superBowl.won
-                  ? ' · he got there'
+                  ? ' He got there.'
                   : career.overall >= 92
-                    ? ' · ninety plus overall and he never got a ring. That one stings.'
-                    : ' · he was never really in it'}
+                    ? ' Ninety plus overall and no ring. That one stings.'
+                    : ' He was never really in it.'}
               </div>
             </div>
           )}
@@ -258,15 +307,25 @@ export function ResultsScreen({
                   className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 ${
                     d.id === 'hof' ? 'border-hazard bg-hazard/15' : 'border-white/20 bg-white/6'
                   }`}
-                  title={d.requirement}
                 >
                   <span className="text-xl">{d.trophy}</span>
                   <span className="font-display text-sm tracking-tight uppercase">{d.label}</span>
                 </div>
               ))}
+              {/*
+                An empty trophy case is not the same story every time. This line landed
+                on a build carrying four traits at 99 and told him he was nobody, which
+                is the framing we already fixed once at the signature trait level and
+                missed here. A player that good with nothing to show for it was robbed,
+                and the weak link box above has already said by what.
+              */}
               {earned.length === 0 && (
                 <div className="font-display text-xl text-white/40 uppercase">
-                  He never won anything. He was a guy who was on a team.
+                  {career.breakdown.eliteCount >= 3
+                    ? `${career.breakdown.eliteCount} traits at the very top of the league and an empty case. This one was a robbery.`
+                    : career.breakdown.eliteCount >= 1
+                      ? 'A real weapon in there and nothing to show for it.'
+                      : 'The trophy case is empty. Somebody has to play the other games.'}
                 </div>
               )}
               {earned.length > 0 && earned.length < 3 && position === 'TE' && (
@@ -286,7 +345,9 @@ export function ResultsScreen({
                   {missed.map((d) => (
                     <li key={d.id} className="font-mono text-[11px] text-white/35">
                       <span className="opacity-40">{d.trophy}</span> {d.label}:{' '}
-                      <span className="text-white/25">{d.requirement}</span>
+                      <span className="text-white/25">
+                        {missedBecause(d.id, career, slots.durability?.value ?? 0)}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -298,8 +359,8 @@ export function ResultsScreen({
 
       {stage === 'done' && (
         <p className="mt-4 text-center font-mono text-[10px] leading-relaxed text-white/35">
-          The seed replays this exact run, spin for spin. If something felt off, send it
-          to somebody along with the seed and they can see precisely what you saw.
+          The seed replays this exact run, spin for spin. Send it to somebody and they
+          face the identical wheel, so you get to find out who builds the better player.
         </p>
       )}
 
@@ -309,13 +370,13 @@ export function ResultsScreen({
             onClick={onRestart}
             className="flex-1 rounded-lg bg-hazard px-6 py-4 font-display text-2xl tracking-tight text-turf-950 uppercase transition-transform hover:scale-[1.02]"
           >
-            Build another guy
+            Build another player
           </button>
           <button
             onClick={() => {
               const url = `${window.location.origin}${window.location.pathname}?seed=${seed}`;
               void navigator.clipboard?.writeText(
-                `${creationName || 'My guy'} came out at ${career.overall} overall with ${earned.length} accolade(s). ` +
+                `${creationName || 'My player'} came out at ${career.overall} overall with ${earned.length} accolade(s). ` +
                 `Same seed gives you the same spins, so see if you can do better: ${url}`,
               );
               setCopied(true);

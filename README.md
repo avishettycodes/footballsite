@@ -5,8 +5,8 @@ on a franchise, you look at every notable player at your position in that team's
 and you steal exactly one attribute from one of them. Repeat until every slot is full,
 then find out what your creation actually did with his career.
 
-Take Derrick Henry's power, Chris Johnson's speed, Le'Veon Bell's vision, and then
-discover on the last spin that you have nobody left with hands.
+Take Derrick Henry's power, Chris Johnson's speed and Le'Veon Bell's vision, then
+discover on the last spin that you have nobody left who can catch.
 
 ## Running it
 
@@ -23,6 +23,14 @@ Solo build mode is playable end to end. Pick a position, spin, steal attributes,
 simulate a career. The wheel, the build sheet, the scoring engine, the accolades and the
 Super Bowl roll are all in.
 
+Hard mode means no rerolls. Every franchise stays in the wheel the whole way in both
+modes, so landing on the same roster twice is a legal and fairly common outcome, and in
+hard mode you have no way to talk your way out of it.
+
+The results screen never tells you what a trophy required. It says how close he came in
+words instead. Learning the shape of the thresholds by playing is the point, and 17-0
+does not print its own rulebook either.
+
 Full offense mode, the Hall of Builds history, the share card and the admin editor are
 not built yet.
 
@@ -34,8 +42,14 @@ positions, seven to nine per franchise per position.
 
 Ratings are deliberately spiky. A player is in the pool because of one number, so Chris
 Johnson has 99 speed and 60 power, Jimmy Graham has a 99 catch radius and 40 blocking,
-and Gus Edwards has 38 hands. Some cards are bad on purpose, because a cold spin should
+and Gus Edwards catches at 38. Some cards are bad on purpose, because a cold spin should
 hurt.
+
+Attribute KEYS in the data files are load-bearing across every player row, the scoring
+weights and the whole verification suite. The words on screen come from
+`ATTRIBUTE_LABELS` in `src/data/types.ts`, so a label that reads wrong gets fixed there
+rather than by renaming a key. That is why the key is still `hands` while the screen says
+CATCHING, and still `processing` while the screen says READS.
 
 ## Deploying
 
@@ -56,7 +70,7 @@ Set `VITE_FEEDBACK_URL` to a form link and a feedback line appears in the footer
 npm run verify
 ```
 
-That runs four suites, and they check more than types.
+That runs five suites, and they check more than types.
 
 - **data** looks for duplicate ids, out of range values and thin pools, and it flags
   dead cards, meaning players with no elite trait and no funny weakness. It also measures
@@ -64,12 +78,22 @@ That runs four suites, and they check more than types.
   pick, you hear about it.
 - **rng** proves the `?seed=` contract. The same seed replays exactly, different seeds
   diverge, and a run serialized mid-game resumes on the same sequence.
-- **run** drives the real store through complete games and fuzzes 400 seeds across both
-  difficulty modes to prove no run can strand. It also proves the Super Bowl roll cannot
-  be re-rolled by refreshing.
+- **run** drives the real store through complete games and fuzzes 1500 seeds per
+  position across both difficulty modes to prove no run can strand. Because a greedy
+  player never actually drains a roster, it also forces the deadlock case on purpose,
+  marking every franchise but one as spent and asserting the free respin carries the run
+  every time. It proves the Super Bowl roll cannot be re-rolled by refreshing.
 - **scoring** plays thousands of games with four bot policies of increasing skill and
   asserts that every accolade gets more likely as you move up that ladder. If careless
   play ever out-earns careful play, it fails.
+- **audio** checks the sound without anybody having to hear it. A tester reported total
+  silence on a phone with the toggle either way, and there were two separate causes. An
+  AudioContext created or suspended without a user gesture behind it stays suspended with
+  its clock frozen, so notes queue at zero instead of playing, and only a gesture can
+  bring it back. And a phone speaker gives you almost nothing under 500Hz, so the old
+  70Hz landing thud and 90Hz heartbeat were not quiet, they were absent. This drives the
+  real module against a fake WebAudio to prove the recovery path works, and walks the
+  voice table to prove every sound still carries on a small speaker.
 
 `src/lib/scoring.ts` is fenced. The weights and gates in there are calibrated against
 measured distributions, so if `verify:scoring` fails after new data lands, the data is

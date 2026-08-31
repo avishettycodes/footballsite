@@ -49,7 +49,7 @@ export default function DataInspector() {
               Mega<span className="text-hazard">tron</span>
             </h1>
             <p className="mt-1 font-mono text-[11px] tracking-[0.2em] text-white/40 uppercase">
-              Build a guy · Steal his best part
+              Build a player · Steal his best part
             </p>
           </div>
           <div className="flex items-center gap-2 font-mono text-[11px]">
