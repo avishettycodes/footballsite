@@ -26,6 +26,7 @@ export function ResultsScreen({
   position, slots, career, seed, hardMode, creationName, onName, onRestart, soundOn,
 }: Props) {
   const [stage, setStage] = useState<Stage>('overall');
+  const [copied, setCopied] = useState(false);
   const [counter, setCounter] = useState(0);
   const defs = accoladeDefs(position);
   const odds = superBowlOdds(career.overall);
@@ -296,7 +297,14 @@ export function ResultsScreen({
       </div>
 
       {stage === 'done' && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <p className="mt-4 text-center font-mono text-[10px] leading-relaxed text-white/35">
+          The seed replays this exact run, spin for spin. If something felt off, send it
+          to somebody along with the seed and they can see precisely what you saw.
+        </p>
+      )}
+
+      {stage === 'done' && (
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             onClick={onRestart}
             className="flex-1 rounded-lg bg-hazard px-6 py-4 font-display text-2xl tracking-tight text-turf-950 uppercase transition-transform hover:scale-[1.02]"
@@ -307,12 +315,15 @@ export function ResultsScreen({
             onClick={() => {
               const url = `${window.location.origin}${window.location.pathname}?seed=${seed}`;
               void navigator.clipboard?.writeText(
-                `${creationName || 'My guy'} came out at ${career.overall} overall with ${earned.length} accolade(s). Same spins, see if you can do better: ${url}`,
+                `${creationName || 'My guy'} came out at ${career.overall} overall with ${earned.length} accolade(s). ` +
+                `Same seed gives you the same spins, so see if you can do better: ${url}`,
               );
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 2600);
             }}
             className="rounded-lg border-2 border-white/25 px-6 py-4 font-display text-2xl tracking-tight uppercase hover:bg-white/10"
           >
-            Copy seed
+            {copied ? 'Copied' : 'Copy seed'}
           </button>
         </div>
       )}

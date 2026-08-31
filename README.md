@@ -37,6 +37,19 @@ Johnson has 99 speed and 60 power, Jimmy Graham has a 99 catch radius and 40 blo
 and Gus Edwards has 38 hands. Some cards are bad on purpose, because a cold spin should
 hurt.
 
+## Deploying
+
+It is a static Vite build with no backend, so Vercel handles it with no configuration.
+Point a project at this repo, take the detected settings, and every push to main
+redeploys.
+
+`npm run build` runs the full verification suite before it compiles, so a data or
+calibration regression fails the deploy rather than shipping. That costs about three
+seconds; the suite is deterministic, so it will never fail you at random. Use
+`npm run build:only` to skip it locally.
+
+Set `VITE_FEEDBACK_URL` to a form link and a feedback line appears in the footer.
+
 ## Verification
 
 ```bash

@@ -231,8 +231,22 @@ export default function App() {
         Megatron is a fan project. It has nothing to do with the NFL and no team has endorsed
         it. Team names are here so you know whose history you are digging through. Every
         rating was written by hand for fun, and none of it comes from a real scouting source.
-        If you disagree with a number, you are probably right.{' '}
-        <a href="?debug" className="underline hover:text-white/50">data inspector</a>
+        If you disagree with a number, you are probably right.
+        <br />
+        {import.meta.env.VITE_FEEDBACK_URL && (
+          <>
+            <a
+              href={import.meta.env.VITE_FEEDBACK_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block text-hazard/70 underline hover:text-hazard"
+            >
+              Something feel wrong? Tell me about it
+            </a>{' '}
+            ·{' '}
+          </>
+        )}
+        <a href="?debug" className="mt-2 inline-block underline hover:text-white/50">data inspector</a>
       </footer>
     </div>
   );
