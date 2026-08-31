@@ -10,10 +10,11 @@
     "preview": "vite preview",
     "verify:data": "jiti scripts/verify-data.ts",
     "verify:rng": "jiti scripts/verify-rng.ts",
-    "verify": "npm run verify:data && npm run verify:rng && npm run verify:run && npm run verify:scoring && npm run verify:copy",
+    "verify": "npm run verify:data && npm run verify:rng && npm run verify:run && npm run verify:scoring && npm run verify:audio && npm run verify:copy",
     "verify:run": "jiti scripts/verify-run.ts",
     "verify:scoring": "jiti scripts/verify-scoring.ts",
     "verify:copy": "jiti scripts/verify-copy.ts",
+    "verify:audio": "jiti scripts/verify-audio.ts",
     "build:only": "tsc -b && vite build"
   },
   "dependencies": {
