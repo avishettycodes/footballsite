@@ -6,8 +6,21 @@ import { tick, thunk } from '../lib/audio';
 
 const ITEM_H = 84;
 const REEL_LEN = 44;
-/** Long, slow tail. Fast off the line, then an agonizing crawl into the stop. */
-const SPIN_MS = 3400;
+
+/**
+ * Long, slow tail. Fast off the line, then a crawl into the stop.
+ *
+ * 3400 is a guess that has never been felt by anyone. For what it is worth, the last
+ * tenth of the distance eats 37% of the spin and the final second holds only three
+ * ticks, so if it drags anywhere it will drag there. Add ?spin=2600 to the URL to try a
+ * different number without editing anything, so the two can be compared back to back.
+ */
+const DEFAULT_SPIN_MS = 3400;
+const SPIN_MS = (() => {
+  if (typeof window === 'undefined') return DEFAULT_SPIN_MS;
+  const raw = Number(new URLSearchParams(window.location.search).get('spin'));
+  return Number.isFinite(raw) && raw >= 400 && raw <= 8000 ? raw : DEFAULT_SPIN_MS;
+})();
 const EASE: [number, number, number, number] = [0.08, 0.82, 0.16, 1];
 
 function bezierY(t: number, [, p1y, , p3y]: [number, number, number, number]) {
@@ -34,6 +47,8 @@ export function SlotMachine({
   const [reel, setReel] = useState<Team[]>([]);
   const [flooding, setFlooding] = useState(false);
   const timers = useRef<number[]>([]);
+  /** Set by a tap so the running animation knows to stop crawling and just land. */
+  const skipRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!spinNonce || !targetTeamId) return;
@@ -67,12 +82,31 @@ export function SlotMachine({
 
     const controls = animate(node, { y: [0, target] }, { duration: SPIN_MS / 1000, ease: EASE });
 
-    controls.then(() => {
+    const finish = () => {
       // Hard snap: a short overshoot and settle so it stops like a machine, not a tween.
       animate(node, { y: [target, target + 9, target] }, { duration: 0.19, ease: 'easeOut' });
       if (soundOn) thunk();
       setFlooding(true);
       window.setTimeout(onLanded, 420);
+    };
+
+    /**
+     * Tap to cut the tail. The first spin of a run is the one you want to watch. By the
+     * sixth you already know which franchises you need and the long crawl is just time.
+     * The landing is already decided, so skipping changes nothing except how long you
+     * wait for it.
+     */
+    skipRef.current = () => {
+      skipRef.current = null;
+      timers.current.forEach(clearTimeout);
+      controls.stop();
+      animate(node, { y: target }, { duration: 0.14, ease: 'easeOut' }).then(finish);
+    };
+
+    controls.then(() => {
+      if (!skipRef.current) return;
+      skipRef.current = null;
+      finish();
     });
 
     return () => {
@@ -88,7 +122,12 @@ export function SlotMachine({
   return (
     <div className="relative">
       <div
-        className="relative overflow-hidden rounded-lg border-2 border-white/15 bg-turf-900"
+        onClick={() => skipRef.current?.()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') skipRef.current?.(); }}
+        title="Tap to skip to the landing"
+        className="relative cursor-pointer overflow-hidden rounded-lg border-2 border-white/15 bg-turf-900"
         style={{ height: ITEM_H }}
       >
         <div ref={reelRef} className="will-change-transform">
@@ -126,6 +165,9 @@ export function SlotMachine({
         <div className="pointer-events-none absolute inset-0 border-y-2 border-hazard/70" />
         <div className="pointer-events-none absolute top-1/2 -left-1 h-0 w-0 -translate-y-1/2 border-y-8 border-l-8 border-y-transparent border-l-hazard" />
         <div className="pointer-events-none absolute top-1/2 -right-1 h-0 w-0 -translate-y-1/2 border-y-8 border-r-8 border-y-transparent border-r-hazard" />
+        <div className="pointer-events-none absolute right-2 bottom-1 font-mono text-[8px] tracking-widest text-white/35">
+          TAP TO SKIP
+        </div>
       </div>
 
       {/* Team colors flooding the screen on the hard stop. */}
