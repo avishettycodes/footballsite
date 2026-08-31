@@ -58,14 +58,22 @@ export const ATTRIBUTE_SETS: Record<Position, AttributeKey[]> = {
 
 export const OL_ATTRIBUTES: AttributeKey[] = ['passBlock', 'runBlock', 'strength', 'agility', 'durability'];
 
-/** Short broadcast-style labels. */
+/**
+ * Short broadcast-style labels. DISPLAY ONLY.
+ *
+ * These are the words on screen and nothing else. The attribute KEYS underneath are
+ * load-bearing across a thousand player rows, the scoring weights and every verification
+ * suite, so a label that reads wrong gets fixed here rather than by renaming a key.
+ * "hands" is CATCHING and "processing" is READS because that is what football people
+ * actually say, and neither key moved an inch.
+ */
 export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   armStrength: 'ARM STRENGTH',
   accuracy: 'ACCURACY',
   deepBall: 'DEEP BALL',
   pocketPresence: 'POCKET PRESENCE',
   mobility: 'MOBILITY',
-  processing: 'PROCESSING',
+  processing: 'READS',
   clutch: 'CLUTCH',
   speed: 'SPEED',
   burst: 'BURST',
@@ -73,7 +81,7 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   power: 'POWER',
   vision: 'VISION',
   contactBalance: 'CONTACT BALANCE',
-  hands: 'HANDS',
+  hands: 'CATCHING',
   routeRunning: 'ROUTE RUNNING',
   release: 'RELEASE',
   contestedCatch: 'CONTESTED CATCH',
@@ -91,8 +99,8 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
 /** Three-letter labels for tight spaces. */
 export const ATTRIBUTE_ABBR: Record<AttributeKey, string> = {
   armStrength: 'ARM', accuracy: 'ACC', deepBall: 'DEEP', pocketPresence: 'PKT',
-  mobility: 'MOB', processing: 'PRO', clutch: 'CLT', speed: 'SPD', burst: 'BRS',
-  juke: 'JKE', power: 'PWR', vision: 'VIS', contactBalance: 'BAL', hands: 'HND',
+  mobility: 'MOB', processing: 'RDS', clutch: 'CLT', speed: 'SPD', burst: 'BRS',
+  juke: 'JKE', power: 'PWR', vision: 'VIS', contactBalance: 'BAL', hands: 'CAT',
   routeRunning: 'RTE', release: 'RLS', contestedCatch: 'CTC', yac: 'YAC',
   deepThreat: 'DPT', blocking: 'BLK', catchRadius: 'RAD', passBlock: 'PBK',
   runBlock: 'RBK', strength: 'STR', agility: 'AGI', durability: 'DUR',
