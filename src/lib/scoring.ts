@@ -135,6 +135,11 @@ export type AccoladeDef = {
   requirement: string;
 };
 
+/** How many 95+ traits OPOY asks for at this position. See opoyEliteShare. */
+export function eliteTraitsRequired(position: Position): number {
+  return Math.floor(ATTRIBUTE_SETS[position].length * GATES.opoyEliteShare);
+}
+
 export function recordLabel(position: Position): string {
   if (position === 'QB') return 'Passing Record';
   if (position === 'RB') return 'Rushing Record';
@@ -172,7 +177,22 @@ export const GATES = {
   proBowl: 88,
   allPro: 92,
   opoy: 94,
-  opoyElites: 5,
+  /**
+   * OPOY's elite-trait requirement, expressed as a SHARE of the position's attribute
+   * count rather than a fixed number.
+   *
+   * The share comes from the eight-attribute positions, where five of eight was the
+   * calibrated answer, so 5/8 = 0.625. That fraction is the thing being carried across,
+   * not the number five.
+   *
+   * Rounding is FLOOR, and the reason is principle rather than outcome. A position with
+   * fewer slots should need fewer elite traits, not the same number. Seven times 0.625
+   * is 4.375, and rounding that up would land back on five, which would mean tight ends
+   * needing five of seven at the position with by far the fewest elite traits in the
+   * dataset. That is not a hard mode, it is arithmetically close to impossible, and it
+   * produced a grand slam rate of one run in a thousand.
+   */
+  opoyEliteShare: 0.625,
   mvp: 95,
   recordOverall: 94,
   recordDurability: 96,
@@ -228,7 +248,7 @@ export function simulateCareer(
 
   const proBowl = overall >= GATES.proBowl;
   const allPro = overall >= GATES.allPro;
-  const opoy = overall >= GATES.opoy && eliteCount >= GATES.opoyElites;
+  const opoy = overall >= GATES.opoy && eliteCount >= eliteTraitsRequired(position);
   const mvp = overall >= GATES.mvp;
   const record = durability >= GATES.recordDurability && overall >= GATES.recordOverall;
 
@@ -260,7 +280,7 @@ export function accoladeDefs(position: Position): AccoladeDef[] {
   return [
     { id: 'proBowl', label: 'Pro Bowl', trophy: '🏈', requirement: `Overall ${GATES.proBowl}+` },
     { id: 'allPro', label: 'First-Team All-Pro', trophy: '⭐', requirement: `Overall ${GATES.allPro}+` },
-    { id: 'opoy', label: 'Offensive Player of the Year', trophy: '🔥', requirement: `Overall ${GATES.opoy}+ with ${GATES.opoyElites} traits at 95 or better` },
+    { id: 'opoy', label: 'Offensive Player of the Year', trophy: '🔥', requirement: `Overall ${GATES.opoy}+ with ${eliteTraitsRequired(position)} traits at 95 or better` },
     { id: 'mvp', label: 'MVP', trophy: '👑', requirement: `Overall ${GATES.mvp}+` },
     { id: 'record', label: recordLabel(position), trophy: '📜', requirement: `Overall ${GATES.recordOverall}+ and durability ${GATES.recordDurability}+, since you cannot break a record from the training room` },
     { id: 'superBowl', label: 'Super Bowl', trophy: '💍', requirement: 'Down to the roll' },
