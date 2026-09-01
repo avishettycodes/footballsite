@@ -11,7 +11,7 @@
  *   random  any legal pick at all. The floor. Should win basically nothing.
  *   fan     goes for the famous name in the pool and takes his best open trait. This is
  *           how people really lose. You grab Barry Sanders on spin two and then you are
- *           sitting there on spin seven with no hands and no durability left.
+ *           sitting there on the last spin with no hands and nobody left who can catch.
  *   human   takes the biggest number on the board. Sensible but short-sighted, and
  *           roughly how most people will play.
  *   sharp   plays the actual objective. For every legal pick it fills the slots it has
@@ -30,7 +30,7 @@ import { useGame } from '../src/store/gameStore';
 import { ATTRIBUTE_SETS, TEAMS, getPool, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import { nextRandom } from '../src/lib/rng';
-import { WEAK_LINK_SHARE, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
+import { RECORD_YARDS, WEAK_LINK_SHARE, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
 import type { AccoladeId } from '../src/lib/scoring';
 
 type Policy = 'random' | 'fan' | 'human' | 'sharp';
@@ -51,43 +51,46 @@ const TOLERANCE = 1.5;
  * thresholds joined by AND, which makes it violently sensitive to small differences.
  * Quarterbacks finish about a point below running backs on average, and that single
  * point turns into a two to three times difference in slam rate. There is no set of
- * position-blind gates that lands both inside a tight band, and there is no gate value
- * between 95 and 96 to split the difference with, because the rating is an integer.
+ * position-blind gates that lands every pool inside a tight band, and there is no gate
+ * value between 95 and 96 to split the difference with, because the rating is an integer.
  *
  * Rather than bolt a per-position offset onto the gates, which is the special-casing we
- * just removed from MVP, the band covers the honest spread. Both positions still meet
- * the actual goal. A sharp quarterback run slams about once every twenty attempts and a
- * sharp running back about once every seven, and neither of those is a lottery.
+ * removed from MVP for good reason, the bands cover the honest spread and the GATES stay
+ * identical everywhere. What differs is only what we expect each pool to produce.
  *
- * Worth revisiting once WR and TE exist, when there are four distributions to look at
- * rather than two.
- */
-/**
- * RESOLVED: the running back pool was never the outlier.
+ * WHAT MOVED WHEN THREE ATTRIBUTES CAME OFF THE BUILD SHEET, and it moved twice.
  *
- * This block used to say the RB and QB gap was undecided. With all four positions in,
- * it is decided. Sharp-policy medians come out QB 94, RB 94, WR 95, TE 91. Receivers
- * moved up to join the first two once their durability was rated from actual careers
- * instead of guessed, and quarterbacks sit a point below. Three positions cluster.
+ * Durability was the scarcest slot in the game. Franchise pools offer a good one far less
+ * often than they offer a good anything else, which is why the note further down says the
+ * bot has to bank one early. Deleting it took the main source of holes out of every
+ * build, the weak link anchor stopped biting, and every rating rose about a point. Gates
+ * of 88, 92, 94 and 95 measured against that new distribution handed a sensible player an
+ * MVP 27% of the time and OPOY 47%, which is halfway back to the meaningless trophies
+ * this whole file exists to prevent. So all four moved up one, to 89, 93, 95 and 96.
  *
- * Tight end is alone at the bottom and has a structural reason for it. It is the only
- * seven-attribute position, and it carries 0.21 elite traits per player against 0.44 to
- * 0.58 everywhere else. That is not an authoring gap. Three separate passes went looking
- * for one, raising pocket-presence-style stinginess, spiking the specialists so a pure
- * blocker's one job actually spikes, and rating availability honestly. Each pass helped
- * a little and none of them closed it, because the position genuinely has fewer elite
- * players in its history than wide receiver does. Forcing the rest would mean inventing
- * tight ends who never existed.
+ * That is a genuine difficulty reduction being paid for rather than a knob being turned.
+ * The awards land near where they used to at three of the four positions.
  *
- * So the bands below are per position. The GATES stay identical everywhere, which is the
- * part that matters, because per-position gates are the special-casing that was removed
- * from MVP for good reason. What differs is only what we expect each pool to produce.
+ * THE FOURTH IS TIGHT END AND IT GOT HARDER, which these bands now say out loud. It lost
+ * two of its seven slots and plays a five pick game, so the two worst numbers carry a
+ * proportionally larger share of the rating than anywhere else, and the same gate lift
+ * costs it more. A sensible tight end run made a Pro Bowl 89% of the time before and
+ * makes one 68% of the time now. That is a real change to that position and it is
+ * defensible, since five spins with nowhere to hide a cold one is the harder game, but it
+ * is a change rather than a rounding error.
+ *
+ * QUARTERBACK SITS LOWEST ON THE SLAM and that is the honest cost of the MVP gate. The
+ * slam needs MVP, MVP needs 96, and the quarterback pool runs about a point under the
+ * other two big positions. A sharp quarterback run slams roughly once in forty. That is
+ * the thinnest of the four and it is at the edge of the design goal above, so if it drops
+ * further the answer is the quarterback pool rather than the band.
  */
 type Band = readonly [number, number];
-const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [3, 10], sharp: [4, 17] };
+const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [2, 11], sharp: [1, 15] };
 
 /**
- * Per-position expectations, measured rather than wished for.
+ * Per-position expectations, measured rather than wished for. Measured at RUNS=4000,
+ * where the rarest of these is still a couple of hundred hits.
  *
  * Tight end's numbers are low and that is deliberate rather than a target anyone is
  * happy with. It is worth noting the grand slam requires MVP, and no tight end has ever
@@ -96,9 +99,9 @@ const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [3, 10], sharp: [4, 
  * live design question rather than a solved one.
  */
 const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
-  QB: { human: [3, 10], sharp: [4, 12] },
-  RB: { human: [4, 13], sharp: [10, 20] },
-  WR: { human: [3, 11], sharp: [10, 20] },
+  QB: { human: [2, 7], sharp: [1, 6] },
+  RB: { human: [4, 11], sharp: [4, 12] },
+  WR: { human: [4, 11], sharp: [6, 14] },
   TE: { human: [0, 3], sharp: [0, 3] },
 };
 
@@ -111,21 +114,17 @@ function rnd(): number {
 }
 
 /**
- * What the sharp bot expects to get for a slot it leaves open, taken from the data as
- * the median best value available in a random franchise pool. Durability forecasts low,
- * which is exactly why banking a good one early is worth giving something up for.
- */
-/**
  * How optimistic the bot is about slots it has not reached yet, as a percentile of what
- * franchise pools offer for that attribute.
+ * franchise pools offer for that attribute. The value it expects for an open slot is the
+ * median best number available in a random franchise pool.
  *
  * There is no single right value here, which is itself the finding. At 0.5 the bot is
  * too conservative to chase peaks and loses OPOY at tight end, where the gates sit out
- * in the tail. At 0.65 it stops banking scarce durability early and loses the record at
- * quarterback. The correct optimism depends on how many spins remain and how scarce the
- * slot is, which a point-estimate lookahead cannot model. 0.5 is kept because it is the
- * honest expectation for a single pool, and the limitation is documented at the ladder
- * check below rather than tuned away.
+ * in the tail. At 0.65 it gets greedy about the abundant slots and gives back the record
+ * at quarterback. The correct optimism depends on how many spins remain and how scarce
+ * the slot is, which a point-estimate lookahead cannot model. 0.5 is kept because it is
+ * the honest expectation for a single pool, and the limitation is documented at the
+ * ladder check below rather than tuned away.
  */
 const FORECAST = Number(process.env.FORECAST ?? 0.5);
 
@@ -241,18 +240,24 @@ for (const position of positions) {
   for (const policy of POLICIES) {
     const overalls: number[] = [];
     const weakest: number[] = [];
+    const seasons: number[] = [];
+    const yardage: number[] = [];
     const hits: Record<string, number> = Object.fromEntries(COLUMNS.map((c) => [c, 0]));
 
     for (let i = 0; i < RUNS; i++) {
       const r = playRun(position, `CAL-${position}-${policy}-${i}`, policy, premium);
       overalls.push(r.overall);
       weakest.push(r.breakdown.weakest.value);
+      seasons.push(r.seasons);
+      yardage.push(r.careerYards);
       for (const c of COLUMNS) {
         if (c === 'grandSlam' ? isGrandSlam(r.accolades) : r.accolades[c]) hits[c]++;
       }
     }
 
     overalls.sort((a, b) => a - b);
+    seasons.sort((a, b) => a - b);
+    yardage.sort((a, b) => a - b);
     const mean = overalls.reduce((x, y) => x + y, 0) / RUNS;
     const wMean = weakest.reduce((x, y) => x + y, 0) / RUNS;
 
@@ -261,6 +266,20 @@ for (const position of positions) {
       `    overall  p10 ${quantile(overalls, 0.1)}  p25 ${quantile(overalls, 0.25)}` +
       `  med ${quantile(overalls, 0.5)}  p75 ${quantile(overalls, 0.75)}  p90 ${quantile(overalls, 0.9)}` +
       `  max ${overalls[overalls.length - 1]}  mean ${mean.toFixed(1)}  weakest ${wMean.toFixed(1)}`,
+    );
+    /**
+     * The record gate is a yardage total now rather than a pair of ratings, so the only
+     * way to place it is to look at what careers this position actually produces. The
+     * threshold in RECORD_YARDS is meant to sit up around the p85 of a sensible run,
+     * which is where the old durability gate used to land.
+     */
+    console.log(
+      `    seasons  med ${quantile(seasons, 0.5)}  p90 ${quantile(seasons, 0.9)}  max ${seasons[seasons.length - 1]}` +
+      `   yards  med ${quantile(yardage, 0.5).toLocaleString()}` +
+      `  p75 ${quantile(yardage, 0.75).toLocaleString()}` +
+      `  p85 ${quantile(yardage, 0.85).toLocaleString()}` +
+      `  p95 ${quantile(yardage, 0.95).toLocaleString()}` +
+      `  (gate ${RECORD_YARDS[position].toLocaleString()})`,
     );
 
     rates[policy] = COLUMNS.map((c) => (100 * hits[c]) / RUNS);

@@ -35,11 +35,45 @@ start screen, where opening him replays the whole report as it came out, fully r
 and without sitting through the reveal a second time. Clearing the name takes him back
 out, which is also the undo. Twenty players are kept, newest first.
 
-The report opens on the story rather than the rating. It says which franchise drafted
-him, how many seasons he lasted and which badges he wore on the way, all of it derived
-from the run that already happened rather than rolled. The one sentence that says what
-he actually won is held back until after the Super Bowl reveal, because printing the
-ending above the reveal defeats the reveal.
+## The career report
+
+The report opens on the story rather than the rating, and it reads in six numbered
+sections: the career, the numbers, the uniforms, the build, the Super Bowl and the
+trophy case. The one sentence that says what he actually won is held back until after
+the Super Bowl reveal, because printing the ending above the reveal defeats the reveal.
+
+Everything in it is a pure function of the seed. Nothing but the season count is stored,
+so opening a player out of your hall next month rebuilds the identical draft slot,
+uniforms and stat line without any of it having been written to disk. That is the same
+promise the wheel makes: a `?seed=` link gives two people the same player, not merely
+the same spins.
+
+**Where he went in the draft** is on the badge under his name, as a round, a pick and an
+overall number, or as UNDRAFTED. The board is deliberately a bad guess. It grades an
+estimate of a career that has not happened yet, so a 96 usually goes early and sometimes
+falls to the third round, and neither is a special case anybody wrote. Roughly a third
+of the great ones go after round one, which is about the real rate. Quarterbacks get
+reached for and running backs get pushed down, because both of those really happen.
+
+**How long he lasted** is rolled from his overall against how long players at that level
+really lasted, per position. Running backs get the shortest window and quarterbacks the
+longest, and there is a flameout chance that never quite reaches zero, so a great player
+occasionally gets four years and a knee. That is the whole reason durability is not an
+attribute any more. See `src/lib/career.ts`.
+
+**What he put up** is simulated season by season, with a rookie ramp, a peak about a
+third of the way in and a decline. The bar chart is coloured by whichever uniform he was
+in that year, and his best season is called out, because that is the line people
+actually quote at each other. The positional record is now the yardage total rather than
+a rating threshold, so a player who owns it is holding a number you can see him owning
+it with.
+
+**Whose uniforms he wore** is one to four franchises rather than every one you spun,
+drawn from the ones you raided and weighted by which of them actually needed the
+position. Need is read off their own history: a franchise whose best ever at the spot is
+a journeyman is desperate, one with an all-time great on the wall is not. At the very
+top that stops mattering, because nobody passes on the best player in the class over a
+depth chart.
 
 ## On a phone
 
@@ -118,9 +152,25 @@ API is called, and no licensed dataset is involved. There are 1000 players acros
 positions, seven to nine per franchise per position.
 
 Ratings are deliberately spiky. A player is in the pool because of one number, so Chris
-Johnson has 99 speed and 60 power, Jimmy Graham has a 99 catch radius and 40 blocking,
+Johnson has 99 speed and 60 power, Jimmy Graham catches everything and blocks nobody,
 and Gus Edwards catches at 38. Some cards are bad on purpose, because a cold spin should
 hurt.
+
+The positions are deliberately uneven. A quarterback build is seven picks, a receiver
+seven, a running back six and a tight end five, and a shorter build is a harder build
+because there is nowhere to hide a cold spin.
+
+**Three attributes were deleted and none of them is coming back.** Contact balance moved
+with power at 0.93 correlation and catch radius said what hands and contested work
+already say between them, so both were slots that were really one pick. The independence
+check had been warning about the first one for months, and deleting the attribute is the
+right end of that problem to fix it from rather than raising the ceiling in the check.
+
+Durability left for a different reason. It was not redundant, it was the wrong shape:
+availability is not a trait you shop for off somebody else's career, it is what happens
+to yours. Removing it also removed the scarcest slot in the game and therefore the main
+source of holes, which lifted every rating about a point and cost a full recalibration
+of the gates. That is written up in `src/lib/scoring.ts`.
 
 Attribute KEYS in the data files are load-bearing across every player row, the scoring
 weights and the whole verification suite. The words on screen come from
@@ -148,7 +198,7 @@ Set `VITE_FEEDBACK_URL` to a form link and a feedback line appears in the footer
 npm run verify
 ```
 
-That runs six suites, and they check more than types.
+That runs seven suites, and they check more than types.
 
 - **data** looks for duplicate ids, out of range values and thin pools, and it flags
   dead cards, meaning players with no elite trait and no funny weakness. It also measures
@@ -167,7 +217,24 @@ That runs six suites, and they check more than types.
   every time. It proves the Super Bowl roll cannot be re-rolled by refreshing.
 - **scoring** plays thousands of games with four bot policies of increasing skill and
   asserts that every accolade gets more likely as you move up that ladder. If careless
-  play ever out-earns careful play, it fails.
+  play ever out-earns careful play, it fails. It also reports what careers this pool
+  actually produces, which is what the record thresholds are placed against.
+- **career** drives the length, draft, uniform and stat models tens of thousands of times
+  each. Three kinds of assertion, and the third is the one worth having. Structural ones
+  cannot be argued with: stints have to add up to the career, a pick has to land in a
+  round that exists, a best season has to be one of the seasons. Directional ones are the
+  design: a better player lasts longer, goes earlier, produces more and moves teams less.
+  And the tails, which are what a plausible looking model quietly loses, so they are
+  asserted from both ends. A draft where every good player goes early is not a draft, and
+  a league where nobody's knee ever goes is not a league. Both of those pass every
+  directional check ever written.
+
+  Six deliberate mutations were run against this suite and two of them walked straight
+  through it, which is the only reason it is worth trusting now. A monotonicity check
+  written with `<` accepted a career length that ignored the rating entirely, because a
+  flat line is not less than a flat line. And a check on interceptions compared them
+  across ratings when the claim was about one man's own seasons, so it never touched the
+  thing it was named after. Both are fixed and both mutations now fail it.
 - **audio** checks the sound without anybody having to hear it. A tester reported total
   silence on a phone with the toggle either way, and there turned out to be three
   separate causes. An AudioContext created or suspended without a user gesture behind it

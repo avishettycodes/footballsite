@@ -50,8 +50,17 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
                   <span className="block truncate font-display text-lg leading-tight tracking-tight uppercase">
                     {player.name}
                   </span>
+                  {/*
+                    The season count earns its place here over the seed. Two saved players
+                    at the same position and rating are told apart by what happened to
+                    them, and a seed is a thing you copy rather than a thing you read.
+                    Players saved before careers had a length in them have no season count
+                    on the record, so that half of the line simply drops.
+                  */}
                   <span className="block font-mono text-[10px] tracking-wider text-white/40">
-                    {player.position} · {player.hardMode ? 'HARD · ' : ''}{player.seed}
+                    {player.position}
+                    {typeof player.career.seasons === 'number' && ` · ${player.career.seasons} SEA`}
+                    {player.hardMode && ' · HARD'} · {player.seed}
                   </span>
                 </span>
                 {trophies.length > 0 && (

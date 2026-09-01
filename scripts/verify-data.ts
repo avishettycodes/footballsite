@@ -43,6 +43,12 @@ for (const position of positionsWithData()) {
  * tend to be the smart ones. Each of these carries a ceiling anyway, so "expected" is
  * never a blanket excuse: drift past the ceiling and it warns like anything else.
  *
+ * ONE PAIR CAME OFF THIS LIST BY BEING DELETED INSTEAD. Power and contact balance sat at
+ * 0.93 for months under a note saying mass and balance are close to the same physics.
+ * They are, which is the point: two slots that were really one pick. Contact balance is
+ * gone from the running back card now rather than still being excused here, and that is
+ * the right end of the problem to fix an entangled pair from.
+ *
  * A pair NOT listed here that correlates highly is the other kind of entangled, where
  * the pool got lazy and two picks stopped being two decisions.
  */
@@ -53,7 +59,6 @@ const EXPECTED: Record<string, { a: string; b: string; ceiling: number; why: str
     { a: 'armStrength', b: 'deepBall', ceiling: 0.92, why: 'the deep ball is mostly arm talent' },
   ],
   RB: [
-    { a: 'power', b: 'contactBalance', ceiling: 0.93, why: 'mass and balance are close to the same physics' },
     { a: 'speed', b: 'burst', ceiling: 0.92, why: 'related but not the same, and the pool has gliders and short-area guys to prove it' },
   ],
 };

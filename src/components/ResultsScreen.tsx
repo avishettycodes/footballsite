@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { GATES, accoladeDefs } from '../lib/scoring';
+import { GATES, RECORD_YARDS, accoladeDefs } from '../lib/scoring';
 import type { AccoladeId, CareerResult } from '../lib/scoring';
-import { draftLine, draftedBy, franchisesUsed, honorsLine, seasonsPlayed, tenureLine } from '../lib/narrative';
-import { inkOn } from '../lib/contrast';
+import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
+import {
+  bestSeasonLine, draftBadge, draftLine, franchisesRaided, honorsLine, productionLine, tenureLine,
+} from '../lib/narrative';
+import { inkOn, teamMark } from '../lib/contrast';
 import { Chevron, Ring, RingBroken, TrophyIcon } from './Icons';
 import { deflate, fanfare, heartbeat } from '../lib/audio';
 import { ratingColor } from './AttributeBar';
@@ -13,7 +16,7 @@ import { ratingColor } from './AttributeBar';
 type Props = {
   position: Position;
   slots: Partial<Record<AttributeKey, FilledSlot>>;
-  /** Which slot was filled first. The franchise behind it is the one that drafted him. */
+  /** Which slot was filled first. The franchises behind these are the ones in play. */
   pickOrder: AttributeKey[];
   career: CareerResult;
   seed: string;
@@ -55,7 +58,7 @@ function nearness(gap: number): string {
   return 'He was never in that conversation.';
 }
 
-function missedBecause(id: AccoladeId, career: CareerResult, durability: number): string {
+function missedBecause(id: AccoladeId, position: Position, career: CareerResult): string {
   switch (id) {
     case 'proBowl':
       return nearness(GATES.proBowl - career.overall);
@@ -67,15 +70,47 @@ function missedBecause(id: AccoladeId, career: CareerResult, durability: number)
       return career.overall >= GATES.opoy
         ? 'The rating was there. They wanted more of him at the very top of the league.'
         : nearness(GATES.opoy - career.overall);
-    case 'record':
-      return durability < GATES.recordDurability
-        ? 'He was not on the field enough to chase it.'
-        : nearness(GATES.recordOverall - career.overall);
+    case 'record': {
+      // The gate is a yardage total now, so how close he came is a real distance rather
+      // than a rating gap. Still no numbers on screen: the stat block above has them.
+      const short = RECORD_YARDS[position] - career.careerYards;
+      if (short <= RECORD_YARDS[position] * 0.05) return 'He finished within touching distance of it.';
+      if (short <= RECORD_YARDS[position] * 0.25) return 'A couple more healthy years and it was his.';
+      return 'He was never producing at the rate that record asks for.';
+    }
     case 'superBowl':
       return 'A ring is the one thing you cannot build for him.';
     case 'hof':
       return 'Not enough on the mantelpiece to get him in.';
   }
+}
+
+/**
+ * Every block on the report is a numbered section, and that is the whole layout idea.
+ *
+ * The old report was six boxes of the same weight stacked on each other, so a reader had
+ * to work out where the story stopped and the receipts started. Numbering them gives the
+ * page an order to be read in, which is what makes it hold together as one thing worth
+ * sending somebody rather than a pile of panels.
+ */
+function Section({ index, title, aside, children }: {
+  index: string;
+  title: string;
+  aside?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border-t border-white/10 px-5 py-4">
+      <div className="mb-3 flex items-baseline gap-2">
+        <span className="font-mono text-[10px] font-bold text-hazard tabular-nums">{index}</span>
+        <h3 className="font-mono text-[10px] tracking-[0.2em] text-white/45">{title}</h3>
+        {aside && (
+          <span className="ml-auto font-mono text-[10px] tracking-[0.15em] text-white/30">{aside}</span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 export function ResultsScreen({
@@ -86,10 +121,27 @@ export function ResultsScreen({
   const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [counter, setCounter] = useState(0);
   const defs = accoladeDefs(position);
+  const keys = ATTRIBUTE_SETS[position];
 
-  const draftTeam = draftedBy(position, pickOrder, slots);
-  const careerTeams = franchisesUsed(position, pickOrder, slots);
-  const seasons = seasonsPlayed(slots.durability?.value, career.overall);
+  /**
+   * THE WHOLE REPORT IS REBUILT FROM THE SEED RIGHT HERE, and nothing but the season
+   * count is read off the frozen career.
+   *
+   * Every one of these is a pure function of (position, build, overall, seed), so a
+   * saved player opened out of the hall next month rebuilds the identical draft slot,
+   * the identical uniforms and the identical stat line without any of it having been
+   * written to storage. A player saved before careers had a length in them has no
+   * `seasons` on his record, which is the one case the fallback is for.
+   */
+  const length = careerLength(position, career.overall, seed);
+  const seasons = typeof career.seasons === 'number' ? career.seasons : length.seasons;
+  const build: Partial<Record<AttributeKey, number>> = {};
+  for (const key of keys) build[key] = slots[key]?.value ?? 0;
+
+  const draft = draftSlot(position, career.overall, seed);
+  const path = careerPath(position, career.overall, seasons, franchisesRaided(position, pickOrder, slots), seed);
+  const stats = careerStats(position, build, career.overall, seasons, seed);
+  const labels = STAT_LABELS[position];
 
   // Count the overall up. Cosmetic only — reads career.overall, never rolls anything.
   useEffect(() => {
@@ -123,6 +175,35 @@ export function ResultsScreen({
   const missed = defs.filter((d) => !career.accolades[d.id]);
   const shareUrl = `${window.location.origin}${window.location.pathname}?seed=${seed}`;
 
+  /** Which uniform he was wearing in a given season, for the bar chart below. */
+  const teamInSeason = (season: number) =>
+    path.stints.find((s) => season >= s.from && season <= s.to)?.team ?? path.stints[0]?.team ?? null;
+
+  const peakSeasonYards = Math.max(1, ...stats.seasons.map((s) => s.yards));
+
+  const tiles: { label: string; value: string; note?: string }[] = [
+    {
+      label: labels.yards,
+      value: commas(stats.yards),
+      /*
+        Read off the YARDS rather than off the trophy, and those are the same thing for
+        anybody built since the record became a yardage total. They come apart for a
+        player saved before that, whose accolades are frozen under the old rule: his case
+        keeps the trophy he was given, which is the promise the hall makes, but the tile
+        would otherwise have stamped ALL-TIME RECORD on a number sitting well under it.
+      */
+      note: stats.yards >= RECORD_YARDS[position] ? 'ALL-TIME RECORD' : undefined,
+    },
+    { label: labels.touchdowns, value: commas(stats.touchdowns) },
+    { label: labels.volume, value: commas(stats.volume) },
+    labels.secondary
+      ? { label: labels.secondary, value: commas(stats.secondary) }
+      : {
+        label: 'YARDS PER CATCH',
+        value: (stats.yards / Math.max(1, stats.volume)).toFixed(1),
+      },
+  ];
+
   /**
    * WHAT THIS BUTTON USED TO PUT ON THE CLIPBOARD, under the label COPY SEED, was a two
    * line sentence with a link somewhere inside it. Paste that into the seed box and it
@@ -149,7 +230,6 @@ export function ResultsScreen({
 
   return (
     <div className="mx-auto max-w-3xl">
-      {/* SHARE CARD */}
       <div className="overflow-hidden rounded-xl border-2 border-white/15 bg-turf-900">
         {/* Both halves of this bar wrapped onto two lines each on a phone. */}
         <div className="flex items-center justify-between gap-2 bg-hazard px-4 py-1.5">
@@ -162,25 +242,15 @@ export function ResultsScreen({
         </div>
 
         {/*
-          NAME YOUR PLAYER used to come off an iPhone reading NAME YOUR PLAY, and the
-          reason it never showed up on a Mac is the font stack. Nothing here loads a
-          webfont, so --font-display falls through Archivo Black and Haettenschweiler to
-          Arial Narrow, which macOS has and iOS does not. A phone lands on system-ui
-          instead, and the same string that measures 227px in Arial Narrow measures 256px
-          in San Francisco against 242px of input. Fifteen pixels of headroom on the
-          machine it was built on, fourteen pixels short on the machine it was played on.
+          THE NAMEPLATE.
 
-          So the size is no longer a bet on which font showed up. It starts at 24px on a
-          phone, where the widest fallback still leaves room to spare, and the overall
-          column shrinks to match rather than taking the width first.
+          NAME YOUR PLAYER used to come off an iPhone reading NAME YOUR PLAY, and the
+          reason it never showed up on a Mac is the font stack. That is fixed at the font
+          level now, but the sizing stays defensive: a long name still has to be readable
+          back, and a name you cannot read is not worth typing.
         */}
         <div className="flex items-end justify-between gap-3 px-5 py-5 sm:gap-4">
           <div className="min-w-0 flex-1">
-            {/*
-              A long name is the same bug as the long placeholder, so it gets the same
-              treatment. THE ALL AMERICAN NIGHTMARE needs 324px at 24px and there are
-              243px to give it, and a name you cannot read back is not worth typing.
-            */}
             {replay ? (
               <h2
                 className={`w-full font-display leading-none tracking-tighter uppercase sm:text-4xl md:text-5xl ${
@@ -199,13 +269,15 @@ export function ResultsScreen({
                 }`}
               />
             )}
-            {/*
-              This used to read BUILT OUT OF N TEAMS. The career block below now says how
-              many uniforms he wore and prints every one of their badges, so the same
-              fact was on screen three times. Seasons is the thing that was missing.
-            */}
             <div className="mt-1.5 font-mono text-[10px] tracking-[0.15em] text-white/40 sm:text-[11px] sm:tracking-[0.2em]">
-              {position} · {seasons} SEASONS
+              {position} · {seasons} SEASON{seasons === 1 ? '' : 'S'} · {path.stints.length} TEAM{path.stints.length === 1 ? '' : 'S'}
+            </div>
+            {/*
+              Where he went in the draft, up top where a football card puts it. It used to
+              be nowhere on the report at all, which meant the story started in the middle.
+            */}
+            <div className="mt-2 inline-block rounded border border-white/20 bg-white/6 px-2 py-1 font-mono text-[10px] font-bold tracking-[0.12em] text-white/70">
+              {draftBadge(draft)}
             </div>
           </div>
           <div className="shrink-0 text-center">
@@ -222,174 +294,279 @@ export function ResultsScreen({
         </div>
 
         {/*
-          THE CAREER. A tester said this screen opens on a rating when it should open on
-          a story, so it now does, and every word of it is derived from the run that
-          already happened. See src/lib/narrative.ts for where each clause comes from.
+          01 THE CAREER. Every word of it derived from the run that already happened, and
+          assembled in src/lib/narrative.ts rather than out of fragments here.
 
           The honours sentence is held back until the reveal is over, and only that
           sentence. Telling somebody he made the Hall of Fame directly above seven
           heartbeats and a Super Bowl reveal would hand him the ending first, which is
           the one thing the reveal exists to avoid.
         */}
-        <div className="mx-5 mb-4 rounded-lg border-l-4 border-white/25 bg-turf-800 py-3 pr-4 pl-4">
-          <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">
-            THE CAREER
-          </div>
-          <p className="mt-1 text-[14px] leading-snug text-white/85">
-            {/*
-              The draft sentence comes out of narrative.ts whole rather than being
-              reassembled here with the city in a <b>. Composing it in the JSX would put
-              the same sentence in two places and let the two drift, and the copy checker
-              would then be reading the wrong one.
-            */}
-            <b className="text-white">{draftLine(draftTeam)}</b>{' '}
-            {tenureLine(seasons, careerTeams, draftTeam)}
+        <Section index="01" title="THE CAREER">
+          <p className="text-[14px] leading-relaxed text-white/85">
+            <b className="text-white">{draftLine(draft, path.drafted)}</b>{' '}
+            {tenureLine(seasons, path.stints, length.cutShort)}{' '}
+            {productionLine(position, stats)}
             {stage === 'done' && <> {honorsLine(career)}</>}
           </p>
-          {/*
-            Every franchise he passed through, readable on a phone. The heist table
-            further down credits these too, but it hides the team column below the sm
-            breakpoint, so on the device most people play this on the teams were not
-            actually anywhere on the screen.
-          */}
-          {careerTeams.length > 1 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {careerTeams.map((t) => (
-                <span
-                  key={t.id}
-                  title={`${t.city} ${t.name}`}
-                  className="rounded px-1.5 py-px font-mono text-[9px] font-bold"
-                  style={{ backgroundColor: t.primary, color: inkOn(t.primary) }}
-                >
-                  {t.abbr}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        </Section>
 
         {/*
-          The weak link gets top billing. Half the overall comes from the two worst
-          numbers, so if this is buried people just read the rating as broken.
+          02 THE NUMBERS. A rating is an opinion and a stat line is a receipt, and the
+          report only ever had the opinion on it. These come out of the same simulation
+          the record trophy is judged against, so a player who owns the record is holding
+          a number you can see him owning it with.
         */}
-        <div className="mx-5 mb-4 rounded-lg border-l-4 bg-turf-800 py-3 pr-4 pl-4"
-             style={{ borderLeftColor: ratingColor(career.breakdown.weakest.value) }}>
-          <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">
-            THE WEAK LINK
-          </div>
-          <p className="mt-1 text-[14px] leading-snug text-white/85">
-            {career.breakdown.weakest.value >= 90 ? (
-              <>
-                Nothing on him drops below{' '}
-                <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
-                  {career.breakdown.weakest.value}
-                </b>
-                . There is no hole to find, which is most of why the number held up.
-              </>
-            ) : (
-              <>
-                His softest number is{' '}
-                <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
-                  {ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()} at{' '}
-                  {career.breakdown.weakest.value}
-                </b>
-                {career.breakdown.weakest.value >= 86
-                  ? '. That is a soft spot rather than a hole, and it cost him a couple of points.'
-                  : career.breakdown.weakest.value >= 75
-                    ? '. Half of the overall comes from your two worst numbers, so that cost you a few points.'
-                    : '. Half of the overall comes from your two worst numbers, so a hole that size costs far more than any one big number gave back.'}
-              </>
-            )}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
-            {/* Was hardcoded to EIGHT, which was already wrong for a seven slot tight end. */}
-            <span>AVERAGE OF THE {ATTRIBUTE_SETS[position].length} <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
-            <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
-            <span>ELITE TRAITS <b className="text-white/75">{career.breakdown.eliteCount}</b></span>
-          </div>
-        </div>
-
-        {/* What he was actually great at, which the trophy case alone can miss entirely. */}
-        {(() => {
-          const keys = ATTRIBUTE_SETS[position];
-          const top = keys
-            .map((k) => ({ k, slot: slots[k] }))
-            .filter((x) => x.slot)
-            .sort((a, b) => (b.slot!.value - a.slot!.value))[0];
-          if (!top?.slot || top.slot.value < 90) return null;
-          const team = TEAMS_BY_ID[top.slot.teamId];
-          return (
-            <div className="mx-5 mb-4 rounded-lg border-l-4 border-hazard bg-turf-800 py-3 pr-4 pl-4">
-              <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">
-                WHAT HE WAS KNOWN FOR
-              </div>
-              <p className="mt-1 text-[14px] leading-snug text-white/85">
-                {top.slot.value >= 97
-                  ? 'Nobody in the league had better '
-                  : top.slot.value >= 93
-                    ? 'One of the best in football at '
-                    : 'He made his living on '}
-                <b className="text-hazard">{ATTRIBUTE_LABELS[top.k].toLowerCase()}</b>
-                {', a '}
-                <b style={{ color: ratingColor(top.slot.value) }}>{top.slot.value}</b>
-                {' you took off '}
-                {top.slot.playerName} in {team.city}.
-              </p>
-            </div>
-          );
-        })()}
-
-        {/* THE HEIST. Every trait credited back to whoever you took it from. */}
-        <div className="border-t border-white/10">
-          {ATTRIBUTE_SETS[position].map((key) => {
-            const slot = slots[key];
-            if (!slot) return null;
-            const team = TEAMS_BY_ID[slot.teamId];
-            return (
-              <div key={key} className="flex items-center gap-3 border-b border-white/6 px-5 py-2">
-                <span className="w-28 shrink-0 font-mono text-[10px] tracking-wider text-white/45">
-                  {ATTRIBUTE_LABELS[key]}
-                </span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/8">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${slot.value}%`, backgroundColor: ratingColor(slot.value) }}
-                  />
+        <Section index="02" title="THE NUMBERS" aside={`${seasons} SEASON${seasons === 1 ? '' : 'S'}`}>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {tiles.map((tile) => (
+              <div key={tile.label} className="rounded-lg bg-turf-800 px-3 py-2.5">
+                <div className="font-stat text-2xl leading-none font-bold tabular-nums text-white sm:text-3xl">
+                  {tile.value}
                 </div>
-                <span
-                  className="w-7 shrink-0 text-right font-mono text-sm font-bold tabular-nums"
-                  style={{ color: ratingColor(slot.value) }}
-                >
-                  {slot.value}
-                </span>
-                <span className="hidden w-44 shrink-0 items-center gap-1.5 sm:flex">
+                <div className="mt-1 font-mono text-[9px] leading-tight tracking-[0.1em] text-white/40">
+                  {tile.label}
+                </div>
+                {tile.note && (
+                  <div className="mt-1 font-mono text-[9px] font-bold tracking-[0.1em] text-hazard">
+                    {tile.note}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/*
+            SEASON BY SEASON, coloured by whose uniform he was in at the time. This is the
+            one graphic on the report that shows a career having a shape: the ramp, the
+            peak, the decline, and the year everything went right. A table of totals
+            cannot show any of that.
+
+            Four seasons is the floor for drawing it. Below that the bars are wider than
+            they are tall and it reads as three blocks of colour rather than as a chart,
+            which is worse than not drawing one.
+          */}
+          {stats.seasons.length >= 4 && (
+            <div className="mt-3">
+              <div className="flex h-16 items-end gap-[3px] border-b border-white/15">
+                {stats.seasons.map((line) => {
+                  const team = teamInSeason(line.season);
+                  const isBest = line.season === stats.best.season;
+                  // Bars stop at 88% so the best-season marker has somewhere to sit.
+                  const height = `${Math.max(6, (line.yards / peakSeasonYards) * 88)}%`;
+                  return (
+                    <div
+                      key={line.season}
+                      title={`Season ${line.season}: ${commas(line.yards)} yards, ${line.touchdowns} TD`}
+                      className="relative flex h-full min-w-0 flex-1 items-end"
+                    >
+                      <div
+                        className="w-full rounded-t-sm"
+                        style={{
+                          height,
+                          // teamMark rather than the raw primary. Twenty two of the
+                          // thirty two primaries are invisible on this card, and a bar
+                          // has no text in it to give the colour away.
+                          backgroundColor: team ? teamMark(team.primary, team.secondary) : '#3b4655',
+                        }}
+                      />
+                      {/*
+                        The marker sits ABOVE the bar rather than outlining it, and that
+                        is not a style preference. It was a gold outline on the bar, and
+                        Pittsburgh's colour is the same gold, so on the one career where
+                        you most wanted to see which year was the big one it was invisible.
+                        On the card behind the bars, hazard reads against every franchise.
+                      */}
+                      {isBest && (
+                        <span
+                          aria-hidden
+                          className="absolute inset-x-0 mx-auto h-1.5 w-1.5 rounded-full bg-hazard"
+                          style={{ bottom: `calc(${height} + 4px)` }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-1 flex items-baseline justify-between font-mono text-[9px] tracking-[0.1em] text-white/30">
+                <span>SEASON 1</span>
+                <span>SEASON {seasons}</span>
+              </div>
+            </div>
+          )}
+
+          {/*
+            The best season gets its own line rather than being squeezed between the two
+            axis labels, where on a phone it wrapped into them and the three ran together
+            as one paragraph. It also has to survive the chart not being drawn at all,
+            since a short career still had a best year.
+          */}
+          <div className="mt-2 rounded-lg bg-turf-800 px-3 py-2.5">
+            <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">BEST SEASON</div>
+            <p className="mt-1 text-[13px] leading-snug text-white/85">{bestSeasonLine(position, stats)}</p>
+          </div>
+        </Section>
+
+        {/*
+          03 THE UNIFORMS. This used to be every franchise you stole from, which meant a
+          report could tell you with a straight face that he played for seven teams.
+          Nobody plays for seven teams. See careerPath in src/lib/career.ts for how many
+          he really gets and which of them wanted him.
+        */}
+        {path.stints.length > 0 && (
+          <Section index="03" title="THE UNIFORMS">
+            {/*
+              Three columns, not four. The year range used to be spelled out as YEARS 1 TO
+              3 next to a separate season count, which between them left 94px for the
+              franchise name on a phone and truncated the Denver Broncos.
+            */}
+            <ol className="space-y-1.5">
+              {path.stints.map((stint) => (
+                <li key={stint.team.id + stint.from} className="flex items-center gap-2.5">
                   <span
-                    className="rounded px-1.5 py-px font-mono text-[9px] font-bold"
-                    style={{ backgroundColor: team.primary, color: inkOn(team.primary) }}
+                    className="w-11 shrink-0 rounded py-1 text-center font-mono text-[10px] font-bold"
+                    style={{ backgroundColor: stint.team.primary, color: inkOn(stint.team.primary) }}
                   >
-                    {team.abbr}
+                    {stint.team.abbr}
                   </span>
-                  <span className="truncate text-[11px] text-white/55">{slot.playerName}</span>
-                </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-white/80">
+                    {stint.team.city} {stint.team.name}
+                  </span>
+                  <span className="shrink-0 font-mono text-[10px] tabular-nums whitespace-nowrap text-white/35">
+                    {stint.from === stint.to ? `YR ${stint.from}` : `YRS ${stint.from}-${stint.to}`}
+                  </span>
+                  <span className="shrink-0 text-right font-mono text-[11px] tabular-nums whitespace-nowrap text-white/65">
+                    {stint.seasons} SEA
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </Section>
+        )}
+
+        {/*
+          04 THE BUILD. Every trait credited back to whoever you took it from, with the
+          two lines that explain the rating sitting directly under it: the hole that cost
+          him, and the one thing he was genuinely great at.
+        */}
+        <Section index="04" title="THE BUILD" aside={`${keys.length} PICKS`}>
+          <div className="overflow-hidden rounded-lg bg-turf-800">
+            {keys.map((key) => {
+              const slot = slots[key];
+              if (!slot) return null;
+              const team = TEAMS_BY_ID[slot.teamId];
+              return (
+                <div key={key} className="flex items-center gap-3 border-b border-white/6 px-3 py-2 last:border-b-0">
+                  <span className="w-28 shrink-0 font-mono text-[10px] tracking-wider text-white/45">
+                    {ATTRIBUTE_LABELS[key]}
+                  </span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/8">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${slot.value}%`, backgroundColor: ratingColor(slot.value) }}
+                    />
+                  </div>
+                  <span
+                    className="w-7 shrink-0 text-right font-mono text-sm font-bold tabular-nums"
+                    style={{ color: ratingColor(slot.value) }}
+                  >
+                    {slot.value}
+                  </span>
+                  <span className="hidden w-44 shrink-0 items-center gap-1.5 sm:flex">
+                    <span
+                      className="rounded px-1.5 py-px font-mono text-[9px] font-bold"
+                      style={{ backgroundColor: team.primary, color: inkOn(team.primary) }}
+                    >
+                      {team.abbr}
+                    </span>
+                    <span className="truncate text-[11px] text-white/55">{slot.playerName}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/*
+            The weak link keeps its billing. Half the overall comes from the two worst
+            numbers, so if this is buried people just read the rating as broken.
+          */}
+          <div
+            className="mt-3 rounded-lg border-l-4 bg-turf-800 py-2.5 pr-3 pl-3"
+            style={{ borderLeftColor: ratingColor(career.breakdown.weakest.value) }}
+          >
+            <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">THE WEAK LINK</div>
+            <p className="mt-1 text-[13px] leading-snug text-white/85">
+              {career.breakdown.weakest.value >= 90 ? (
+                <>
+                  Nothing on him drops below{' '}
+                  <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
+                    {career.breakdown.weakest.value}
+                  </b>
+                  . There is no hole to find, which is most of why the number held up.
+                </>
+              ) : (
+                <>
+                  His softest number is{' '}
+                  <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
+                    {ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()} at{' '}
+                    {career.breakdown.weakest.value}
+                  </b>
+                  {career.breakdown.weakest.value >= 86
+                    ? '. That is a soft spot rather than a hole, and it cost him a couple of points.'
+                    : career.breakdown.weakest.value >= 75
+                      ? '. Half of the overall comes from your two worst numbers, so that cost you a few points.'
+                      : '. Half of the overall comes from your two worst numbers, so a hole that size costs far more than any one big number gave back.'}
+                </>
+              )}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
+              <span>AVERAGE OF THE {keys.length} <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
+              <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
+              <span>ELITE TRAITS <b className="text-white/75">{career.breakdown.eliteCount}</b></span>
+            </div>
+          </div>
+
+          {/* What he was actually great at, which the trophy case alone can miss entirely. */}
+          {(() => {
+            const top = keys
+              .map((k) => ({ k, slot: slots[k] }))
+              .filter((x) => x.slot)
+              .sort((a, b) => (b.slot!.value - a.slot!.value))[0];
+            if (!top?.slot || top.slot.value < 90) return null;
+            const team = TEAMS_BY_ID[top.slot.teamId];
+            return (
+              <div className="mt-2 rounded-lg border-l-4 border-hazard bg-turf-800 py-2.5 pr-3 pl-3">
+                <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">
+                  WHAT HE WAS KNOWN FOR
+                </div>
+                <p className="mt-1 text-[13px] leading-snug text-white/85">
+                  {top.slot.value >= 97
+                    ? 'Nobody in the league had better '
+                    : top.slot.value >= 93
+                      ? 'One of the best in football at '
+                      : 'He made his living on '}
+                  <b className="text-hazard">{ATTRIBUTE_LABELS[top.k].toLowerCase()}</b>
+                  {', a '}
+                  <b style={{ color: ratingColor(top.slot.value) }}>{top.slot.value}</b>
+                  {' you took off '}
+                  {top.slot.playerName} in {team.city}.
+                </p>
               </div>
             );
-          })}
-        </div>
+          })()}
+        </Section>
 
-        {/* SUPER BOWL */}
-        <div className="px-5 py-5">
+        {/* 05 SUPER BOWL */}
+        <Section index="05" title="SUPER BOWL SUNDAY">
           {stage === 'overall' && (
-            <div className="text-center font-mono text-[11px] tracking-[0.2em] text-white/35">
+            <div className="py-3 text-center font-mono text-[11px] tracking-[0.2em] text-white/35">
               WATCHING THE TAPE BACK…
             </div>
           )}
 
           {stage === 'rolling' && (
-            <div className="text-center">
-              <div className="font-mono text-[11px] tracking-[0.2em] text-white/45">
-                SUPER BOWL SUNDAY
-              </div>
-              <div className="mt-2 font-display text-3xl tracking-tight text-white/80 uppercase">
+            <div className="py-2 text-center">
+              <div className="font-display text-3xl tracking-tight text-white/80 uppercase">
                 <span className="inline-block animate-pulse">The ring is being decided</span>
               </div>
             </div>
@@ -433,84 +610,86 @@ export function ResultsScreen({
               </div>
             </div>
           )}
-        </div>
+        </Section>
 
-        {/* TROPHY CASE */}
+        {/* 06 TROPHY CASE */}
         {stage === 'done' && (
-          <div className="animate-[slotpop_300ms_ease-out] border-t border-white/10 px-5 py-5">
-            <div className="flex flex-wrap gap-2">
-              {earned.map((d) => (
-                <div
-                  key={d.id}
-                  className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 ${
-                    d.id === 'hof' ? 'border-hazard bg-hazard/15' : 'border-white/20 bg-white/6'
-                  }`}
-                >
-                  <TrophyIcon
-                    id={d.trophy}
-                    className={`h-6 w-6 shrink-0 ${d.id === 'hof' ? 'text-hazard' : 'text-white/85'}`}
-                  />
-                  <span className="font-display text-sm uppercase">{d.label}</span>
-                </div>
-              ))}
-              {/*
-                An empty trophy case is not the same story every time. This line landed
-                on a build carrying four traits at 99 and told him he was nobody, which
-                is the framing we already fixed once at the signature trait level and
-                missed here. A player that good with nothing to show for it was robbed,
-                and the weak link box above has already said by what.
-              */}
-              {earned.length === 0 && (
-                <div className="font-display text-xl text-white/40 uppercase">
-                  {career.breakdown.eliteCount >= 3
-                    ? `${career.breakdown.eliteCount} traits at the very top of the league and an empty case. This one was a robbery.`
-                    : career.breakdown.eliteCount >= 1
-                      ? 'A real weapon in there and nothing to show for it.'
-                      : 'The trophy case is empty. Somebody has to play the other games.'}
-                </div>
-              )}
-              {earned.length > 0 && earned.length < 3 && position === 'TE' && (
-                <div className="w-full font-mono text-[11px] text-white/40">
-                  Tight end is the hard one. Getting this far with a seven slot build is
-                  more than it looks like.
-                </div>
-              )}
-            </div>
-
-            {missed.length > 0 && (
-              <details className="group mt-4">
+          <div className="animate-[slotpop_300ms_ease-out]">
+            <Section index="06" title="THE TROPHY CASE" aside={`${earned.length} OF ${defs.length}`}>
+              <div className="flex flex-wrap gap-2">
+                {earned.map((d) => (
+                  <div
+                    key={d.id}
+                    className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 ${
+                      d.id === 'hof' ? 'border-hazard bg-hazard/15' : 'border-white/20 bg-white/6'
+                    }`}
+                  >
+                    <TrophyIcon
+                      id={d.trophy}
+                      className={`h-6 w-6 shrink-0 ${d.id === 'hof' ? 'text-hazard' : 'text-white/85'}`}
+                    />
+                    <span className="font-display text-sm uppercase">{d.label}</span>
+                  </div>
+                ))}
                 {/*
-                  list-none plus the webkit marker rule kills the browser's own arrow.
-                  It is the last piece of stock UI chrome on this screen, and it does not
-                  match a single other control in the app.
+                  An empty trophy case is not the same story every time. This line landed
+                  on a build carrying four traits at 99 and told him he was nobody, which
+                  is the framing we already fixed once at the signature trait level and
+                  missed here. A player that good with nothing to show for it was robbed,
+                  and the weak link box above has already said by what.
                 */}
-                <summary className="flex cursor-pointer list-none items-center gap-1.5 font-mono text-[10px] tracking-[0.2em] text-white/35 uppercase [&::-webkit-details-marker]:hidden">
-                  <Chevron className="h-3.5 w-3.5 shrink-0 -rotate-90 transition-transform group-open:rotate-0" />
-                  What he missed out on ({missed.length})
-                </summary>
-                <ul className="mt-2 space-y-1">
-                  {missed.map((d) => (
-                    <li key={d.id} className="flex gap-2 font-mono text-[11px] text-white/35">
-                      <TrophyIcon id={d.trophy} className="mt-px h-3.5 w-3.5 shrink-0 text-white/25" />
-                      <span>
-                        {d.label}:{' '}
-                        <span className="text-white/25">
-                          {missedBecause(d.id, career, slots.durability?.value ?? 0)}
+                {earned.length === 0 && (
+                  <div className="font-display text-xl text-white/40 uppercase">
+                    {career.breakdown.eliteCount >= 3
+                      ? `${career.breakdown.eliteCount} traits at the very top of the league and an empty case. This one was a robbery.`
+                      : career.breakdown.eliteCount >= 1
+                        ? 'A real weapon in there and nothing to show for it.'
+                        : 'The trophy case is empty. Somebody has to play the other games.'}
+                  </div>
+                )}
+                {earned.length > 0 && earned.length < 3 && position === 'TE' && (
+                  <div className="w-full font-mono text-[11px] text-white/40">
+                    Tight end is the hard one. Five slots means five spins, so getting
+                    this far with one is more than it looks like.
+                  </div>
+                )}
+              </div>
+
+              {missed.length > 0 && (
+                <details className="group mt-4">
+                  {/*
+                    list-none plus the webkit marker rule kills the browser's own arrow.
+                    It is the last piece of stock UI chrome on this screen, and it does not
+                    match a single other control in the app.
+                  */}
+                  <summary className="flex cursor-pointer list-none items-center gap-1.5 font-mono text-[10px] tracking-[0.2em] text-white/35 uppercase [&::-webkit-details-marker]:hidden">
+                    <Chevron className="h-3.5 w-3.5 shrink-0 -rotate-90 transition-transform group-open:rotate-0" />
+                    What he missed out on ({missed.length})
+                  </summary>
+                  <ul className="mt-2 space-y-1">
+                    {missed.map((d) => (
+                      <li key={d.id} className="flex gap-2 font-mono text-[11px] text-white/35">
+                        <TrophyIcon id={d.trophy} className="mt-px h-3.5 w-3.5 shrink-0 text-white/25" />
+                        <span>
+                          {d.label}:{' '}
+                          <span className="text-white/25">
+                            {missedBecause(d.id, position, career)}
+                          </span>
                         </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </Section>
           </div>
         )}
       </div>
 
       {stage === 'done' && (
         <p className="mt-4 text-center font-mono text-[10px] leading-relaxed text-white/35">
-          The seed replays this exact run, spin for spin. Send it to somebody and they
-          face the identical wheel, so you get to find out who builds the better player.
+          The seed replays this exact run, spin for spin, right down to the draft slot and
+          the year his knee went. Send it to somebody and they face the identical wheel.
         </p>
       )}
 

@@ -1,87 +1,123 @@
-import { ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
+import { ATTRIBUTE_SETS } from '../data';
 import type { AttributeKey, Position, Team } from '../data';
+import { STAT_LABELS, commas } from './career';
+import type { CareerStats, DraftSlot, Stint } from './career';
 import type { CareerResult } from './scoring';
 
 /**
- * THE CAREER SUMMARY. Two or three sentences at the top of the report.
+ * THE WORDS. Every sentence on the career report comes out of this file whole.
  *
  * A tester said the results screen opens on a rating when it should open on a story:
- * who drafted him, how long he lasted, where he turned up and what he actually won.
+ * who took him, how long he lasted, where he turned up, what he put up and what he
+ * actually won. It now does, in that order.
  *
- * Every one of those is DERIVED from the run that already happened. Nothing new is
- * rolled, nothing new is stored, and the same build always tells the same story. That
- * matters more than it sounds: a seed link promises two people the identical run, so a
- * narrative with any randomness of its own would quietly break that promise. It also
- * means this is a line of flavour rather than a draft phase, which is what the tester
- * who asked for it explicitly did not want.
+ * Nothing in here rolls anything. The story is assembled from a career that has already
+ * happened, and every number in it is a pure function of the seed, which is what lets a
+ * shared `?seed=` link promise two people the same player rather than the same wheel.
  *
- * The mapping:
- *   drafted by   -> the franchise you took his FIRST attribute from
- *   seasons      -> durability, because that is already what durability means
- *   uniforms     -> every franchise you stole from
- *   what he won  -> the accolades already on the frozen career
+ * The sentences live here rather than in the JSX because a sentence assembled out of
+ * fragments in a component is a sentence in two places, and the voice checker would then
+ * be reading the wrong half of it.
  */
 
 type SlotLike = { value: number; teamId: string };
 type Slots = Partial<Record<AttributeKey, SlotLike>>;
 
-export const MIN_SEASONS = 4;
-export const MAX_SEASONS = 18;
+/** Every franchise he was built out of, in the order you raided them. */
+export function franchisesRaided(position: Position, pickOrder: AttributeKey[], slots: Slots): string[] {
+  const order = pickOrder.length ? pickOrder : ATTRIBUTE_SETS[position];
+  const seen: string[] = [];
+  for (const key of order) {
+    const slot = slots[key];
+    if (slot && !seen.includes(slot.teamId)) seen.push(slot.teamId);
+  }
+  return seen;
+}
+
+const ROUND_WORDS = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh'];
+
+/** 1st, 2nd, 3rd, 4th. Broadcast always says the pick this way and never says pick 7. */
+export function ordinal(n: number): string {
+  const rest = n % 100;
+  if (rest >= 11 && rest <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+}
 
 /**
- * Career length off durability, on the same 40 to 99 span the ratings actually occupy.
+ * The badge above the report, short enough to sit on one line of a phone.
  *
- * The fallback matters. Durability is the attribute most likely to be cut from a
- * position, and a summary that says "he played 4 seasons" for a 97 overall because a
- * slot no longer exists would be worse than no summary at all. With no durability in
- * the build the overall stands in, which reads sensibly: good players last longer.
+ * Uppercased here rather than in CSS, because the ordinal suffix is the only lowercase
+ * thing in a line of capitals and it read as a typo sitting inside the badge.
  */
-export function seasonsPlayed(durability: number | undefined, overall: number): number {
-  const basis = typeof durability === 'number' ? durability : overall;
-  const t = (basis - 40) / 59;
-  const seasons = Math.round(MIN_SEASONS + t * (MAX_SEASONS - MIN_SEASONS));
-  return Math.max(MIN_SEASONS, Math.min(MAX_SEASONS, seasons));
+export function draftBadge(draft: DraftSlot): string {
+  if (draft.undrafted) return 'UNDRAFTED';
+  return `RD ${draft.round} · PICK ${draft.pick} · ${ordinal(draft.overallPick).toUpperCase()} OVERALL`;
 }
 
-/** The franchise the first stolen attribute came from. */
-export function draftedBy(position: Position, pickOrder: AttributeKey[], slots: Slots): Team | null {
-  const order = pickOrder.length ? pickOrder : ATTRIBUTE_SETS[position];
-  for (const key of order) {
-    const slot = slots[key];
-    if (slot) return TEAMS_BY_ID[slot.teamId] ?? null;
+export function draftLine(draft: DraftSlot, team: Team | null): string {
+  const who = team ? team.city : 'Somebody';
+  if (draft.undrafted) {
+    return `Nobody drafted him. ${who} signed him for nothing and found out later.`;
   }
-  return null;
-}
-
-/** Every franchise he was built out of, in the order you raided them. */
-export function franchisesUsed(position: Position, pickOrder: AttributeKey[], slots: Slots): Team[] {
-  const order = pickOrder.length ? pickOrder : ATTRIBUTE_SETS[position];
-  const seen = new Set<string>();
-  const teams: Team[] = [];
-  for (const key of order) {
-    const slot = slots[key];
-    if (!slot || seen.has(slot.teamId)) continue;
-    seen.add(slot.teamId);
-    const team = TEAMS_BY_ID[slot.teamId];
-    if (team) teams.push(team);
+  if (draft.overallPick === 1) return `${who} took him first overall.`;
+  if (draft.round === 1) {
+    return `${who} spent the ${ordinal(draft.pick)} pick of the first round on him.`;
   }
-  return teams;
+  return `${who} got him in the ${ROUND_WORDS[draft.round]} round, ${ordinal(draft.overallPick)} overall.`;
 }
 
-export function draftLine(team: Team | null): string {
-  if (!team) return 'Nobody can agree on who drafted him.';
-  return `The ${team.city} ${team.name} drafted him.`;
-}
+/**
+ * How long it lasted, and whether it ended or was ended.
+ *
+ * The number of uniforms is a real number now rather than however many franchises you
+ * happened to spin. Nobody plays for seven teams, so the report no longer says he did.
+ */
+export function tenureLine(seasons: number, stints: Stint[], cutShort: boolean): string {
+  const years = `${seasons} season${seasons === 1 ? '' : 's'}`;
 
-export function tenureLine(seasons: number, teams: Team[], drafted: Team | null): string {
-  if (teams.length <= 1) {
-    const home = drafted?.city ?? teams[0]?.city;
+  if (cutShort) {
+    const home = stints[0]?.team.city;
     return home
-      ? `He gave them ${seasons} seasons and never wore anything but ${home}.`
-      : `He lasted ${seasons} seasons.`;
+      ? `It was over after ${years}, which is not how anybody in ${home} saw it going.`
+      : `It was over after ${years}, well before anybody expected it to be.`;
   }
-  const long = seasons >= 14 ? 'He hung around for' : seasons <= 6 ? 'He was gone in' : 'He lasted';
-  return `${long} ${seasons} seasons and wore ${teams.length} different uniforms doing it.`;
+
+  if (stints.length <= 1) {
+    const home = stints[0]?.team.city;
+    return home
+      ? `He gave ${home} ${years} and never wore anything else.`
+      : `He lasted ${years}.`;
+  }
+
+  const opener = seasons >= 14 ? 'He hung around for' : seasons <= 6 ? 'He was gone in' : 'He lasted';
+  return `${opener} ${years} and wore ${stints.length} different uniforms doing it.`;
+}
+
+/** The line people screenshot. One sentence of counting numbers, nothing else in it. */
+export function productionLine(position: Position, stats: CareerStats): string {
+  const labels = STAT_LABELS[position];
+  const yards = `${commas(stats.yards)} ${labels.yards.toLowerCase()}`;
+
+  if (position === 'QB') {
+    return `He finished with ${yards} and threw ${commas(stats.touchdowns)} touchdowns.`;
+  }
+  if (position === 'RB') {
+    return `He finished with ${yards} on ${commas(stats.volume)} carries and scored ${commas(stats.touchdowns)} times.`;
+  }
+  return `He finished with ${commas(stats.volume)} catches for ${commas(stats.yards)} yards and ${commas(stats.touchdowns)} touchdowns.`;
+}
+
+/** His best year, which is the one anybody arguing about him reaches for first. */
+export function bestSeasonLine(position: Position, stats: CareerStats): string {
+  const best = stats.best;
+  const where = `In year ${best.season}`;
+  if (position === 'QB') {
+    return `${where} he threw for ${commas(best.yards)} and ${best.touchdowns} touchdowns.`;
+  }
+  if (position === 'RB') {
+    return `${where} he ran for ${commas(best.yards)} and scored ${best.touchdowns} times.`;
+  }
+  return `${where} he caught ${best.volume} balls for ${commas(best.yards)} and ${best.touchdowns} touchdowns.`;
 }
 
 /**

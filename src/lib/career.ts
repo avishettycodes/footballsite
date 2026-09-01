@@ -1,0 +1,532 @@
+import { ATTRIBUTE_SETS, TEAMS, TEAMS_BY_ID, getPool } from '../data';
+import type { AttributeKey, Position, Team } from '../data';
+import { hashSeed, nextRandom } from './rng';
+
+/**
+ * WHAT HAPPENED TO HIM. Career length, where he got drafted, whose uniforms he wore,
+ * and the numbers he put up doing it.
+ *
+ * This file exists because durability used to be a slot on the build sheet, and that was
+ * the wrong shape for the idea. Availability is not a trait you shop for off somebody
+ * else's career. It is what happens to yours. So nobody picks it any more: how long a
+ * player lasts is rolled at the end, weighted by how good he turned out to be, against
+ * how long players at that level really lasted.
+ *
+ * EVERYTHING IN HERE IS A PURE FUNCTION OF (position, build, overall, seed).
+ *
+ * That is not a style preference, it is the seed contract. A `?seed=` link promises two
+ * people the identical run, and a career that rolled off live state would quietly break
+ * it, because one of them rerolled twice and the other did not. Every draw below comes
+ * out of a sub-stream keyed on the seed and a fixed tag, exactly like the Super Bowl
+ * roll, so the same build always gets the same career and the report can be rebuilt from
+ * a saved player without storing any of it.
+ *
+ * The numbers are anchored on real careers rather than picked to feel good. Where a
+ * constant is a real record or a real career length, the name is written next to it.
+ */
+
+/** One sub-stream, keyed on the seed and a tag. Same idea as the Super Bowl roll. */
+function stream(seed: string, tag: string): () => number {
+  let state = hashSeed(`${seed}::${tag}`);
+  return () => {
+    const draw = nextRandom(state);
+    state = draw.state;
+    return draw.value;
+  };
+}
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+/**
+ * A bell out of three flat draws. Averaging uniforms is the cheapest way to get
+ * something that clusters in the middle and still has tails, which is what almost every
+ * quantity down this file wants. A flat roll would give as many 22 year careers as 9
+ * year ones, and that is not what a league looks like.
+ */
+function bell(roll: () => number): number {
+  return (roll() + roll() + roll()) / 3;
+}
+
+/** Where a rating sits on its own scale, as 0 to 1. 58 is replacement, 96 is the ceiling. */
+function grade(overall: number): number {
+  return clamp((overall - 58) / 38, 0, 1);
+}
+
+/** How far a single trait leans from an ordinary one, as roughly -1 to 1. */
+function lean(build: Partial<Record<AttributeKey, number>>, key: AttributeKey): number {
+  return clamp(((build[key] ?? 76) - 76) / 20, -1.2, 1.2);
+}
+
+// ---------------------------------------------------------------------------
+// HOW LONG HE LASTED
+// ---------------------------------------------------------------------------
+
+/**
+ * The ceiling is the long career at the position, not the freak. Brady got 23 years and
+ * Rice got 20, and building the model around either one would hand a merely great player
+ * two decades. These are the numbers a genuine all-time great at the position actually
+ * gets, and the noise below reaches past them from time to time, which is where the
+ * freaks come from.
+ *
+ * Running back is the short one and it is short by a long way. Emmitt Smith got 15 years
+ * and Barry Sanders got 10, while the average back in the league is gone inside three.
+ * The position eats people, so a running back build is playing for a shorter window than
+ * a quarterback build with the same rating, and it should feel that way.
+ *
+ * FLAMEOUT is the chance the career simply ends early: a knee, a neck, a suspension, or
+ * a team that stopped calling. It is scaled down hard by how good he is, because a great
+ * player gets another chance and a marginal one does not, but it never reaches zero.
+ * Gale Sayers was the best back alive and got seven years.
+ */
+export const CAREER_SHAPE: Record<Position, { floor: number; ceiling: number; flameout: number }> = {
+  QB: { floor: 2, ceiling: 19, flameout: 0.17 },
+  RB: { floor: 2, ceiling: 14, flameout: 0.28 },
+  WR: { floor: 2, ceiling: 18, flameout: 0.20 },
+  TE: { floor: 2, ceiling: 17, flameout: 0.19 },
+};
+
+export const MAX_SEASONS = 23;
+
+/**
+ * THE CURVE IS CENTRED ON 91, WHICH IS NOT WHERE YOU WOULD PUT IT FROM FIRST PRINCIPLES.
+ *
+ * The obvious version spreads career length evenly from a replacement player to a
+ * perfect one, and it was measured doing exactly the wrong thing: a median build came out
+ * at seventeen seasons and put up the second most passing yards in history, every single
+ * time. The reason is that this game's ratings are not spread out. You cherry-pick from
+ * 32 franchises, so a sensible run lands between 90 and 96 almost always, and a curve
+ * built for the full 40 to 99 range hands that whole cluster the top of its ceiling.
+ *
+ * So the S bends where the players actually are. Half the span is spent between 88 and
+ * 95, which is the only stretch this game produces in quantity, and the difference
+ * between a 91 and a 95 is four more years rather than a rounding error. Below 85 it
+ * falls away fast, which is the honest answer: a replacement player gets two or three
+ * years and a phone call.
+ */
+const CENTRE = 91;
+const STEEPNESS = 4.5;
+
+export type CareerLength = {
+  seasons: number;
+  /** What his rating alone said he should get, before the dice. */
+  expected: number;
+  /** True when something ended it early rather than age doing it. */
+  cutShort: boolean;
+};
+
+export function careerLength(position: Position, overall: number, seed: string): CareerLength {
+  const shape = CAREER_SHAPE[position];
+  const t = grade(overall);
+  const roll = stream(seed, 'CAREER');
+
+  const share = 1 / (1 + Math.exp(-(overall - CENTRE) / STEEPNESS));
+  const expected = shape.floor + share * (shape.ceiling - shape.floor);
+
+  const spread = 0.72 + 0.56 * bell(roll);
+  let seasons = Math.round(expected * spread);
+
+  const cutShort = roll() < shape.flameout * (1 - 0.8 * t);
+  if (cutShort) seasons = Math.round(seasons * (0.2 + 0.3 * roll()));
+
+  return {
+    seasons: clamp(seasons, 1, MAX_SEASONS),
+    expected: Math.round(expected * 10) / 10,
+    cutShort,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// WHERE HE WENT IN THE DRAFT
+// ---------------------------------------------------------------------------
+
+export const ROUNDS = 7;
+export const PICKS_PER_ROUND = 32;
+export const LAST_PICK = ROUNDS * PICKS_PER_ROUND;
+
+export type DraftSlot = {
+  undrafted: boolean;
+  /** 1 to 7. Zero when he went undrafted. */
+  round: number;
+  /** Pick within the round. Zero when he went undrafted. */
+  pick: number;
+  /** 1 to 224. Zero when he went undrafted. */
+  overallPick: number;
+};
+
+/**
+ * Quarterbacks get reached for and running backs get pushed down, and both of those are
+ * real. Teams talk themselves into a quarterback every April, and no running back went
+ * in the first round at all in 2013 or 2014. This is applied to how he was SEEN coming
+ * out, not to how he turned out, which is the whole point of the next comment.
+ */
+const DRAFT_LIFT: Record<Position, number> = { QB: 6, RB: -5, WR: 0, TE: -3 };
+
+/**
+ * THE DRAFT IS A GUESS, AND IT IS A BAD ONE. That is the entire model here.
+ *
+ * The obvious version of this maps overall straight onto a pick number, and it produces
+ * a league where every great player went in the top five and every bust went late. No
+ * draft has ever looked like that. Tom Brady went 199th, Kurt Warner was stocking
+ * shelves, and Ryan Leaf went second. What teams are actually drafting is their estimate
+ * of a career that has not happened yet, so what sets the slot is the ESTIMATE.
+ *
+ * The scale below is the part that took two attempts, and the failure is worth keeping
+ * because it is invisible from the inside. The first version squashed the estimate onto
+ * a 0 to 1 board and squared it, and the board saturated: two thirds of 96 overall
+ * players came out pinned at the top of it, so 99% of them went in the first round and
+ * exactly nobody slid. Meanwhile half of the 76 overall players were going in the first
+ * round too, because the same squashing pushed the middle of the range up against the
+ * top. It looked fine. It was a draft with no tail at either end.
+ *
+ * This one is an exponential on the estimate with no ceiling in it, anchored on two
+ * points a person can argue with: an estimate of 97 goes tenth, and every six or so
+ * points below that roughly doubles the wait. Around 30% of the great ones now go after
+ * round one, which is about the real rate, and it is not a special case anybody wrote.
+ * It falls out of the guess being wrong.
+ */
+const ANCHOR_ESTIMATE = 97;
+const ANCHOR_PICK = 10;
+const ESTIMATE_DECAY = 0.16;
+/** Spread of the board's error, as the full width of the bell. About ten points of sd. */
+const ESTIMATE_NOISE = 63;
+
+export function draftSlot(position: Position, overall: number, seed: string): DraftSlot {
+  const roll = stream(seed, 'DRAFT');
+
+  const estimate = overall + (bell(roll) - 0.5) * ESTIMATE_NOISE + DRAFT_LIFT[position];
+  const expected = ANCHOR_PICK * Math.exp(-ESTIMATE_DECAY * (estimate - ANCHOR_ESTIMATE));
+  const overallPick = Math.round(expected * (0.85 + 0.3 * roll()));
+
+  if (!Number.isFinite(overallPick) || overallPick > LAST_PICK) {
+    return { undrafted: true, round: 0, pick: 0, overallPick: 0 };
+  }
+
+  const at = Math.max(1, overallPick);
+  return {
+    undrafted: false,
+    round: Math.ceil(at / PICKS_PER_ROUND),
+    pick: ((at - 1) % PICKS_PER_ROUND) + 1,
+    overallPick: at,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// WHO WANTED HIM
+// ---------------------------------------------------------------------------
+
+/**
+ * WHICH FRANCHISE NEEDS THIS POSITION, read straight off their own history.
+ *
+ * A team that has had an all-time great at the spot is not desperate for another one,
+ * and a team whose best ever is a competent journeyman is. That is a fact already
+ * sitting in the data, so nothing new has to be invented or stored: it is the mean of
+ * the two best cards in that franchise's pool at that position.
+ *
+ * It comes out as a RANK rather than a raw score, on purpose. A raw cutoff would need a
+ * magic number per position, and the positions do not share a scale, so the score is
+ * turned into "how needy is this franchise compared to the other 31", which is what the
+ * word need actually means and which recalibrates itself when the data changes.
+ */
+function poolStrength(position: Position, teamId: string): number {
+  const pool = getPool(position, teamId);
+  if (!pool.length) return 0;
+  const keys = ATTRIBUTE_SETS[position];
+  const means = pool
+    .map((p) => keys.reduce((sum, k) => sum + (p.attributes[k] ?? 0), 0) / keys.length)
+    .sort((a, b) => b - a);
+  return means.length === 1 ? means[0] : (means[0] + means[1]) / 2;
+}
+
+const NEED: Record<Position, Record<string, number>> = (() => {
+  const out = {} as Record<Position, Record<string, number>>;
+  for (const position of Object.keys(ATTRIBUTE_SETS) as Position[]) {
+    const ranked = TEAMS
+      .map((t) => ({ id: t.id, strength: poolStrength(position, t.id) }))
+      .filter((row) => row.strength > 0)
+      .sort((a, b) => b.strength - a.strength);
+    const table: Record<string, number> = {};
+    ranked.forEach((row, i) => {
+      table[row.id] = ranked.length > 1 ? i / (ranked.length - 1) : 0.5;
+    });
+    out[position] = table;
+  }
+  return out;
+})();
+
+/** 0 for the franchise with the deepest history here, 1 for the one with nothing. */
+export function positionalNeed(position: Position, teamId: string): number {
+  return NEED[position]?.[teamId] ?? 0.5;
+}
+
+/**
+ * How much need actually decides it, which falls away at the top of the board.
+ *
+ * This is the Ty Simpson case. A team sitting on a settled depth chart does not pass on
+ * a player everyone in the building thinks is the best in the class, so at the very top
+ * need stops mattering and whoever is picking takes him. Below that it matters a lot,
+ * because a team with an all-time great already on the wall is not spending a high pick
+ * on his understudy.
+ */
+function needBlend(overall: number): number {
+  return clamp((overall - 88) / 10, 0, 1);
+}
+
+function weightedIndex(weights: number[], r: number): number {
+  const total = weights.reduce((a, b) => a + b, 0);
+  let target = r * total;
+  for (let i = 0; i < weights.length; i++) {
+    target -= weights[i];
+    if (target <= 0) return i;
+  }
+  return weights.length - 1;
+}
+
+export type Stint = {
+  team: Team;
+  seasons: number;
+  /** Season numbers of his career, one-based and inclusive. */
+  from: number;
+  to: number;
+};
+
+export type CareerPath = {
+  drafted: Team | null;
+  stints: Stint[];
+};
+
+/**
+ * HOW MANY UNIFORMS, which used to be every franchise you stole from and was therefore
+ * sometimes seven.
+ *
+ * Nobody plays for seven teams. Rice played for three in twenty years, Manning for two
+ * in eighteen, and the players who really do bounce around are the ones nobody wants to
+ * keep. So the number falls out of the two things that drive it in real life: how long
+ * he was around, and whether he was worth re-signing. A star gets extended and a fringe
+ * player gets replaced.
+ */
+function stintCount(overall: number, seasons: number, available: number, r: number): number {
+  let cap = seasons <= 4 ? 1 : seasons <= 8 ? 2 : seasons <= 13 ? 3 : 4;
+  if (overall >= 92) cap -= 1;
+  if (overall < 78) cap += 1;
+  // `seasons` is the ceiling that matters and it used to be missing. A one season career
+  // with the journeyman bonus applied came back as two stints of one season each, which
+  // is three seasons of timeline on a man who played one, and the report printed both.
+  cap = clamp(cap, 1, Math.min(4, available, seasons));
+  // Skewed toward the low end, because one team and two teams are the common answers.
+  return 1 + Math.floor(Math.pow(r, 1.4) * cap);
+}
+
+/**
+ * The franchises he was built out of are the franchises he can play for. That tie back
+ * to the run is the point of the whole game, so it survives: what changed is that they
+ * are no longer ALL of them, and the order is no longer the order you happened to spin.
+ */
+export function careerPath(
+  position: Position,
+  overall: number,
+  seasons: number,
+  raidedTeamIds: string[],
+  seed: string,
+): CareerPath {
+  const pool = raidedTeamIds.map((id) => TEAMS_BY_ID[id]).filter(Boolean);
+  if (!pool.length) return { drafted: null, stints: [] };
+
+  const roll = stream(seed, 'PATH');
+  const blend = needBlend(overall);
+
+  const remaining = [...pool];
+  const chosen: Team[] = [];
+  const count = stintCount(overall, seasons, pool.length, roll());
+
+  for (let i = 0; i < count && remaining.length; i++) {
+    const weights = remaining.map((t) => {
+      const need = positionalNeed(position, t.id);
+      // 0.15 keeps a settled franchise in play rather than ruling it out. Teams do sign
+      // a second one, they just do not pay a premium for him.
+      const byNeed = 0.15 + need * need * 2;
+      return byNeed * (1 - blend) + blend;
+    });
+    chosen.push(...remaining.splice(weightedIndex(weights, roll()), 1));
+  }
+
+  // Seasons per stop. The first one gets the most, because that is where the rookie deal
+  // and the extension both are, and the noise is there so it is not always the most.
+  const shares = chosen.map((_, i) => (chosen.length - i) + roll() * 1.6);
+  const total = shares.reduce((a, b) => a + b, 0);
+
+  const lengths = chosen.map(() => 1);
+  let left = Math.max(0, seasons - chosen.length);
+  for (let i = 0; i < chosen.length && left > 0; i++) {
+    const take = i === chosen.length - 1 ? left : Math.min(left, Math.round((seasons - chosen.length) * (shares[i] / total)));
+    lengths[i] += take;
+    left -= take;
+  }
+
+  let cursor = 1;
+  const stints = chosen.map((team, i) => {
+    const from = cursor;
+    cursor += lengths[i];
+    return { team, seasons: lengths[i], from, to: cursor - 1 };
+  });
+
+  return { drafted: stints[0]?.team ?? null, stints };
+}
+
+// ---------------------------------------------------------------------------
+// WHAT HE PUT UP
+// ---------------------------------------------------------------------------
+
+export type SeasonLine = {
+  season: number;
+  /** The number the position is judged on. Passing yards, rushing yards, receiving yards. */
+  yards: number;
+  touchdowns: number;
+  /** Attempts for a passer, carries for a back, catches for a receiver. */
+  volume: number;
+  /** Interceptions for a passer, receptions for a back, and unused elsewhere. */
+  secondary: number;
+};
+
+export type CareerStats = {
+  seasons: SeasonLine[];
+  yards: number;
+  touchdowns: number;
+  volume: number;
+  secondary: number;
+  /** His single best year, which is the line people actually quote at each other. */
+  best: SeasonLine;
+};
+
+/**
+ * THE CAREER ARC, normalised so the peak is worth exactly one prime season.
+ *
+ * A rookie year is not a prime year and neither is year fourteen. Without this, a long
+ * career is just a short career times a bigger number, and every all-time total comes
+ * out absurd. The curve peaks about a third of the way in, which is where football
+ * players actually peak, and the tails are the ramp and the decline.
+ */
+const ARC_PEAK = 1.4;
+function arc(index: number, seasons: number): number {
+  const x = seasons === 1 ? 0.35 : index / (seasons - 1);
+  return (0.55 + 0.85 * Math.exp(-Math.pow((x - 0.35) / 0.42, 2))) / ARC_PEAK;
+}
+
+/**
+ * What a prime season looks like at this rating, before the arc and before the dice.
+ *
+ * Anchored on real prime seasons rather than on what felt generous. An elite passer year
+ * is around 4,800 and 36, a replacement one is around 2,700 and 13. An elite back is
+ * 1,750 on 330 carries, which is Emmitt's best year, while the league is full of 700
+ * yard seasons. Traits push these around the edges, so a build with a 96 deep ball
+ * scores more than one that dinks it, and a passer who cannot read a defence throws it
+ * to the wrong team more often.
+ *
+ * THE TRAIT MULTIPLIERS ARE SMALL ON PURPOSE, and receivers are why. They started at
+ * double these and they COMPOUND, because receiving yards are catches times yards per
+ * catch and both ends were being pushed. A sensible build came out at 116 catches for
+ * 1,998 every prime year, which is the best season Randy Moss ever had, repeated twelve
+ * times, and a career total that beat Jerry Rice. A trait should tilt a season, not
+ * rewrite it.
+ */
+function primeSeason(
+  position: Position,
+  build: Partial<Record<AttributeKey, number>>,
+  overall: number,
+): { yards: number; touchdowns: number; volume: number; secondary: number } {
+  const p = grade(overall);
+
+  /**
+   * SNAPS, WHICH IS THE THING THIS MODEL WAS MISSING ENTIRELY.
+   *
+   * The first version scaled only the rate stats, so a 71 overall quarterback threw for
+   * 3,887 yards in the single season he lasted. He was bad and he still played every
+   * snap of every game, because nothing in the model knew what a backup was.
+   *
+   * The biggest difference between a bad career and a good one is not yards per attempt,
+   * it is attempts. Bad players are backups, spot starters and rotational pieces, and
+   * they get benched. So volume carries most of the range and efficiency carries the
+   * rest, which is also why the low end drops away much faster than the high end climbs.
+   */
+  const workload = 0.42 + 0.58 * p;
+
+  if (position === 'QB') {
+    const attempts = (330 + 210 * p) * workload;
+    const perAttempt = (6.3 + 2.4 * p) * (1 + 0.09 * lean(build, 'deepBall') + 0.04 * lean(build, 'armStrength'));
+    const touchdowns = attempts * (0.030 + 0.030 * p) * (1 + 0.14 * lean(build, 'deepBall') + 0.08 * lean(build, 'clutch'));
+    // Absolute interceptions RISE with playing time even as the rate falls, and that is
+    // correct rather than a bug. Brees threw 243 of them and your backup threw four.
+    const picks = attempts * (0.048 - 0.022 * p) * (1 - 0.18 * lean(build, 'processing') - 0.12 * lean(build, 'accuracy'));
+    return { yards: attempts * perAttempt, touchdowns, volume: attempts, secondary: Math.max(1, picks) };
+  }
+
+  if (position === 'RB') {
+    const carries = (185 + 120 * p) * workload * (1 + 0.08 * lean(build, 'power'));
+    const perCarry = (3.7 + 1.2 * p) * (1 + 0.07 * lean(build, 'vision') + 0.05 * lean(build, 'burst'));
+    const touchdowns = carries * (0.020 + 0.026 * p) * (1 + 0.20 * lean(build, 'power'));
+    const catches = (20 + 42 * p) * workload * (1 + 0.25 * lean(build, 'hands'));
+    return { yards: carries * perCarry, touchdowns, volume: carries, secondary: catches };
+  }
+
+  if (position === 'WR') {
+    const catches = (35 + 48 * p) * workload * (1 + 0.07 * lean(build, 'hands') + 0.05 * lean(build, 'routeRunning'));
+    const perCatch = (11 + 4.0 * p) * (1 + 0.06 * lean(build, 'deepThreat') + 0.03 * lean(build, 'yac'));
+    const touchdowns = catches * (0.055 + 0.055 * p) * (1 + 0.16 * lean(build, 'contestedCatch'));
+    return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0 };
+  }
+
+  const catches = (26 + 43 * p) * workload * (1 + 0.16 * lean(build, 'hands'));
+  const perCatch = (9.5 + 3.8 * p) * (1 + 0.10 * lean(build, 'speed') + 0.07 * lean(build, 'yac'));
+  const touchdowns = catches * (0.050 + 0.045 * p) * (1 + 0.14 * lean(build, 'hands'));
+  return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0 };
+}
+
+export function careerStats(
+  position: Position,
+  build: Partial<Record<AttributeKey, number>>,
+  overall: number,
+  seasons: number,
+  seed: string,
+): CareerStats {
+  const prime = primeSeason(position, build, overall);
+  const roll = stream(seed, 'STATS');
+
+  const lines: SeasonLine[] = [];
+  for (let i = 0; i < seasons; i++) {
+    // Year to year noise, so a career has a season in it worth remembering rather than
+    // the same line printed fourteen times.
+    const swing = 0.80 + 0.40 * bell(roll);
+    const share = arc(i, seasons) * swing;
+    lines.push({
+      season: i + 1,
+      yards: Math.round(prime.yards * share),
+      touchdowns: Math.round(prime.touchdowns * share),
+      volume: Math.round(prime.volume * share),
+      // A passer throws MORE picks when he is worse, so the swing runs the other way.
+      secondary: Math.round(prime.secondary * (position === 'QB' ? 2 - share : share)),
+    });
+  }
+
+  const sum = (pick: (line: SeasonLine) => number) => lines.reduce((total, line) => total + pick(line), 0);
+  const best = lines.reduce((a, b) => (b.yards > a.yards ? b : a), lines[0]);
+
+  return {
+    seasons: lines,
+    yards: sum((l) => l.yards),
+    touchdowns: sum((l) => l.touchdowns),
+    volume: sum((l) => l.volume),
+    secondary: sum((l) => l.secondary),
+    best,
+  };
+}
+
+/** What each of the four numbers above is called at this position. */
+export const STAT_LABELS: Record<Position, { yards: string; touchdowns: string; volume: string; secondary: string | null }> = {
+  QB: { yards: 'PASSING YARDS', touchdowns: 'PASSING TDS', volume: 'ATTEMPTS', secondary: 'INTERCEPTIONS' },
+  RB: { yards: 'RUSHING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'CARRIES', secondary: 'RECEPTIONS' },
+  WR: { yards: 'RECEIVING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'RECEPTIONS', secondary: null },
+  TE: { yards: 'RECEIVING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'RECEPTIONS', secondary: null },
+};
+
+export function commas(n: number): string {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}

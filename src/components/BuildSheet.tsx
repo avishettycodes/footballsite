@@ -21,7 +21,7 @@ export function BuildSheet({ position, slots, highlight, usedPlayerIds = [] }: P
 
   /**
    * The sentence you actually want by the middle of a run. Counting in your head which
-   * franchises can still solve durability is work the screen should be doing for you.
+   * franchises can still solve catching is work the screen should be doing for you.
    */
   // Every franchise stays in the wheel in both modes, so scarcity is now purely about
   // who is left on the rosters rather than about which teams you have used up.

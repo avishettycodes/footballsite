@@ -1,13 +1,24 @@
 import { ATTRIBUTE_ABBR, ATTRIBUTE_LABELS } from '../data';
 import type { AttributeKey } from '../data';
 
-/** Elite traits glow, joke traits rot. The color IS the information. */
+/**
+ * FOUR BANDS, ON THE ROUND NUMBERS. The color IS the information, so it has to be
+ * information somebody can hold in their head.
+ *
+ * This used to be six bands on 95, 88, 78, 66 and 52, which meant an 89 and a 79 were
+ * different colours for no reason a player could name, and gold at 95 sat one shade off
+ * the hazard yellow the interface already uses for buttons. Nobody reads a scale they
+ * cannot predict, so the edges are now the numbers football people already say out loud.
+ *
+ *   90 and up   green    an actual strength
+ *   80 to 89    yellow   fine, and not what wins you anything
+ *   70 to 79    grey     filler
+ *   under 70    red      a hole, and half your overall comes from your two worst
+ */
 export function ratingColor(value: number): string {
-  if (value >= 95) return '#ffd400';
-  if (value >= 88) return '#4ade80';
-  if (value >= 78) return '#a3e635';
-  if (value >= 66) return '#94a3b8';
-  if (value >= 52) return '#fb923c';
+  if (value >= 90) return '#22c55e';
+  if (value >= 80) return '#facc15';
+  if (value >= 70) return '#94a3b8';
   return '#ef4444';
 }
 

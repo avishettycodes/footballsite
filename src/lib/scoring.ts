@@ -1,5 +1,6 @@
 import { ATTRIBUTE_SETS } from '../data';
 import type { AttributeKey, Position } from '../data';
+import { careerLength, careerStats } from './career';
 import { hashSeed, nextRandom } from './rng';
 
 /**
@@ -34,13 +35,13 @@ export type Build = Partial<Record<AttributeKey, number>>;
 
 /**
  * Positional weights. Higher = this trait defines the position.
- * RB leans on vision and contact balance; QB on accuracy and processing.
+ * RB leans on vision and burst; QB on accuracy and processing.
  */
 export const WEIGHTS: Record<Position, Partial<Record<AttributeKey, number>>> = {
-  RB: { vision: 1.50, contactBalance: 1.30, speed: 1.15, burst: 1.15, power: 1.10, juke: 1.05, durability: 1.00, hands: 0.70 },
-  QB: { accuracy: 1.55, processing: 1.45, pocketPresence: 1.15, deepBall: 1.05, armStrength: 1.00, clutch: 0.95, durability: 0.90, mobility: 0.80 },
-  WR: { hands: 1.40, routeRunning: 1.35, speed: 1.15, release: 1.05, contestedCatch: 1.00, yac: 1.00, deepThreat: 0.95, durability: 0.90 },
-  TE: { hands: 1.45, catchRadius: 1.20, routeRunning: 1.15, blocking: 1.05, yac: 0.95, speed: 0.90, durability: 0.90 },
+  RB: { vision: 1.50, speed: 1.15, burst: 1.15, power: 1.10, juke: 1.05, hands: 0.70 },
+  QB: { accuracy: 1.55, processing: 1.45, pocketPresence: 1.15, deepBall: 1.05, armStrength: 1.00, clutch: 0.95, mobility: 0.80 },
+  WR: { hands: 1.40, routeRunning: 1.35, speed: 1.15, release: 1.05, contestedCatch: 1.00, yac: 1.00, deepThreat: 0.95 },
+  TE: { hands: 1.45, routeRunning: 1.15, blocking: 1.05, yac: 0.95, speed: 0.90 },
 };
 
 /**
@@ -159,14 +160,27 @@ export function recordLabel(position: Position): string {
  * typical run actually scores. Measured against the real data they were far too low:
  * a naive-but-sensible player cleared MVP 74% of the time and made the Hall 97%, which
  * makes every trophy meaningless. The cause is supply — the best available number in
- * ANY franchise's pool is ~94 for every attribute, so eight competent picks land near
- * the ceiling by construction.
+ * ANY franchise's pool is ~94 for every attribute, so a handful of competent picks land
+ * near the ceiling by construction.
+ *
+ * THEY MOVED UP ONE AGAIN when durability, contact balance and catch radius came off the
+ * build sheet. Durability was the scarcest slot in the game and therefore the main source
+ * of holes, so deleting it stopped the weak link anchor biting and lifted every rating
+ * about a point. At the old numbers a sensible player was back to an MVP 27% of the time.
+ * These are 89, 93, 95 and 96 because that is what it took to put the trophies back where
+ * they were, not because bigger numbers look harder.
  *
  * These values sit on the measured distribution instead, and are re-checked against a
  * SKILL LADDER of four bot policies whose accolade rates must rise monotonically. If a
  * careless policy ever out-earns a careful one, the weak link anchor has failed its job.
  *
- * Reference medians for a finished build: random 72, careless 86, sensible 93, sharp 94.
+ * Reference medians for a finished build, by position and policy:
+ *
+ *            random  fan  sensible  sharp
+ *     QB         70   87        93     94
+ *     RB         77   89        94     94
+ *     WR         79   90        94     95
+ *     TE         73   80        90     90
  */
 export const GATES = {
   /**
@@ -180,9 +194,9 @@ export const GATES = {
    * the old quarterback MVP bonus, where 96 minus 1.5 rounded onto OPOY's 95, and again
    * when MVP was lowered to 95 outright. Both times the rates came back byte identical.
    */
-  proBowl: 88,
-  allPro: 92,
-  opoy: 94,
+  proBowl: 89,
+  allPro: 93,
+  opoy: 95,
   /**
    * OPOY's elite-trait requirement, expressed as a SHARE of the position's attribute
    * count rather than a fixed number.
@@ -199,9 +213,7 @@ export const GATES = {
    * produced a grand slam rate of one run in a thousand.
    */
   opoyEliteShare: 0.625,
-  mvp: 95,
-  recordOverall: 94,
-  recordDurability: 96,
+  mvp: 96,
   /**
    * 5 of 6, not the spec's 3. At 3 a mediocre run walked into Canton, and at 4 a
    * perfect run made it two thirds of the time. At 5 the Hall is the capstone it
@@ -235,12 +247,51 @@ export function superBowlRoll(seed: string): number {
   return nextRandom(hashSeed(`${seed}::SUPERBOWL`)).value;
 }
 
+/**
+ * THE RECORD IS NOW THE ACTUAL NUMBER, which is the whole reason it moved.
+ *
+ * It used to read "overall 94 or better and durability 96 or better", which is a gate
+ * made of two ratings standing in for a career nobody ever saw. Careers are simulated
+ * season by season now, so the record can simply ask what it says on the trophy: did he
+ * put up more yards than anyone should.
+ *
+ * They are CALIBRATED like every other gate here, against the measured distribution of
+ * real play rather than picked because the number looked impressive, and each one lands
+ * on a real name a few places down the all-time list. Careers here are shorter than the
+ * twenty year outliers who own the actual records, so aiming at Brady would have made
+ * this unreachable rather than hard.
+ *
+ *   QB  57,000  between Warren Moon at 49,325 and Eli Manning at 57,023
+ *   RB  14,500  around Curtis Martin at 14,101, under Barry Sanders at 15,269
+ *   WR  16,900  between Randy Moss at 15,292 and Larry Fitzgerald at 17,492
+ *   TE  10,600  around Shannon Sharpe at 10,060, under Antonio Gates at 11,841
+ *
+ * These land the trophy between OPOY and MVP in rarity, which is the right place for it.
+ * A record is a bigger deal than a good season and a smaller one than being the best
+ * player alive.
+ */
+export const RECORD_YARDS: Record<Position, number> = {
+  QB: 57000,
+  RB: 14500,
+  WR: 16900,
+  TE: 10600,
+};
+
 export type CareerResult = {
   overall: number;
   breakdown: OverallBreakdown;
   accolades: Record<AccoladeId, boolean>;
   superBowl: { odds: number; roll: number; won: boolean };
   hofPoints: number;
+  /**
+   * How many years he got. Rolled here rather than picked on the build sheet, and stored
+   * because the record gate below reads it and a saved player has to keep the answer he
+   * got. Everything else about the career report is rebuilt from the seed on demand,
+   * since it is a pure function of one, so nothing else needs keeping.
+   */
+  seasons: number;
+  /** The number the position is judged on. Passing, rushing or receiving yards. */
+  careerYards: number;
 };
 
 export function simulateCareer(
@@ -250,13 +301,17 @@ export function simulateCareer(
 ): CareerResult {
   const breakdown = computeOverall(position, build);
   const { overall, eliteCount } = breakdown;
-  const durability = build.durability ?? 0;
+
+  // How long he lasted, then what he did with the time. Both are pure functions of the
+  // seed, so a shared run gives two people the same career and not merely the same wheel.
+  const { seasons } = careerLength(position, overall, seed);
+  const stats = careerStats(position, build, overall, seasons, seed);
 
   const proBowl = overall >= GATES.proBowl;
   const allPro = overall >= GATES.allPro;
   const opoy = overall >= GATES.opoy && eliteCount >= eliteTraitsRequired(position);
   const mvp = overall >= GATES.mvp;
-  const record = durability >= GATES.recordDurability && overall >= GATES.recordOverall;
+  const record = stats.yards >= RECORD_YARDS[position];
 
   const odds = superBowlOdds(overall);
   const roll = superBowlRoll(seed);
@@ -271,6 +326,8 @@ export function simulateCareer(
     accolades: { proBowl, allPro, opoy, mvp, record, superBowl, hof },
     superBowl: { odds, roll, won: superBowl },
     hofPoints,
+    seasons,
+    careerYards: stats.yards,
   };
 }
 
@@ -288,7 +345,7 @@ export function accoladeDefs(position: Position): AccoladeDef[] {
     { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+` },
     { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy}+ with ${eliteTraitsRequired(position)} traits at 95 or better` },
     { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp}+` },
-    { id: 'record', label: recordLabel(position), trophy: 'stopwatch', requirement: `Overall ${GATES.recordOverall}+ and durability ${GATES.recordDurability}+, since you cannot break a record from the training room` },
+    { id: 'record', label: recordLabel(position), trophy: 'stopwatch', requirement: `${RECORD_YARDS[position].toLocaleString()} career yards, which takes both a long career and a good one` },
     { id: 'superBowl', label: 'Super Bowl', trophy: 'ring', requirement: 'Down to the roll' },
     { id: 'hof', label: 'Hall of Fame', trophy: 'laurel', requirement: `Any ${GATES.hofPoints} of the ones above` },
   ];
