@@ -73,9 +73,14 @@ export function StartScreen({
               {!live && <div className="font-mono text-[9px] opacity-60">SOON</div>}
               {/*
                 Tight end really is harder, and saying so turns a broken promise into
-                the point. It is the only seven attribute position and it has by far the
-                fewest elite players in its history, so the top awards sit further away
-                than they do anywhere else.
+                the point. It plays the shortest build in the game at five slots, so the
+                two worst numbers carry more of the rating than they do anywhere else,
+                and it has by far the fewest elite players in its history, so the top
+                awards sit further away too.
+
+                This comment used to say tight end was the only seven attribute position,
+                which was left over from before the attribute cut and had been false for
+                a while. Seven is QB and WR. Tight end is five.
               */}
               {pos === 'TE' && live && (
                 <div className="font-mono text-[8px] tracking-wider text-red-400">
@@ -100,8 +105,8 @@ export function StartScreen({
           </div>
           <div className="font-mono text-[11px] text-white/50">
             {hardMode
-              ? 'No rerolls at all. Every franchise stays in the wheel the whole way, so you can land on the Browns twice and you get to live with it.'
-              : 'Three rerolls, and every franchise stays in the wheel the whole way.'}
+              ? 'No reroll at all, and the pool hides every rating. You take him on his name and find out what you got once he is yours.'
+              : 'One reroll, so you can get out of one bad landing and no more. Every franchise stays in the wheel the whole way.'}
           </div>
         </div>
         <div

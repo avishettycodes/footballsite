@@ -9,7 +9,20 @@ import { loadHall, removeFromHall, saveToHall } from '../lib/hall';
 import type { SavedPlayer } from '../lib/hall';
 import { safeStorage } from '../lib/storage';
 
-export const REROLLS_NORMAL = 3;
+/**
+ * ONE REROLL, NOT THREE.
+ *
+ * A run is five to seven spins, so three rerolls meant you could escape almost every
+ * pool you did not like and the wheel stopped being a constraint. One lets you dodge
+ * the single worst landing of a run and no more, which is the difference between
+ * getting out of trouble once and shopping until the pool suits you.
+ *
+ * Nothing in `npm run verify:scoring` moves when this number changes, and that is worth
+ * knowing rather than reassuring. None of the calibration policies ever calls reroll,
+ * so every rate that harness prints has always described a run played with zero of
+ * them. See the note at the top of scripts/verify-scoring.ts.
+ */
+export const REROLLS_NORMAL = 1;
 export const REROLLS_HARD = 0;
 
 export type FilledSlot = {
@@ -132,8 +145,8 @@ const emptyRun = (): RunState => ({
  *      respin is drawn from the franchises that still have somebody left, so one retry
  *      is always enough.
  *   2. Otherwise you must take something. Not liking the pool is not a deadlock, it is
- *      the game. Escaping a live pool costs one of your rerolls, and hard mode does not
- *      give you any.
+ *      the game. Escaping a live pool costs your one reroll, and hard mode does not give
+ *      you one at all.
  *
  * HARD MODE USED TO CARRY HALF OF THIS AND NO LONGER DOES. It excluded already-visited
  * franchises from the reel, which meant the exhausted-pool case was nearly unreachable:
@@ -155,8 +168,9 @@ function drawTeam(state: RunState): { teamId: string | null; rngState: number; f
   const hasUnused = (teamId: string) =>
     getPool(position, teamId).some((p) => !usedPlayerIds.includes(p.id));
 
-  // Every franchise is always in the wheel. Hard mode is about rerolls, not about
-  // crossing teams off, so a repeat is a legal and frequently funny outcome.
+  // Every franchise is always in the wheel. Hard mode takes away your reroll and hides
+  // the pool's ratings, and it has never crossed teams off, so a repeat is a legal and
+  // frequently funny outcome.
   const allowed = TEAMS.map((t) => t.id);
   const eligible = allowed.filter(hasUnused);
 

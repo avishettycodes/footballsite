@@ -13,14 +13,33 @@ type Props = {
   slots: Partial<Record<AttributeKey, unknown>>;
   onSteal: (playerId: string, attribute: AttributeKey) => void;
   onHover: (attribute: AttributeKey | null) => void;
+  /**
+   * Hard mode. Every rating in the pool renders as a question mark and no colour is
+   * spent on it, so the only things left to pick on are the name, the era and the blurb.
+   *
+   * THE POOL IS BLIND, YOUR BUILD IS NOT. The number you take lands on the build sheet
+   * the moment you take it, because a game where you cannot see what you already have is
+   * not harder, it is unplayable. Everything hidden here is hidden on the way in.
+   *
+   * The best and worst callout goes with the numbers rather than staying as a hint. It
+   * is a rating read out in words, and leaving it up would be the same information
+   * wearing a different coat.
+   */
+  blind?: boolean;
 };
 
-export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHover }: Props) {
+export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHover, blind = false }: Props) {
   const [selection, setSelection] = useState<Selection>(null);
   const keys = ATTRIBUTE_SETS[position];
 
   return (
     <>
+      {blind && (
+        <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 font-mono text-[11px] leading-relaxed tracking-wide text-red-300">
+          Hard mode hides the ratings. Take him on his name, and find out what you got
+          when it lands on your build sheet.
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {pool.map((player) => {
           const spent = usedPlayerIds.includes(player.id);
@@ -59,7 +78,7 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
               <p className="px-4 pt-1 text-[12px] leading-snug text-white/55 italic">
                 {spent ? 'You already took something off him. Move on.' : player.blurb}
               </p>
-              {!spent && (
+              {!spent && !blind && (
                 <p className="flex flex-wrap items-center gap-x-3 px-4 pt-1.5 font-mono text-[10px] tracking-wide">
                   <span className="inline-flex items-center gap-1" style={{ color: ratingColor(bestValue) }}>
                     <CaretUp className="h-2.5 w-2.5" />
@@ -98,16 +117,24 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
                       title={taken ? 'You already filled that slot' : ATTRIBUTE_LABELS[key]}
                     >
                       <span className="flex min-w-0 items-center gap-1 font-mono text-[9px] tracking-wider">
-                        {key === bestKey && !disabled && !active && (
+                        {key === bestKey && !disabled && !active && !blind && (
                           <CaretUp className="h-2 w-2 shrink-0" />
                         )}
                         <span className="truncate">{ATTRIBUTE_LABELS[key]}</span>
                       </span>
                       <span
                         className="ml-1 font-mono text-[13px] leading-none font-bold tabular-nums"
-                        style={{ color: active ? '#07090c' : disabled ? undefined : ratingColor(value) }}
+                        style={{
+                          color: active
+                            ? '#07090c'
+                            : disabled
+                              ? undefined
+                              : blind
+                                ? '#7c8698'
+                                : ratingColor(value),
+                        }}
                       >
-                        {value}
+                        {blind ? '?' : value}
                       </span>
                     </button>
                   );
@@ -124,10 +151,12 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-hazard bg-turf-900/95 px-4 py-3 backdrop-blur">
             <div className="min-w-0">
               <div className="font-mono text-[10px] tracking-[0.2em] text-white/50">STEALING</div>
+              {/* The number comes off the confirm bar too in hard mode. It is the last
+                  place the rating could leak before you commit to it. */}
               <div className="truncate font-display text-xl tracking-tight uppercase">
                 {selection.player.name} ·{' '}
                 <span className="text-hazard">{ATTRIBUTE_LABELS[selection.attribute]}</span> ·{' '}
-                {selection.player.attributes[selection.attribute]}
+                {blind ? '?' : selection.player.attributes[selection.attribute]}
               </div>
             </div>
             <div className="flex gap-2">

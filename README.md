@@ -23,9 +23,16 @@ Solo build mode is playable end to end. Pick a position, spin, steal attributes,
 simulate a career. The wheel, the build sheet, the scoring engine, the accolades and the
 Super Bowl roll are all in.
 
-Hard mode means no rerolls. Every franchise stays in the wheel the whole way in both
-modes, so landing on the same roster twice is a legal and fairly common outcome, and in
-hard mode you have no way to talk your way out of it.
+Normal mode gives you one reroll, which is enough to walk away from the single worst
+landing of a run and not enough to shop. Hard mode gives you none, and it also hides
+every rating in the pool: each number renders as a question mark, so you take a player
+on his name and his era and the line under it, and you only see what you got once it
+lands on your build sheet. Your own build is never hidden, because a run where you
+cannot see what you already have is not harder, it is unplayable.
+
+Every franchise stays in the wheel the whole way in both modes, so landing on the same
+roster twice is a legal and fairly common outcome, and in hard mode you have no way to
+talk your way out of it.
 
 QUIT in the header walks out of a run from anywhere, including mid spin, and asks first.
 It deletes the build and the autosave with it, which is why it asks.

@@ -9,12 +9,23 @@ type Props = {
   slots: Partial<Record<AttributeKey, FilledSlot>>;
   highlight?: AttributeKey | null;
   usedPlayerIds?: string[];
+  /**
+   * Hard mode. Everything you have already taken still shows in full, because that is
+   * your build rather than the pool.
+   *
+   * THE HARDEST SLOT PANEL COMES OFF, and it is the only thing here that does. It reads
+   * every unused player's ratings and tells you in words how many franchises can still
+   * solve a slot, which is pool information with the numbers filed off. Hiding the
+   * ratings on the cards and then printing a scarcity count from those same ratings
+   * would be hiding them from the player and not from the game.
+   */
+  blind?: boolean;
 };
 
 /** A slot is "covered" by a franchise if it still has an unused player with a good one. */
 const GOOD_ENOUGH = 90;
 
-export function BuildSheet({ position, slots, highlight, usedPlayerIds = [] }: Props) {
+export function BuildSheet({ position, slots, highlight, usedPlayerIds = [], blind = false }: Props) {
   const keys = ATTRIBUTE_SETS[position];
   const filled = keys.filter((k) => slots[k]);
   const open = keys.filter((k) => !slots[k]);
@@ -36,7 +47,7 @@ export function BuildSheet({ position, slots, highlight, usedPlayerIds = [] }: P
       ).length,
     }))
     .sort((a, b) => a.teams - b.teams);
-  const hardest = scarcity[0];
+  const hardest = blind ? undefined : scarcity[0];
 
   /**
    * A bare count does not tell you whether you are in trouble. Sixteen franchises with

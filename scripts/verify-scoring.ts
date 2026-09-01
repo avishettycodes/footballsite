@@ -25,16 +25,48 @@
  *
  * Positions are discovered from the data, so a new pool gets covered the moment it
  * lands. Nothing here needs updating when QB, WR or TE arrive.
+ *
+ * WHAT THESE FOUR DO NOT MODEL, WRITTEN DOWN BECAUSE IT USED TO BE INVISIBLE.
+ *
+ * All four play NORMAL mode with every rating on screen, and not one of them has ever
+ * called reroll. That was fine while it was the only mode, and it silently stopped being
+ * fine twice.
+ *
+ * Rerolls first. The ladder above has always described a run played with zero rerolls,
+ * while a person on normal mode had three of them. So the harness was not measuring
+ * normal mode, it was measuring the hardest possible version of it, and a tester saying
+ * the game is too easy was not contradicted by anything printed here. Normal mode is one
+ * reroll now, and the honest thing to say about that change is that NOTHING BELOW MOVES,
+ * because the policies still do not reroll. That is not the change failing, it is the
+ * harness never having had that number in it.
+ *
+ * Then hard mode, which now hides every rating in the pool. A bot that reads numbers off
+ * the cards is not playing it at all, so `blind` below exists to stop this file quietly
+ * reporting normal-mode rates under a heading a hard mode player would read as his own.
+ *
+ *   blind   plays HARD mode: no rerolls, and no numbers. It picks the famous name in the
+ *           pool the way `fan` does, and then takes a slot off him AT RANDOM, because
+ *           which of his traits is the good one is exactly what the mode hides.
+ *
+ * Blind is a FLOOR rather than a ceiling and the gap is real, so do not read its row as
+ * what a good player scores in hard mode. A person picking blind knows Jerry Rice caught
+ * everything and Randy Moss ran past people, and that knowledge is most of the game once
+ * the numbers are gone. The bot has none of it and guesses uniformly. What the row does
+ * prove is the direction: hard mode has to cost you something against sighted play, and
+ * the assertion at the bottom of each position is that it does.
  */
 import { useGame } from '../src/store/gameStore';
 import { ATTRIBUTE_SETS, TEAMS, getPool, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
-import { nextRandom } from '../src/lib/rng';
+import { hashSeed, nextRandom } from '../src/lib/rng';
 import { RECORD_YARDS, WEAK_LINK_SHARE, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
 import type { AccoladeId } from '../src/lib/scoring';
 
-type Policy = 'random' | 'fan' | 'human' | 'sharp';
+type Policy = 'random' | 'fan' | 'human' | 'sharp' | 'blind';
+/** The skill ladder, in order. `blind` is deliberately not on it; see LADDER below. */
 const POLICIES: Policy[] = ['random', 'fan', 'human', 'sharp'];
+/** Everything that gets played and printed, ladder or not. */
+const ALL_POLICIES: Policy[] = [...POLICIES, 'blind'];
 const RUNS = Number(process.env.RUNS ?? 3000);
 
 type Column = AccoladeId | 'grandSlam';
@@ -105,8 +137,21 @@ const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
   TE: { human: [0, 3], sharp: [0, 3] },
 };
 
-/** Policy randomness is kept separate from game randomness so seeds stay comparable. */
+/**
+ * Policy randomness is kept separate from game randomness so seeds stay comparable, and
+ * it is now RESEEDED PER POSITION AND POLICY rather than run as one long stream.
+ *
+ * The stream version made the output depend on what else was in the run list. Adding
+ * `blind`, which draws from here, silently moved the `random` rows at every position
+ * after the first, because those two share the generator and blind had shifted it along.
+ * Three numbers changed in a diff that was supposed to prove nothing changed, which is
+ * exactly the noise you do not want when the question is whether a rule change moved the
+ * game. Each policy now starts from its own fixed point and cannot disturb any other.
+ */
 let noise = 0x9e3779b9;
+function seedNoise(position: Position, policy: Policy) {
+  noise = hashSeed(`NOISE-${position}-${policy}`);
+}
 function rnd(): number {
   const d = nextRandom(noise);
   noise = d.state;
@@ -144,7 +189,8 @@ function expectedFill(position: Position): Record<string, number> {
 function playRun(position: Position, seed: string, policy: Policy, premium: Record<string, number>) {
   const s = useGame.getState();
   s.abandonRun();
-  s.startRun({ position, hardMode: false, seed });
+  // The only policy that plays hard mode is the one that cannot see the numbers.
+  s.startRun({ position, hardMode: policy === 'blind', seed });
 
   let guard = 0;
   while (useGame.getState().phase !== 'complete' && guard++ < 200) {
@@ -176,6 +222,21 @@ function playRun(position: Position, seed: string, policy: Policy, premium: Reco
         const v = star.attributes[k] ?? 0;
         if (v > best) { best = v; attr = k; }
       }
+    } else if (policy === 'blind') {
+      // Fame is the only thing still legible on a card in hard mode, so the star gets
+      // picked the same way `fan` picks him. Peak rating stands in for fame here, which
+      // is a proxy the bot is allowed to use and the player is not, and it is the
+      // closest thing in the data to a name somebody recognises.
+      let star = pool[0];
+      let starPeak = -1;
+      for (const p of pool) {
+        const peak = Math.max(...ATTRIBUTE_SETS[g.position].map((k) => p.attributes[k] ?? 0));
+        if (peak > starPeak) { starPeak = peak; star = p; }
+      }
+      pid = star.id;
+      // And then a coin flip, because which trait to take off him is the decision the
+      // mode deletes. A person guesses better than this. A bot cannot guess at all.
+      attr = open[Math.floor(rnd() * open.length)];
     } else if (policy === 'human') {
       let best = -1;
       for (const p of pool) for (const k of open) {
@@ -223,7 +284,17 @@ const pct = (n: number, d: number) => ((100 * n) / d).toFixed(1).padStart(5) + '
 const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
 
 const positions = positionsWithData();
-console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}\n`);
+console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}`);
+/**
+ * Printed rather than left in a comment, because the person who needs it is reading the
+ * table and not this file.
+ */
+console.log(
+  '  random, fan, human and sharp play NORMAL mode with every rating visible, and none of\n' +
+  '  them ever rerolls, so the reroll count does not enter a single number below.\n' +
+  '  blind plays HARD mode: no rerolls, no numbers, famous name and then a guess at which\n' +
+  '  trait to take. It is the floor for hard mode rather than what a good player gets.\n',
+);
 
 let failed = false;
 
@@ -237,7 +308,8 @@ for (const position of positions) {
   const rates: Record<string, number[]> = {};
   const table: string[][] = [];
 
-  for (const policy of POLICIES) {
+  for (const policy of ALL_POLICIES) {
+    seedNoise(position, policy);
     const overalls: number[] = [];
     const weakest: number[] = [];
     const seasons: number[] = [];
@@ -352,6 +424,40 @@ for (const position of positions) {
     `(want ${target.human[0]} to ${target.human[1]}), ` +
     `sharp ${slamSharp.toFixed(1)}% (want ${target.sharp[0]} to ${target.sharp[1]})`,
   );
+
+  /**
+   * HARD MODE HAS TO COST SOMETHING, and this is the one claim about it worth failing on.
+   *
+   * Taking the numbers away and taking the reroll away must leave a player worse off than
+   * playing sighted, at every trophy. If blind ever out-earns `human` then hard mode is
+   * not a harder game, it is a different one that happens to pay better, and somebody
+   * would work that out and farm it.
+   *
+   * The comparison is against `human` rather than `sharp` on purpose. `human` is how most
+   * people play with the numbers up, so "worse than sighted play" means worse than what
+   * the person turning the mode on was doing a minute ago.
+   *
+   * This is a floor-against-ceiling comparison and it should hold by a mile. If it ever
+   * comes close, the interesting question is not the bot. It is whether picking at random
+   * off the famous name is quietly a good strategy, which would mean the pools reward
+   * fame more than they reward choosing well.
+   */
+  const beatsSighted: string[] = [];
+  for (let c = 0; c < COLUMNS.length; c++) {
+    const blind = rates.blind[c];
+    const sighted = rates.human[c];
+    if (blind > sighted + TOLERANCE) {
+      beatsSighted.push(`${COLUMNS[c]}: blind ${blind.toFixed(1)}% above human ${sighted.toFixed(1)}%`);
+    }
+  }
+  if (beatsSighted.length) {
+    failed = true;
+    console.log('  hard mode:    FAIL, blind picking is out-earning sighted picking');
+    for (const v of beatsSighted) console.log(`    x ${v}`);
+  } else {
+    const worst = COLUMNS.map((c, i) => `${c} ${rates.blind[i].toFixed(1)}%`).join(', ');
+    console.log(`  hard mode:    PASS, blind costs you at every trophy. ${worst}`);
+  }
   console.log();
 }
 

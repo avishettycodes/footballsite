@@ -77,6 +77,10 @@ export default function App() {
                   {g.seed}
                 </span>
                 <span className="rounded bg-white/8 px-2 py-1 text-white/60">{g.position}</span>
+                {/* One chip, not two. A BLIND chip was tried here and taken back out: it
+                    is a second red word saying what the banner over the pool already says
+                    at the moment it matters, and this row is the one that overflowed a
+                    390px header before. The question marks are explained where they are. */}
                 {g.hardMode && (
                   <span className="rounded bg-red-500/20 px-2 py-1 font-bold text-red-400">HARD</span>
                 )}
@@ -237,6 +241,7 @@ export default function App() {
                   pool={pool}
                   usedPlayerIds={g.usedPlayerIds}
                   slots={g.slots}
+                  blind={g.hardMode}
                   onSteal={(playerId, attribute) => { if (g.soundOn) lock(); g.takeAttribute(playerId, attribute); }}
                   onHover={setHover}
                 />
@@ -292,6 +297,7 @@ export default function App() {
                 slots={g.slots}
                 highlight={hover}
                 usedPlayerIds={g.usedPlayerIds}
+                blind={g.hardMode}
               />
             </div>
           </aside>
@@ -311,6 +317,7 @@ export default function App() {
                   slots={g.slots}
                   highlight={hover}
                   usedPlayerIds={g.usedPlayerIds}
+                  blind={g.hardMode}
                 />
               </div>
             )}
