@@ -29,8 +29,8 @@ import {
   CAREER_SHAPE, LAST_PICK, MAX_SEASONS, PICKS_PER_ROUND, ROUNDS,
   careerLength, careerPath, careerStats, draftSlot, positionalNeed,
 } from '../src/lib/career';
-import { RECORD_YARDS, computeOverall } from '../src/lib/scoring';
-import { recordMissLine } from '../src/lib/narrative';
+import { RECORD_YARDS, computeOverall, superBowlOdds } from '../src/lib/scoring';
+import { emptyCaseLine, recordMissLine, ringMissLine } from '../src/lib/narrative';
 
 const SEEDS = Number(process.env.SEEDS ?? 4000);
 
@@ -443,6 +443,66 @@ for (const position of positions) {
 }
 
 // ---------------------------------------------------------------------------
+console.log('\nwhich picks actually move the stat line');
+// ---------------------------------------------------------------------------
+/**
+ * A SLOT THAT CANNOT CHANGE A NUMBER ON THE REPORT IS NOT A DECISION.
+ *
+ * This is the general form of a bug that shipped. A running back who spent one of his six
+ * spins on catching came out with a reception count and no yards beside it, and a
+ * quarterback who spent one on mobility got nothing at all: he could steal a 99 off
+ * Michael Vick and the report would not move a pixel.
+ *
+ * Every trait still moves the report through the OVERALL, which drives how long he lasts
+ * and therefore every total on the page, so nothing here is truly inert. What this checks
+ * is the direct effect, with the overall pinned so only the trait varies. The traits that
+ * legitimately have no direct effect are listed rather than inferred, because the whole
+ * failure was one of them being missing by accident and nobody noticing.
+ */
+const RATING_ONLY: Record<Position, AttributeKey[]> = {
+  // The pocket is the reason the other numbers happen rather than a number of its own.
+  QB: ['pocketPresence'],
+  // Breaking a tackle and outrunning the angle both land in yards per carry, which vision
+  // and burst already carry. Worth revisiting; it is a gap rather than a principle.
+  RB: ['speed', 'juke'],
+  // Same shape at receiver. Getting off the line is release, and it ends up in the catch
+  // count that route running already moves.
+  WR: ['speed', 'release'],
+  // Blocking genuinely has no stat. Nobody has ever been handed a trophy for it, which is
+  // most of why a blocking tight end is a hard card to love.
+  TE: ['blocking', 'routeRunning'],
+};
+
+for (const position of positions) {
+  const overall = 90;
+  const seasons = 12;
+  const base = buildFor(position, overall);
+  const line = (build: Partial<Record<AttributeKey, number>>) => {
+    const st = careerStats(position, build, overall, seasons, 'MOVES');
+    return [st.yards, st.touchdowns, st.volume, st.secondary, st.secondaryYards];
+  };
+  const flat = line(base);
+
+  const inert: AttributeKey[] = [];
+  const moves: AttributeKey[] = [];
+  for (const key of ATTRIBUTE_SETS[position]) {
+    // Same overall, same seed, same seasons. Only this one trait differs.
+    const low = line({ ...base, [key]: 40 });
+    const high = line({ ...base, [key]: 96 });
+    const shifted = low.some((v, i) => Math.abs(v - high[i]) > Math.max(1, Math.abs(flat[i]) * 0.01));
+    (shifted ? moves : inert).push(key);
+  }
+
+  console.log(`  ${position}  moves the stat line: ${moves.join(', ') || 'nothing'}`);
+  const expected = [...RATING_ONLY[position]].sort().join(',');
+  check(
+    `${position} every pick that should move a number does`,
+    [...inert].sort().join(',') === expected,
+    inert.length ? `rating only: ${[...inert].sort().join(', ')}` : 'every trait moves a stat',
+  );
+}
+
+// ---------------------------------------------------------------------------
 console.log('\nwhat it tells him about the record he missed');
 // ---------------------------------------------------------------------------
 /**
@@ -529,6 +589,75 @@ check(
   onPaceAnywhere > 0,
   `${onPaceAnywhere} careers across every position were on record pace and still missed`,
 );
+
+// ---------------------------------------------------------------------------
+console.log('\nwhat it tells him when he won nothing');
+// ---------------------------------------------------------------------------
+/**
+ * THE REPORT MUST NOT BLAME HIM FOR WHAT THE DICE DID. Same rule as the record line, and
+ * these two were caught breaking it in the same reading.
+ *
+ * A player with a 49% shot at a ring was told he was never really in it, and a man who
+ * rated 86, started four years and ran for 3,269 yards was told that somebody has to play
+ * the other games. Both are the game calling its own coin flip a verdict on the player.
+ *
+ * The bar is not that the report has to be kind. A genuinely poor career should be told
+ * so, which is the second half of each check, because a report that never says anything
+ * hard is not worth reading either.
+ */
+const NEVER_IN_IT = 'He was never really in it.';
+const NOBODY = 'The trophy case is empty. Somebody has to play the other games.';
+
+{
+  const wrong: string[] = [];
+  const soft: string[] = [];
+  for (let overall = 60; overall <= 99; overall++) {
+    const odds = superBowlOdds(overall);
+    const line = ringMissLine(overall);
+    // A third of the time or better is a real chance, whatever the rating says.
+    if (odds >= 0.3 && line === NEVER_IN_IT) wrong.push(`${overall} (${Math.round(odds * 100)}%)`);
+    // And a one-in-twenty shot is not a near miss.
+    if (odds <= 0.05 && line !== NEVER_IN_IT) soft.push(`${overall} (${Math.round(odds * 100)}%)`);
+  }
+  check('a real shot at a ring is never called a non event', wrong.length === 0,
+    wrong.length ? `told he was never in it at ${wrong.join(', ')}` : 'every rating reads its own odds');
+  check('and a long shot is still called one', soft.length === 0,
+    soft.length ? `given a near miss at ${soft.join(', ')}` : 'the bottom of the range is told the truth');
+}
+
+for (const position of positions) {
+  const shape = CAREER_SHAPE[position];
+  let starterInsulted = 0;
+  let cutShortInsulted = 0;
+  let checkedShort = 0;
+
+  for (let i = 0; i < SEEDS; i++) {
+    const overall = 84 + (i % 12);
+    const len = careerLength(position, overall, seed(i, 'CASE'));
+    const run = { seasons: len.seasons, expected: len.expected, cutShort: len.cutShort };
+    const line = emptyCaseLine(overall, 0, run);
+    if (line === NOBODY) starterInsulted++;
+    if (len.cutShort && len.seasons < len.expected * 0.75) {
+      checkedShort++;
+      if (line === NOBODY) cutShortInsulted++;
+    }
+  }
+
+  check(
+    `${position} a real starter is never told he was nobody`,
+    starterInsulted === 0,
+    `${SEEDS} careers from 84 to 95 overall, ${starterInsulted} got the nobody line`,
+  );
+  check(
+    `${position} and a career the league ended says so`,
+    checkedShort > 0 && cutShortInsulted === 0,
+    `${checkedShort} were cut short, ${cutShortInsulted} were blamed for it`,
+  );
+
+  // The other end. A genuinely poor player at this position does get told.
+  const poor = emptyCaseLine(70, 0, { seasons: 3, expected: shape.floor + 2, cutShort: false });
+  check(`${position} a poor career is still told the truth`, poor === NOBODY, `"${poor}"`);
+}
 
 console.log();
 if (failed) {

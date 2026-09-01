@@ -385,6 +385,20 @@ export type SeasonLine = {
   volume: number;
   /** Interceptions for a passer, receptions for a back, and unused elsewhere. */
   secondary: number;
+  /**
+   * THE OTHER WAY HE MOVED THE BALL, and it exists because a whole pick was invisible
+   * without it.
+   *
+   * A back who spent a spin on catching came out of the report with a reception count and
+   * no yards next to it, and the career sentence never mentioned him catching anything at
+   * all, so the screen said he only ever ran. A quarterback who spent a spin on mobility
+   * had it worse: nothing on the report moved at all. Both picks now show up as yards.
+   *
+   * Rushing yards for a passer, receiving yards for a back. Receivers and tight ends have
+   * nothing here, because their `yards` already is the receiving number and a gadget
+   * carry once a year is not a stat.
+   */
+  secondaryYards: number;
 };
 
 export type CareerStats = {
@@ -393,6 +407,7 @@ export type CareerStats = {
   touchdowns: number;
   volume: number;
   secondary: number;
+  secondaryYards: number;
   /** His single best year, which is the line people actually quote at each other. */
   best: SeasonLine;
 };
@@ -432,7 +447,7 @@ function primeSeason(
   position: Position,
   build: Partial<Record<AttributeKey, number>>,
   overall: number,
-): { yards: number; touchdowns: number; volume: number; secondary: number } {
+): { yards: number; touchdowns: number; volume: number; secondary: number; secondaryYards: number } {
   const p = grade(overall);
 
   /**
@@ -456,28 +471,50 @@ function primeSeason(
     // Absolute interceptions RISE with playing time even as the rate falls, and that is
     // correct rather than a bug. Brees threw 243 of them and your backup threw four.
     const picks = attempts * (0.048 - 0.022 * p) * (1 - 0.18 * lean(build, 'processing') - 0.12 * lean(build, 'accuracy'));
-    return { yards: attempts * perAttempt, touchdowns, volume: attempts, secondary: Math.max(1, picks) };
+    /**
+     * Scrambling, off mobility alone rather than off the rating.
+     *
+     * It has to be steep, because the gap it is modelling is enormous and real. Marino
+     * ran for 87 yards in seventeen seasons and Lamar Jackson has cleared a thousand in
+     * one, so a linear slope from an 18 mobility to a 99 would flatter the statue and rob
+     * the runner. The exponent is what makes the pick worth spending a spin on.
+     */
+    const scramble = clamp(((build.mobility ?? 55) - 40) / 55, 0, 1.1);
+    const rushing = (30 + 620 * Math.pow(scramble, 1.6)) * workload;
+    return {
+      yards: attempts * perAttempt, touchdowns, volume: attempts,
+      secondary: Math.max(1, picks), secondaryYards: rushing,
+    };
   }
 
   if (position === 'RB') {
     const carries = (185 + 120 * p) * workload * (1 + 0.08 * lean(build, 'power'));
     const perCarry = (3.7 + 1.2 * p) * (1 + 0.07 * lean(build, 'vision') + 0.05 * lean(build, 'burst'));
     const touchdowns = carries * (0.020 + 0.026 * p) * (1 + 0.20 * lean(build, 'power'));
-    const catches = (20 + 42 * p) * workload * (1 + 0.25 * lean(build, 'hands'));
-    return { yards: carries * perCarry, touchdowns, volume: carries, secondary: catches };
+    /**
+     * Catching swings this hard on purpose. At the old 0.25 a back with 38 hands still
+     * came out with 40 catches a year, which is not what a man nobody throws to looks
+     * like. Third down work is the most all-or-nothing thing a running back does.
+     */
+    const catches = (20 + 42 * p) * workload * (1 + 0.40 * lean(build, 'hands'));
+    const perCatch = (7.0 + 2.5 * p) * (1 + 0.08 * lean(build, 'hands'));
+    return {
+      yards: carries * perCarry, touchdowns, volume: carries,
+      secondary: catches, secondaryYards: catches * perCatch,
+    };
   }
 
   if (position === 'WR') {
     const catches = (35 + 48 * p) * workload * (1 + 0.07 * lean(build, 'hands') + 0.05 * lean(build, 'routeRunning'));
     const perCatch = (11 + 4.0 * p) * (1 + 0.06 * lean(build, 'deepThreat') + 0.03 * lean(build, 'yac'));
     const touchdowns = catches * (0.055 + 0.055 * p) * (1 + 0.16 * lean(build, 'contestedCatch'));
-    return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0 };
+    return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0, secondaryYards: 0 };
   }
 
   const catches = (26 + 43 * p) * workload * (1 + 0.16 * lean(build, 'hands'));
   const perCatch = (9.5 + 3.8 * p) * (1 + 0.10 * lean(build, 'speed') + 0.07 * lean(build, 'yac'));
   const touchdowns = catches * (0.050 + 0.045 * p) * (1 + 0.14 * lean(build, 'hands'));
-  return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0 };
+  return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0, secondaryYards: 0 };
 }
 
 export function careerStats(
@@ -503,6 +540,7 @@ export function careerStats(
       volume: Math.round(prime.volume * share),
       // A passer throws MORE picks when he is worse, so the swing runs the other way.
       secondary: Math.round(prime.secondary * (position === 'QB' ? 2 - share : share)),
+      secondaryYards: Math.round(prime.secondaryYards * share),
     });
   }
 
@@ -515,16 +553,20 @@ export function careerStats(
     touchdowns: sum((l) => l.touchdowns),
     volume: sum((l) => l.volume),
     secondary: sum((l) => l.secondary),
+    secondaryYards: sum((l) => l.secondaryYards),
     best,
   };
 }
 
 /** What each of the four numbers above is called at this position. */
-export const STAT_LABELS: Record<Position, { yards: string; touchdowns: string; volume: string; secondary: string | null }> = {
-  QB: { yards: 'PASSING YARDS', touchdowns: 'PASSING TDS', volume: 'ATTEMPTS', secondary: 'INTERCEPTIONS' },
-  RB: { yards: 'RUSHING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'CARRIES', secondary: 'RECEPTIONS' },
-  WR: { yards: 'RECEIVING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'RECEPTIONS', secondary: null },
-  TE: { yards: 'RECEIVING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'RECEPTIONS', secondary: null },
+export const STAT_LABELS: Record<Position, {
+  yards: string; touchdowns: string; volume: string;
+  secondary: string | null; secondaryYards: string | null;
+}> = {
+  QB: { yards: 'PASSING YARDS', touchdowns: 'PASSING TDS', volume: 'ATTEMPTS', secondary: 'INTERCEPTIONS', secondaryYards: 'RUSHING YARDS' },
+  RB: { yards: 'RUSHING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'CARRIES', secondary: 'RECEPTIONS', secondaryYards: 'RECEIVING YARDS' },
+  WR: { yards: 'RECEIVING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'RECEPTIONS', secondary: null, secondaryYards: null },
+  TE: { yards: 'RECEIVING YARDS', touchdowns: 'TOUCHDOWNS', volume: 'RECEPTIONS', secondary: null, secondaryYards: null },
 };
 
 export function commas(n: number): string {

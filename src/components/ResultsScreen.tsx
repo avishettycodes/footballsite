@@ -6,8 +6,8 @@ import { GATES, RECORD_YARDS, accoladeDefs } from '../lib/scoring';
 import type { AccoladeId, CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
-  bestSeasonLine, draftBadge, draftLine, franchisesRaided, honorsLine, productionLine,
-  recordMissLine, tenureLine,
+  bestSeasonLine, draftBadge, draftLine, emptyCaseLine, franchisesRaided, honorsLine,
+  productionLine, recordMissLine, ringMissLine, tenureLine,
 } from '../lib/narrative';
 import type { RunShape } from '../lib/narrative';
 import { inkOn, teamMark } from '../lib/contrast';
@@ -142,6 +142,9 @@ export function ResultsScreen({
   const build: Partial<Record<AttributeKey, number>> = {};
   for (const key of keys) build[key] = slots[key]?.value ?? 0;
 
+  /** How the career actually went. Three lines on this screen need it. */
+  const run: RunShape = { seasons, expected: length.expected, cutShort: length.cutShort };
+
   const draft = draftSlot(position, career.overall, seed);
   const path = careerPath(position, career.overall, seasons, franchisesRaided(position, pickOrder, slots), seed);
   const stats = careerStats(position, build, career.overall, seasons, seed);
@@ -185,7 +188,7 @@ export function ResultsScreen({
 
   const peakSeasonYards = Math.max(1, ...stats.seasons.map((s) => s.yards));
 
-  const tiles: { label: string; value: string; note?: string }[] = [
+  const tiles: { label: string; value: string; note?: string; sub?: string }[] = [
     {
       label: labels.yards,
       value: commas(stats.yards),
@@ -199,9 +202,24 @@ export function ResultsScreen({
       note: stats.yards >= RECORD_YARDS[position] ? 'ALL-TIME RECORD' : undefined,
     },
     { label: labels.touchdowns, value: commas(stats.touchdowns) },
-    { label: labels.volume, value: commas(stats.volume) },
+    /*
+      The fourth tile is where a whole pick used to go missing. A quarterback's mobility
+      produced nothing on this screen at all, so it takes the slot attempts used to have:
+      completions against attempts is not a decision anybody made on the build sheet and
+      running for a thousand yards is. A back keeps his receptions and gets the yards that
+      go with them underneath, since catching is a slot he spent a spin on.
+    */
+    position === 'QB'
+      ? { label: labels.secondaryYards ?? 'RUSHING YARDS', value: commas(stats.secondaryYards) }
+      : { label: labels.volume, value: commas(stats.volume) },
     labels.secondary
-      ? { label: labels.secondary, value: commas(stats.secondary) }
+      ? {
+        label: labels.secondary,
+        value: commas(stats.secondary),
+        sub: labels.secondaryYards && position !== 'QB'
+          ? `${commas(stats.secondaryYards)} YARDS`
+          : undefined,
+      }
       : {
         label: 'YARDS PER CATCH',
         value: (stats.yards / Math.max(1, stats.volume)).toFixed(1),
@@ -331,6 +349,11 @@ export function ResultsScreen({
                 <div className="mt-1 font-mono text-[9px] leading-tight tracking-[0.1em] text-white/40">
                   {tile.label}
                 </div>
+                {tile.sub && (
+                  <div className="mt-0.5 font-mono text-[9px] tracking-[0.1em] text-white/30">
+                    {tile.sub}
+                  </div>
+                )}
                 {tile.note && (
                   <div className="mt-1 font-mono text-[9px] font-bold tracking-[0.1em] text-hazard">
                     {tile.note}
@@ -454,6 +477,19 @@ export function ResultsScreen({
           him, and the one thing he was genuinely great at.
         */}
         <Section index="04" title="THE BUILD" aside={`${keys.length} PICKS`}>
+          {/*
+            THIS CAPTION EXISTS BECAUSE THE TWO TEAM LISTS ON THIS REPORT MEAN DIFFERENT
+            THINGS AND LOOKED IDENTICAL.
+
+            Section 03 is who he played for and this table is who you took each number
+            off, and now that the first one is a realistic one to four franchises instead
+            of everybody you spun, the two lists disagree on purpose. A reader glancing at
+            five badges here under a nameplate reading 1 TEAM had to work the distinction
+            out on their own, from two sets of the same coloured chips.
+          */}
+          <p className="mb-2 font-mono text-[10px] tracking-[0.12em] text-white/35">
+            WHO YOU STOLE FROM, WHICH IS NOT WHO HE PLAYED FOR
+          </p>
           <div className="overflow-hidden rounded-lg bg-turf-800">
             {keys.map((key) => {
               const slot = slots[key];
@@ -608,9 +644,7 @@ export function ResultsScreen({
               <div className="mt-1 font-mono text-[11px] text-white/45">
                 {career.superBowl.won
                   ? 'He got his ring, and nobody can take that off him now.'
-                  : career.overall >= 92
-                    ? 'A career that good and no ring. That is the one that stings.'
-                    : 'He was never really in it.'}
+                  : ringMissLine(career.overall)}
               </div>
             </div>
           )}
@@ -644,11 +678,7 @@ export function ResultsScreen({
                 */}
                 {earned.length === 0 && (
                   <div className="font-display text-xl text-white/40 uppercase">
-                    {career.breakdown.eliteCount >= 3
-                      ? `${career.breakdown.eliteCount} traits at the very top of the league and an empty case. This one was a robbery.`
-                      : career.breakdown.eliteCount >= 1
-                        ? 'A real weapon in there and nothing to show for it.'
-                        : 'The trophy case is empty. Somebody has to play the other games.'}
+                    {emptyCaseLine(career.overall, career.breakdown.eliteCount, run)}
                   </div>
                 )}
                 {earned.length > 0 && earned.length < 3 && position === 'TE' && (
@@ -677,9 +707,7 @@ export function ResultsScreen({
                         <span>
                           {d.label}:{' '}
                           <span className="text-white/25">
-                            {missedBecause(d.id, position, career, {
-                              seasons, expected: length.expected, cutShort: length.cutShort,
-                            })}
+                            {missedBecause(d.id, position, career, run)}
                           </span>
                         </span>
                       </li>

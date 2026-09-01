@@ -2,7 +2,7 @@ import { ATTRIBUTE_SETS } from '../data';
 import type { AttributeKey, Position, Team } from '../data';
 import { STAT_LABELS, commas } from './career';
 import type { CareerStats, DraftSlot, Stint } from './career';
-import { RECORD_YARDS } from './scoring';
+import { RECORD_YARDS, superBowlOdds } from './scoring';
 import type { CareerResult } from './scoring';
 
 /**
@@ -94,16 +94,27 @@ export function tenureLine(seasons: number, stints: Stint[], cutShort: boolean):
   return `${opener} ${years} and wore ${stints.length} different uniforms doing it.`;
 }
 
-/** The line people screenshot. One sentence of counting numbers, nothing else in it. */
+/**
+ * The line people screenshot. One sentence of counting numbers, nothing else in it.
+ *
+ * IT USED TO LEAVE A WHOLE PICK OUT. A back who spent one of his six spins on catching
+ * finished with 703 receptions and a sentence saying he ran for some yards and scored
+ * some touchdowns, so the report read as though he never caught anything. Quarterbacks
+ * had the same hole around mobility, where a 99 produced nothing you could point at. If
+ * a slot on the build sheet cannot change a number on this screen, it is not a decision.
+ */
 export function productionLine(position: Position, stats: CareerStats): string {
   const labels = STAT_LABELS[position];
   const yards = `${commas(stats.yards)} ${labels.yards.toLowerCase()}`;
 
   if (position === 'QB') {
-    return `He finished with ${yards} and threw ${commas(stats.touchdowns)} touchdowns.`;
+    const ran = stats.secondaryYards >= 1500
+      ? ` He ran for another ${commas(stats.secondaryYards)}.`
+      : '';
+    return `He finished with ${yards} and threw ${commas(stats.touchdowns)} touchdowns.${ran}`;
   }
   if (position === 'RB') {
-    return `He finished with ${yards} on ${commas(stats.volume)} carries and scored ${commas(stats.touchdowns)} times.`;
+    return `He finished with ${yards} on ${commas(stats.volume)} carries, caught ${commas(stats.secondary)} passes for another ${commas(stats.secondaryYards)} and scored ${commas(stats.touchdowns)} times.`;
   }
   return `He finished with ${commas(stats.volume)} catches for ${commas(stats.yards)} yards and ${commas(stats.touchdowns)} touchdowns.`;
 }
@@ -161,6 +172,49 @@ export function recordMissLine(position: Position, careerYards: number, run: Run
 
   if (short <= gate * 0.25) return 'A couple more healthy years and it was his.';
   return 'He was never producing at the rate that record asks for.';
+}
+
+/**
+ * WHY HE HAS NO RING, and it has to respect the odds he actually had.
+ *
+ * This was two branches on a rating, and the lower one told a player with a 49% shot at
+ * a Super Bowl that he was never really in it. He was a coin flip away from it. Reading
+ * the odds instead of the rating costs nothing and stops the report calling a near miss
+ * a non event.
+ */
+export function ringMissLine(overall: number): string {
+  const odds = superBowlOdds(overall);
+  if (overall >= 92) return 'A career that good and no ring. That is the one that stings.';
+  if (odds >= 0.4) return 'It came down to a coin he did not call. That is all it ever is.';
+  if (odds >= 0.18) return 'He had his chances. None of them fell his way.';
+  return 'He was never really in it.';
+}
+
+/**
+ * AN EMPTY TROPHY CASE IS NOT THE SAME STORY EVERY TIME, and this is the second place on
+ * the report caught blaming a player for what the dice did.
+ *
+ * It used to branch on elite traits alone, so a man who rated 86, started for four years
+ * and ran for 3,269 yards was told that somebody has to play the other games. He was a
+ * real NFL starter. What he was not was a Pro Bowler, and those are different sentences.
+ *
+ * The short career case matters more again. A player whose years were taken off him has
+ * an empty case because he ran out of time rather than because he was not good enough,
+ * and telling him otherwise is exactly the thing that was fixed one screen down on the
+ * record. Same bug, same fix, same reason it is worth a check.
+ */
+export function emptyCaseLine(overall: number, eliteCount: number, run: RunShape): string {
+  if (eliteCount >= 3) {
+    return `${eliteCount} traits at the very top of the league and an empty case. This one was a robbery.`;
+  }
+  if (overall >= 84 && run.seasons < run.expected * 0.75) {
+    return run.cutShort
+      ? 'He was on his way and the league took the years back. There was never time to win anything.'
+      : 'Good enough to win something, and gone before he could.';
+  }
+  if (eliteCount >= 1) return 'A real weapon in there and nothing to show for it.';
+  if (overall >= 84) return 'A real NFL starter who never got a trophy for it. Most of them never do.';
+  return 'The trophy case is empty. Somebody has to play the other games.';
 }
 
 /**
