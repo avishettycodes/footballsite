@@ -30,6 +30,7 @@ import {
   careerLength, careerPath, careerStats, draftSlot, positionalNeed,
 } from '../src/lib/career';
 import { RECORD_YARDS, computeOverall } from '../src/lib/scoring';
+import { recordMissLine } from '../src/lib/narrative';
 
 const SEEDS = Number(process.env.SEEDS ?? 4000);
 
@@ -440,6 +441,94 @@ for (const position of positions) {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+console.log('\nwhat it tells him about the record he missed');
+// ---------------------------------------------------------------------------
+/**
+ * THE ONE LINE ON THIS REPORT THAT CAN BE WRONG RATHER THAN JUST BLUNT.
+ *
+ * The record is a career total, so it sits downstream of two rolls: how long he lasted,
+ * then what he did per season. A player can now do everything right, produce at a record
+ * rate, and lose it because his knee went in year four. What the report says to him in
+ * that moment is the difference between a story and the game cheating.
+ *
+ * Asserted from both ends, like the tails. Nobody who was on record pace may be told he
+ * was never producing at that rate, and somebody who genuinely was not may not be handed
+ * the consolation. The first is the bug that was actually there. The second is what a fix
+ * for it turns into if you only check one side, since a line that never blames the player
+ * is as useless as one that always does.
+ */
+const NEVER = 'He was never producing at the rate that record asks for.';
+const ON_PACE = ['He was on pace for it right up until it ended. Nobody gets those years back.',
+  'The rate was there. The seasons were not.'];
+
+/** Every career at this rating that missed the record, with what it was told about it. */
+function misses(position: Position, overall: number) {
+  const build = buildFor(position, overall);
+  const out: { projected: number; gate: number; line: string }[] = [];
+  for (let i = 0; i < SEEDS; i++) {
+    const s = seed(i, 'MISS');
+    const len = careerLength(position, overall, s);
+    const stats = careerStats(position, build, overall, len.seasons, s);
+    if (stats.yards >= RECORD_YARDS[position]) continue;
+    out.push({
+      projected: (stats.yards / Math.max(1, len.seasons)) * len.expected,
+      gate: RECORD_YARDS[position],
+      line: recordMissLine(position, stats.yards, {
+        seasons: len.seasons, expected: len.expected, cutShort: len.cutShort,
+      }),
+    });
+  }
+  return out;
+}
+
+let onPaceAnywhere = 0;
+for (const position of positions) {
+  // The good build, for the sentence that was actually wrong.
+  const good = misses(position, 95);
+  const onPace = good.filter((m) => m.projected >= m.gate);
+  onPaceAnywhere += onPace.length;
+  check(
+    `${position} a man on record pace is never told he was too slow`,
+    onPace.every((m) => m.line !== NEVER),
+    `${onPace.length} of ${good.length} misses were on pace, ` +
+    `${onPace.filter((m) => m.line === NEVER).length} got the wrong sentence`,
+  );
+
+  /**
+   * The other end, and it needs a different player. Sampling this at 95 was vacuous:
+   * there are no slow careers at 95, so the check reported zero of zero and passed
+   * without ever running. A line that never blames anybody is as useless as one that
+   * always does, so the man who genuinely was not good enough has to be told.
+   */
+  const poor = misses(position, 74);
+  const slow = poor.filter((m) => m.projected < m.gate * 0.6);
+  check(
+    `${position} a man who really was too slow is told so`,
+    slow.length > 0 && slow.every((m) => m.line === NEVER),
+    `${slow.length} of ${poor.length} misses were nowhere near the pace, ` +
+    `${slow.filter((m) => m.line !== NEVER).length} got let off`,
+  );
+  check(
+    `${position} and he is never handed the consolation`,
+    poor.every((m) => !ON_PACE.includes(m.line)),
+    `${poor.filter((m) => ON_PACE.includes(m.line)).length} of ${poor.length} were told the years were the problem`,
+  );
+}
+
+/**
+ * The on-pace assertion above passes trivially at any position that cannot produce such
+ * a career, and receivers cannot: their record needs a long career rather than a hot
+ * rate, so the projection never clears it. That is a real property rather than a gap,
+ * but it means the check has to be proved non-vacuous somewhere or the whole section
+ * could quietly stop running.
+ */
+check(
+  'the on-pace case exists at all',
+  onPaceAnywhere > 0,
+  `${onPaceAnywhere} careers across every position were on record pace and still missed`,
+);
 
 console.log();
 if (failed) {

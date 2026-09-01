@@ -6,8 +6,10 @@ import { GATES, RECORD_YARDS, accoladeDefs } from '../lib/scoring';
 import type { AccoladeId, CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
-  bestSeasonLine, draftBadge, draftLine, franchisesRaided, honorsLine, productionLine, tenureLine,
+  bestSeasonLine, draftBadge, draftLine, franchisesRaided, honorsLine, productionLine,
+  recordMissLine, tenureLine,
 } from '../lib/narrative';
+import type { RunShape } from '../lib/narrative';
 import { inkOn, teamMark } from '../lib/contrast';
 import { Chevron, Ring, RingBroken, TrophyIcon } from './Icons';
 import { deflate, fanfare, heartbeat } from '../lib/audio';
@@ -58,7 +60,13 @@ function nearness(gap: number): string {
   return 'He was never in that conversation.';
 }
 
-function missedBecause(id: AccoladeId, position: Position, career: CareerResult): string {
+function missedBecause(
+  id: AccoladeId,
+  position: Position,
+  career: CareerResult,
+  /** How the career actually went, which the record needs and nothing else does. */
+  run: RunShape,
+): string {
   switch (id) {
     case 'proBowl':
       return nearness(GATES.proBowl - career.overall);
@@ -70,14 +78,10 @@ function missedBecause(id: AccoladeId, position: Position, career: CareerResult)
       return career.overall >= GATES.opoy
         ? 'The rating was there. They wanted more of him at the very top of the league.'
         : nearness(GATES.opoy - career.overall);
-    case 'record': {
-      // The gate is a yardage total now, so how close he came is a real distance rather
-      // than a rating gap. Still no numbers on screen: the stat block above has them.
-      const short = RECORD_YARDS[position] - career.careerYards;
-      if (short <= RECORD_YARDS[position] * 0.05) return 'He finished within touching distance of it.';
-      if (short <= RECORD_YARDS[position] * 0.25) return 'A couple more healthy years and it was his.';
-      return 'He was never producing at the rate that record asks for.';
-    }
+    // The only near-miss line that can be wrong rather than merely blunt, so it lives in
+    // narrative.ts where the career suite can drive it.
+    case 'record':
+      return recordMissLine(position, career.careerYards, run);
     case 'superBowl':
       return 'A ring is the one thing you cannot build for him.';
     case 'hof':
@@ -673,7 +677,9 @@ export function ResultsScreen({
                         <span>
                           {d.label}:{' '}
                           <span className="text-white/25">
-                            {missedBecause(d.id, position, career)}
+                            {missedBecause(d.id, position, career, {
+                              seasons, expected: length.expected, cutShort: length.cutShort,
+                            })}
                           </span>
                         </span>
                       </li>

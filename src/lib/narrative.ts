@@ -2,6 +2,7 @@ import { ATTRIBUTE_SETS } from '../data';
 import type { AttributeKey, Position, Team } from '../data';
 import { STAT_LABELS, commas } from './career';
 import type { CareerStats, DraftSlot, Stint } from './career';
+import { RECORD_YARDS } from './scoring';
 import type { CareerResult } from './scoring';
 
 /**
@@ -118,6 +119,48 @@ export function bestSeasonLine(position: Position, stats: CareerStats): string {
     return `${where} he ran for ${commas(best.yards)} and scored ${best.touchdowns} times.`;
   }
   return `${where} he caught ${best.volume} balls for ${commas(best.yards)} and ${best.touchdowns} touchdowns.`;
+}
+
+/** How the career actually went. The record miss is the only line that needs it. */
+export type RunShape = { seasons: number; expected: number; cutShort: boolean };
+
+/**
+ * WHY HE DID NOT GET THE RECORD, and the rate and the years are two different stories.
+ *
+ * This lives here rather than in the component with the other near-miss lines, because
+ * it is the one of them that can be WRONG rather than merely blunt, so it is the one
+ * worth being able to assert on. `npm run verify:career` drives it.
+ *
+ * The gate is a career total now, which puts it downstream of two rolls rather than one
+ * attribute you picked: how long he lasted, then what he did per season. That makes
+ * losing it more dramatic and it also makes it much easier to describe wrongly. A
+ * quarterback who averaged 4,095 yards a year for seven seasons and then blew a knee was
+ * being told he was never producing at the rate the record asks for. He was producing at
+ * almost exactly that rate. What he did not get was the fourteen years his rating said he
+ * had coming, and telling a player he was not good enough when the game is the thing that
+ * took the years off him reads as the game cheating rather than as a story.
+ *
+ * So his pace is projected over the career his rating expected, and that decides which
+ * sentence he gets. It is the same arithmetic the stat block already shows him, so
+ * nothing here is inventing a consolation he did not earn.
+ */
+export function recordMissLine(position: Position, careerYards: number, run: RunShape): string {
+  const gate = RECORD_YARDS[position];
+  const short = gate - careerYards;
+  if (short <= gate * 0.05) return 'He finished within touching distance of it.';
+
+  const projected = (careerYards / Math.max(1, run.seasons)) * run.expected;
+  if (projected >= gate) {
+    return run.cutShort
+      ? 'He was on pace for it right up until it ended. Nobody gets those years back.'
+      : 'The rate was there. The seasons were not.';
+  }
+  if (projected >= gate * 0.85) {
+    return 'A full career at that rate and he would have been in the argument.';
+  }
+
+  if (short <= gate * 0.25) return 'A couple more healthy years and it was his.';
+  return 'He was never producing at the rate that record asks for.';
 }
 
 /**
