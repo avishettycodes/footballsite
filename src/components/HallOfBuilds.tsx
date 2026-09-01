@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { SavedPlayer } from '../lib/hall';
 import { accoladeDefs } from '../lib/scoring';
 import { ratingColor } from './AttributeBar';
+import { Close, TrophyIcon } from './Icons';
 
 type Props = {
   hall: SavedPlayer[];
@@ -55,10 +56,16 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
                 </span>
                 {trophies.length > 0 && (
                   <span
-                    className="shrink-0 text-sm"
+                    className="flex shrink-0 items-center gap-1"
                     title={trophies.map((d) => d.label).join(', ')}
                   >
-                    {trophies.map((d) => d.trophy).join('')}
+                    {trophies.map((d) => (
+                      <TrophyIcon
+                        key={d.id}
+                        id={d.trophy}
+                        className={`h-4 w-4 ${d.id === 'hof' ? 'text-hazard' : 'text-white/45'}`}
+                      />
+                    ))}
                   </span>
                 )}
               </button>
@@ -83,9 +90,9 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
                   onClick={() => setArmed(player.id)}
                   title={`Forget ${player.name}`}
                   aria-label={`Forget ${player.name}`}
-                  className="shrink-0 rounded px-3 py-3 font-mono text-sm text-white/30 hover:text-red-300"
+                  className="shrink-0 rounded px-3 py-3 text-white/30 hover:text-red-300"
                 >
-                  ✕
+                  <Close className="h-4 w-4" />
                 </button>
               )}
             </li>

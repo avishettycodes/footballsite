@@ -6,6 +6,7 @@ import { GATES, accoladeDefs } from '../lib/scoring';
 import type { AccoladeId, CareerResult } from '../lib/scoring';
 import { draftLine, draftedBy, franchisesUsed, honorsLine, seasonsPlayed, tenureLine } from '../lib/narrative';
 import { inkOn } from '../lib/contrast';
+import { Chevron, Ring, RingBroken, TrophyIcon } from './Icons';
 import { deflate, fanfare, heartbeat } from '../lib/audio';
 import { ratingColor } from './AttributeBar';
 
@@ -402,7 +403,11 @@ export function ResultsScreen({
                   : 'border-red-500/60 bg-red-500/10'
               }`}
             >
-              <div className="text-4xl">{career.superBowl.won ? '💍' : '💔'}</div>
+              <div className="flex justify-center">
+                {career.superBowl.won
+                  ? <Ring className="h-11 w-11 text-hazard" />
+                  : <RingBroken className="h-11 w-11 text-red-400/80" />}
+              </div>
               <div className="mt-1 font-display text-2xl tracking-tight uppercase sm:text-3xl">
                 {career.superBowl.won ? 'Super Bowl Champion' : 'Never won the big one'}
               </div>
@@ -441,8 +446,11 @@ export function ResultsScreen({
                     d.id === 'hof' ? 'border-hazard bg-hazard/15' : 'border-white/20 bg-white/6'
                   }`}
                 >
-                  <span className="text-xl">{d.trophy}</span>
-                  <span className="font-display text-sm tracking-tight uppercase">{d.label}</span>
+                  <TrophyIcon
+                    id={d.trophy}
+                    className={`h-6 w-6 shrink-0 ${d.id === 'hof' ? 'text-hazard' : 'text-white/85'}`}
+                  />
+                  <span className="font-display text-sm uppercase">{d.label}</span>
                 </div>
               ))}
               {/*
@@ -470,16 +478,25 @@ export function ResultsScreen({
             </div>
 
             {missed.length > 0 && (
-              <details className="mt-4">
-                <summary className="cursor-pointer font-mono text-[10px] tracking-[0.2em] text-white/35 uppercase">
+              <details className="group mt-4">
+                {/*
+                  list-none plus the webkit marker rule kills the browser's own arrow.
+                  It is the last piece of stock UI chrome on this screen, and it does not
+                  match a single other control in the app.
+                */}
+                <summary className="flex cursor-pointer list-none items-center gap-1.5 font-mono text-[10px] tracking-[0.2em] text-white/35 uppercase [&::-webkit-details-marker]:hidden">
+                  <Chevron className="h-3.5 w-3.5 shrink-0 -rotate-90 transition-transform group-open:rotate-0" />
                   What he missed out on ({missed.length})
                 </summary>
                 <ul className="mt-2 space-y-1">
                   {missed.map((d) => (
-                    <li key={d.id} className="font-mono text-[11px] text-white/35">
-                      <span className="opacity-40">{d.trophy}</span> {d.label}:{' '}
-                      <span className="text-white/25">
-                        {missedBecause(d.id, career, slots.durability?.value ?? 0)}
+                    <li key={d.id} className="flex gap-2 font-mono text-[11px] text-white/35">
+                      <TrophyIcon id={d.trophy} className="mt-px h-3.5 w-3.5 shrink-0 text-white/25" />
+                      <span>
+                        {d.label}:{' '}
+                        <span className="text-white/25">
+                          {missedBecause(d.id, career, slots.durability?.value ?? 0)}
+                        </span>
                       </span>
                     </li>
                   ))}

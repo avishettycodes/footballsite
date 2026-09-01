@@ -4,6 +4,7 @@ import type { AttributeKey } from './data';
 import { useGame } from './store/gameStore';
 import { audioState, lock, primeAudio, setSoundEnabled, subscribeAudio } from './lib/audio';
 import type { SavedPlayer } from './lib/hall';
+import { Chevron, SoundOff, SoundOn } from './components/Icons';
 import { SlotMachine } from './components/SlotMachine';
 import { BuildSheet } from './components/BuildSheet';
 import { PoolPicker } from './components/PoolPicker';
@@ -117,13 +118,14 @@ export default function App() {
               }}
               aria-pressed={g.soundOn}
               title={g.soundOn ? 'Turn the sound off' : 'Turn the sound on'}
-              className={`rounded px-2 py-1 font-bold tracking-wider transition-colors ${
+              className={`flex items-center gap-1.5 rounded px-2 py-1 font-bold tracking-wider transition-colors ${
                 g.soundOn
                   ? 'bg-hazard text-turf-950 hover:bg-hazard/85'
                   : 'bg-white/8 text-white/45 hover:bg-white/15'
               }`}
             >
-              {g.soundOn ? '🔊 SOUND ON' : '🔇 SOUND OFF'}
+              {g.soundOn ? <SoundOn className="h-3.5 w-3.5" /> : <SoundOff className="h-3.5 w-3.5" />}
+              SOUND {g.soundOn ? 'ON' : 'OFF'}
             </button>
           </div>
         </div>
@@ -297,9 +299,10 @@ export default function App() {
           <div className={g.phase === 'results' ? 'hidden' : 'lg:hidden'}>
             <button
               onClick={() => setSheetOpen(!sheetOpen)}
-              className="w-full rounded-lg border border-white/12 bg-turf-800 px-4 py-3 text-left font-display text-lg tracking-tight uppercase"
+              className="flex w-full items-center justify-between rounded-lg border border-white/12 bg-turf-800 px-4 py-3 text-left font-display text-lg uppercase"
             >
-              Build sheet · {filledCount}/{totalSlots} {sheetOpen ? '▾' : '▸'}
+              <span>Build sheet · {filledCount}/{totalSlots}</span>
+              <Chevron className={`h-5 w-5 transition-transform ${sheetOpen ? '' : '-rotate-90'}`} />
             </button>
             {sheetOpen && (
               <div className="mt-2">

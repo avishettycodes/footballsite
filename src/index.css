@@ -1,25 +1,86 @@
 @import "tailwindcss";
 
+/*
+  THE DISPLAY FACE IS NOW SHIPPED WITH THE SITE.
+
+  It used to be a bet: "Archivo Black", then Haettenschweiler, then Arial Narrow, then
+  whatever. Nothing was loaded, so the browser picked. macOS has Arial Narrow and iOS
+  does not, which meant a phone rendered the whole game in San Francisco, roughly 13%
+  wider than the machine it was built on. That is the entire reason NAME YOUR PLAYER came
+  off a tester's iPhone reading NAME YOUR PLAY, and it made every width in the app a
+  guess about which font showed up.
+
+  Anton is loaded from node_modules and bundled, so every device gets the same letters at
+  the same widths, and that class of bug is gone rather than worked around. It is also
+  simply the right face for this: a heavy condensed grotesque is what a scoreboard, a
+  jersey number and a broadcast lower third are all set in.
+*/
+@import "@fontsource/anton/400.css";
+@import "@fontsource/barlow-condensed/500.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
+
 @theme {
-  --font-display: "Archivo Black", "Haettenschweiler", "Arial Narrow", system-ui, sans-serif;
+  --font-display: "Anton", "Arial Narrow", system-ui, sans-serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-stat: "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
-  --color-turf-950: #07090c;
-  --color-turf-900: #0d1117;
-  --color-turf-800: #141a23;
-  --color-turf-700: #1e2733;
-  --color-turf-600: #2c3849;
+  --color-turf-950: #06090b;
+  --color-turf-900: #0c1114;
+  --color-turf-800: #131a1e;
+  --color-turf-700: #1d262b;
+  --color-turf-600: #2a373d;
   --color-chalk: #f2f5f8;
   --color-hazard: #ffd400;
+  /* The green a night game is lit in, used at very low opacity for the field only. */
+  --color-grass: #1f5c34;
 }
 
 html, body, #root { height: 100%; }
 
+/*
+  THE FIELD. Yard lines every five yards with a heavier one every twenty five, laid over
+  the dark ground at a couple of percent opacity.
+
+  It has to be felt rather than read. At any strength where you would call it a pattern
+  it competes with the cards on top of it, and the point is that the page sits on grass
+  rather than that anybody notices grass. Fixed attachment so it behaves like a field the
+  content scrolls over instead of wallpaper that scrolls with it.
+
+  Spacing is in PIXELS rather than percentages. Percentages looked fine on either screen
+  and were wrong on both, because the yard lines then stretch with the viewport: four
+  heavy lines on a laptop and four on a phone, at completely different widths. A field
+  has fixed yard lines and you see fewer of them through a narrower window, so that is
+  what these do.
+*/
 body {
   background-color: var(--color-turf-950);
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(242, 245, 248, 0.05) 0 1px,
+      transparent 1px 150px),
+    repeating-linear-gradient(90deg,
+      rgba(242, 245, 248, 0.02) 0 1px,
+      transparent 1px 30px),
+    radial-gradient(120% 80% at 50% -10%, rgba(31, 92, 52, 0.16), transparent 60%);
+  background-attachment: fixed;
   color: var(--color-chalk);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+  Anton has almost no sidebearing and a very tall x-height, so the tracking-tighter that
+  Arial Narrow needed now closes the letters onto each other. Display type gets a hair of
+  positive tracking back instead, which is also how broadcast type is actually set.
+*/
+.font-display {
+  letter-spacing: 0.005em;
+}
+
+/* Numbers on a scoreboard are never proportional. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes flood {

@@ -131,6 +131,12 @@ export type AccoladeId =
 export type AccoladeDef = {
   id: AccoladeId;
   label: string;
+  /**
+   * Which icon to draw. These used to be emoji sitting right here in the string, which
+   * meant Apple, Google and Microsoft each drew the trophy case differently and none of
+   * them could take the colour of the card they sat on. Scoring still owns WHICH
+   * trophies exist; src/components/Icons.tsx owns what they look like.
+   */
   trophy: string;
   requirement: string;
 };
@@ -278,12 +284,12 @@ export function isGrandSlam(accolades: Record<AccoladeId, boolean>): boolean {
 
 export function accoladeDefs(position: Position): AccoladeDef[] {
   return [
-    { id: 'proBowl', label: 'Pro Bowl', trophy: '🏈', requirement: `Overall ${GATES.proBowl}+` },
-    { id: 'allPro', label: 'First-Team All-Pro', trophy: '⭐', requirement: `Overall ${GATES.allPro}+` },
-    { id: 'opoy', label: 'Offensive Player of the Year', trophy: '🔥', requirement: `Overall ${GATES.opoy}+ with ${eliteTraitsRequired(position)} traits at 95 or better` },
-    { id: 'mvp', label: 'MVP', trophy: '👑', requirement: `Overall ${GATES.mvp}+` },
-    { id: 'record', label: recordLabel(position), trophy: '📜', requirement: `Overall ${GATES.recordOverall}+ and durability ${GATES.recordDurability}+, since you cannot break a record from the training room` },
-    { id: 'superBowl', label: 'Super Bowl', trophy: '💍', requirement: 'Down to the roll' },
-    { id: 'hof', label: 'Hall of Fame', trophy: '🏛️', requirement: `Any ${GATES.hofPoints} of the ones above` },
+    { id: 'proBowl', label: 'Pro Bowl', trophy: 'football', requirement: `Overall ${GATES.proBowl}+` },
+    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+` },
+    { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy}+ with ${eliteTraitsRequired(position)} traits at 95 or better` },
+    { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp}+` },
+    { id: 'record', label: recordLabel(position), trophy: 'stopwatch', requirement: `Overall ${GATES.recordOverall}+ and durability ${GATES.recordDurability}+, since you cannot break a record from the training room` },
+    { id: 'superBowl', label: 'Super Bowl', trophy: 'ring', requirement: 'Down to the roll' },
+    { id: 'hof', label: 'Hall of Fame', trophy: 'laurel', requirement: `Any ${GATES.hofPoints} of the ones above` },
   ];
 }

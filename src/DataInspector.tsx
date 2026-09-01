@@ -47,7 +47,7 @@ export default function DataInspector() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-4 py-5">
           <div>
             <h1 className="font-display text-4xl leading-none tracking-tighter uppercase sm:text-5xl">
-              Mega<span className="text-hazard">tron</span>
+              Gridiron<span className="text-hazard">Lab</span>
             </h1>
             <p className="mt-1 font-mono text-[11px] tracking-[0.2em] text-white/40 uppercase">
               Build a player · Steal his best part

@@ -239,6 +239,32 @@ for (let i = 0; i < words.length; i++) {
   }
 }
 
+/**
+ * The old name, hunted through the RENDERED text rather than the source.
+ *
+ * The rename missed the data inspector's heading for two commits, because it was written
+ * `Mega<span className="text-hazard">tron</span>` to colour half the word. Every grep for
+ * "Megatron" came back clean while the page went on saying it in 48px type, and it was a
+ * browser that eventually noticed rather than any check here. Stripping the tags first
+ * puts the word back together, which is the only way a source scan can see what a reader
+ * sees.
+ *
+ * The storage keys are deliberately still called megatron and are not affected, since
+ * they live in string literals rather than in markup.
+ */
+const oldName: Problem[] = [];
+for (const file of screens()) {
+  const text = readFileSync(file, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/.*/g, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\{[^{}]*\}/g, ' ');
+  if (/megatron/i.test(text)) {
+    const line = text.split('\n').findIndex((l) => /megatron/i.test(l)) + 1;
+    oldName.push({ where: `${file} (around line ${line})`, what: 'this screen still says Megatron' });
+  }
+}
+
 function report(title: string, hint: string, items: Problem[]): boolean {
   if (!items.length) return false;
   console.log(`\n${title} (${items.length})`);
@@ -257,6 +283,7 @@ const failed = [
   report(`blurbs over ${MAX_BLURB} characters`, 'trim to one punchy line', longBlurb),
   report('duplicate blurbs', 'every player needs his own line', dupes),
   report('near-duplicate blurbs', 'these two are making the same joke, rewrite one', nearDupes),
+  report('the old name on a screen', 'the game is called GridironLab now', oldName),
 ].some(Boolean);
 
 if (failed) process.exit(1);

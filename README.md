@@ -43,13 +43,37 @@ ending above the reveal defeats the reveal.
 
 ## On a phone
 
-Test the layout at 390px with the display font FORCED to `system-ui`, not with whatever
-your Mac happens to have. Nothing here loads a webfont, so `--font-display` falls through
-Archivo Black and Haettenschweiler to Arial Narrow, and macOS has Arial Narrow while iOS
-does not. A phone therefore renders the whole game in San Francisco, roughly 13% wider,
-and that is entirely why NAME YOUR PLAYER came off a tester's iPhone reading NAME YOUR
-PLAY while it fit on the machine it was built on. Anything sized so that the narrow
-fallback just barely fits is already broken on the device most people are holding.
+Test the layout at 390px. You no longer have to force the font first, and that is worth
+explaining because the instruction used to be the opposite.
+
+Nothing here loaded a webfont, so `--font-display` fell through Archivo Black and
+Haettenschweiler to Arial Narrow. macOS has Arial Narrow and iOS does not, so a phone
+rendered the whole game in San Francisco, roughly 13% wider than the machine it was built
+on. That is entirely why NAME YOUR PLAYER came off a tester's iPhone reading NAME YOUR
+PLAY while it fit fine on the laptop. Every width in the app was quietly a bet on which
+font turned up.
+
+Anton is now bundled with the site from `node_modules`, so every device gets the same
+letters at the same widths and that whole class of bug is gone rather than worked around.
+It is also the right face for this, since a heavy condensed grotesque is what a
+scoreboard and a jersey number and a broadcast lower third are all set in.
+
+## Icons
+
+There are no emoji anywhere. Every trophy, the ring, the sound toggle and the little
+carets on a player card are hand-drawn SVG in `src/components/Icons.tsx`.
+
+Emoji are somebody else's artwork. Apple, Google and Microsoft each draw them
+differently, they carry a glossy style that fights everything around them, and they
+cannot take a colour, so a gold trophy sitting on a gold card stayed whatever colour
+Apple decided. The icons here are one path each and inherit their colour through
+`currentColor`, which is why the same trophy is gold in the case and grey in the missed
+list without a second asset existing.
+
+They are drawn on a 24 unit grid and they have to survive being rendered at 14px. Two of
+them failed that on the first pass and are worth remembering: a laurel wreath read as an
+insect, and a helmet in profile read as a hook. Both got redrawn as the duller, more
+obvious shape, which is usually the right answer at this size.
 
 The results screen never tells you what a trophy required. It says how close he came in
 words instead. Learning the shape of the thresholds by playing is the point, and 17-0

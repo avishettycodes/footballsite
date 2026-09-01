@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, getTeam } from '../data';
 import type { AttributeKey, Player, Position } from '../data';
 import { ratingColor } from './AttributeBar';
+import { CaretDown, CaretUp } from './Icons';
 
 type Selection = { player: Player; attribute: AttributeKey } | null;
 
@@ -59,13 +60,15 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
                 {spent ? 'You already took something off him. Move on.' : player.blurb}
               </p>
               {!spent && (
-                <p className="px-4 pt-1.5 font-mono text-[10px] tracking-wide">
-                  <span style={{ color: ratingColor(bestValue) }}>
-                    ▲ {ATTRIBUTE_LABELS[bestKey]} {bestValue}
+                <p className="flex flex-wrap items-center gap-x-3 px-4 pt-1.5 font-mono text-[10px] tracking-wide">
+                  <span className="inline-flex items-center gap-1" style={{ color: ratingColor(bestValue) }}>
+                    <CaretUp className="h-2.5 w-2.5" />
+                    {ATTRIBUTE_LABELS[bestKey]} {bestValue}
                   </span>
                   {worstValue <= 60 && (
-                    <span className="ml-3 text-red-400">
-                      ▼ {ATTRIBUTE_LABELS[worstKey]} {worstValue}
+                    <span className="inline-flex items-center gap-1 text-red-400">
+                      <CaretDown className="h-2.5 w-2.5" />
+                      {ATTRIBUTE_LABELS[worstKey]} {worstValue}
                     </span>
                   )}
                 </p>
@@ -94,9 +97,11 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
                       }`}
                       title={taken ? 'You already filled that slot' : ATTRIBUTE_LABELS[key]}
                     >
-                      <span className="truncate font-mono text-[9px] tracking-wider">
-                        {key === bestKey && !disabled && !active ? '▲ ' : ''}
-                        {ATTRIBUTE_LABELS[key]}
+                      <span className="flex min-w-0 items-center gap-1 font-mono text-[9px] tracking-wider">
+                        {key === bestKey && !disabled && !active && (
+                          <CaretUp className="h-2 w-2 shrink-0" />
+                        )}
+                        <span className="truncate">{ATTRIBUTE_LABELS[key]}</span>
                       </span>
                       <span
                         className="ml-1 font-mono text-[13px] leading-none font-bold tabular-nums"
