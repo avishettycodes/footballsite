@@ -9,6 +9,7 @@ import {
   validateData,
 } from './data';
 import type { Position } from './data';
+import { inkOn } from './lib/contrast';
 import { PlayerCard } from './components/PlayerCard';
 import { ratingColor } from './components/AttributeBar';
 
@@ -119,7 +120,7 @@ export default function DataInspector() {
                 }`}
                 style={{
                   backgroundColor: t.primary,
-                  color: '#fff',
+                  color: inkOn(t.primary),
                   boxShadow: `inset 0 -3px 0 ${t.secondary}`,
                 }}
               >

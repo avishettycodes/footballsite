@@ -2,6 +2,7 @@ import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS, TEAMS_BY_ID, getPool } from '.
 import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
 import { ratingColor } from './AttributeBar';
+import { inkOn } from '../lib/contrast';
 
 type Props = {
   position: Position;
@@ -84,7 +85,7 @@ export function BuildSheet({ position, slots, highlight, usedPlayerIds = [] }: P
                 <div className="mt-1 flex items-center gap-1.5">
                   <span
                     className="rounded px-1.5 py-px font-mono text-[9px] font-bold"
-                    style={{ backgroundColor: TEAMS_BY_ID[slot.teamId].primary, color: '#fff' }}
+                    style={{ backgroundColor: TEAMS_BY_ID[slot.teamId].primary, color: inkOn(TEAMS_BY_ID[slot.teamId].primary) }}
                   >
                     {TEAMS_BY_ID[slot.teamId].abbr}
                   </span>

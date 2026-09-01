@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { animate } from 'framer-motion';
 import { TEAMS, TEAMS_BY_ID, getPool } from '../data';
+import { CONTRAST_LARGE_TEXT, inkOn } from '../lib/contrast';
 import type { Position, Team } from '../data';
 import { tick, thunk } from '../lib/audio';
 
@@ -136,6 +137,22 @@ export function SlotMachine({
             // greyed out. Only a genuinely empty roster is dimmed.
             const raided = visitedTeamIds.includes(team.id) && i < REEL_LEN - 1;
             const empty = getPool(position, team.id).every((p) => usedPlayerIds.includes(p.id));
+            /*
+              The reel is the single largest block of team colour in the game and you
+              stare at it for the length of every spin, so it is the worst place to have
+              a name you cannot read. White on Pittsburgh gold is 1.76:1 and on New
+              Orleans it is 1.85:1, which is three seconds of unreadable franchise on
+              every landing. The softer two lines keep their old weighting by taking the
+              same ink at a lower opacity rather than being hardcoded to white.
+
+              Judged at the LARGE TEXT threshold, which is what this type is. That is
+              not a loosening, it is what stops the ink flipping between rows: Detroit
+              and the Chargers are two blues nobody can tell apart that sit either side
+              of the small text cutoff, and they turn up next to each other on the reel.
+              At 3:1 only Pittsburgh and New Orleans flip, which are the two that are
+              actually gold.
+            */
+            const ink = inkOn(team.primary, CONTRAST_LARGE_TEXT);
             return (
               <div
                 key={`${team.id}-${i}`}
@@ -148,14 +165,23 @@ export function SlotMachine({
                 }}
               >
                 <div className="min-w-0">
-                  <div className="font-display text-2xl leading-none tracking-tight text-white uppercase sm:text-3xl">
+                  <div
+                    className="font-display text-2xl leading-none tracking-tight uppercase sm:text-3xl"
+                    style={{ color: ink }}
+                  >
                     {team.city} {team.name}
                   </div>
-                  <div className="font-mono text-[10px] tracking-[0.2em] text-white/60">
+                  <div
+                    className="font-mono text-[10px] tracking-[0.2em]"
+                    style={{ color: ink, opacity: 0.6 }}
+                  >
                     {empty ? 'NOBODY LEFT' : raided ? 'BEEN HERE ALREADY' : `${getPool(position, team.id).length} ${position}`}
                   </div>
                 </div>
-                <div className="font-display text-4xl leading-none text-white/35 sm:text-5xl">
+                <div
+                  className="font-display text-4xl leading-none sm:text-5xl"
+                  style={{ color: ink, opacity: 0.35 }}
+                >
                   {team.abbr}
                 </div>
               </div>
