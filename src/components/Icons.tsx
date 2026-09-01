@@ -29,7 +29,11 @@ const box = (className?: string) => ({
   'aria-hidden': true,
 });
 
-/** Pro Bowl. A pigskin, laces and all. */
+/**
+ * A pigskin, laces and all. Currently UNUSED: it was the Pro Bowl trophy, and the Pro
+ * Bowl was deleted for firing on nearly every run. Kept because it is a drawn asset that
+ * costs nothing to leave in the map and a future award may want a football.
+ */
 export function Football({ className }: Props) {
   return (
     <svg {...box(className)}>

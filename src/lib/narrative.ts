@@ -196,23 +196,27 @@ export function ringMissLine(overall: number): string {
  *
  * It used to branch on elite traits alone, so a man who rated 86, started for four years
  * and ran for 3,269 yards was told that somebody has to play the other games. He was a
- * real NFL starter. What he was not was a Pro Bowler, and those are different sentences.
+ * real NFL starter. What he was not was an All-Pro, and those are different sentences.
+ *
+ * IT COUNTS SPIKES NOW RATHER THAN TRAITS AT 95. The old count called almost every
+ * finished player elite, so the robbery line fired on builds that had simply been
+ * ordinary, which is the same complaint one paragraph up wearing the other hat.
  *
  * The short career case matters more again. A player whose years were taken off him has
  * an empty case because he ran out of time rather than because he was not good enough,
  * and telling him otherwise is exactly the thing that was fixed one screen down on the
  * record. Same bug, same fix, same reason it is worth a check.
  */
-export function emptyCaseLine(overall: number, eliteCount: number, run: RunShape): string {
-  if (eliteCount >= 3) {
-    return `${eliteCount} traits at the very top of the league and an empty case. This one was a robbery.`;
+export function emptyCaseLine(overall: number, spikeCount: number, run: RunShape): string {
+  if (spikeCount >= 3) {
+    return `${spikeCount} traits at the very top of the league and an empty case. This one was a robbery.`;
   }
   if (overall >= 84 && run.seasons < run.expected * 0.75) {
     return run.cutShort
       ? 'He was on his way and the league took the years back. There was never time to win anything.'
       : 'Good enough to win something, and gone before he could.';
   }
-  if (eliteCount >= 1) return 'A real weapon in there and nothing to show for it.';
+  if (spikeCount >= 1) return 'A real weapon in there and nothing to show for it.';
   if (overall >= 84) return 'A real NFL starter who never got a trophy for it. Most of them never do.';
   return 'The trophy case is empty. Somebody has to play the other games.';
 }
@@ -230,6 +234,5 @@ export function honorsLine(career: CareerResult): string {
   if (a.superBowl) return 'He got his ring out of it, whatever else the voters thought.';
   if (a.record) return 'He owns a record, which is the kind of thing they read out at funerals.';
   if (a.allPro) return 'First team All-Pro, and that was as high as it went.';
-  if (a.proBowl) return 'He made a Pro Bowl. Nobody is naming a street after him.';
   return 'He retired with an empty trophy case.';
 }

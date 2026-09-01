@@ -86,12 +86,27 @@ function weightedShortfalls(position: Position, build: Build): { key: AttributeK
     .sort((a, b) => a.adjusted - b.adjusted);
 }
 
+/**
+ * What counts as a spike, as opposed to merely a good number.
+ *
+ * 95 used to be the bar and it stopped meaning anything. A sensible run takes the
+ * biggest number on the board every spin and franchise pools offer 94 to 96 for most
+ * traits, so three traits at 95 turned up in 97% of finished players. An award asking
+ * for that was not asking for anything. 97 is the number a build has to go out of its
+ * way for: a sensible run gets three of them about half the time at quarterback and
+ * running back, and a tight end almost never does.
+ */
+export const SPIKE_AT = 97;
+
 export type OverallBreakdown = {
   overall: number;
   weightedMean: number;
   weakAnchor: number;
   weakest: { attribute: AttributeKey; value: number };
+  /** Traits at 95 or better. Kept for the lookahead bot's tiebreak and nothing else. */
   eliteCount: number;
+  /** Traits at SPIKE_AT or better. This is what OPOY asks for. */
+  spikeCount: number;
 };
 
 export function computeOverall(position: Position, build: Build): OverallBreakdown {
@@ -123,11 +138,12 @@ export function computeOverall(position: Position, build: Build): OverallBreakdo
     // Reported as the raw number, since that is what the player actually picked.
     weakest: { attribute: shortfalls[0].key, value: build[shortfalls[0].key] ?? 0 },
     eliteCount: keys.filter((k) => (build[k] ?? 0) >= 95).length,
+    spikeCount: keys.filter((k) => (build[k] ?? 0) >= SPIKE_AT).length,
   };
 }
 
 export type AccoladeId =
-  | 'proBowl' | 'allPro' | 'opoy' | 'mvp' | 'record' | 'superBowl' | 'hof';
+  | 'allPro' | 'opoy' | 'mvp' | 'record' | 'superBowl' | 'hof';
 
 export type AccoladeDef = {
   id: AccoladeId;
@@ -142,9 +158,9 @@ export type AccoladeDef = {
   requirement: string;
 };
 
-/** How many 95+ traits OPOY asks for at this position. See opoyEliteShare. */
-export function eliteTraitsRequired(position: Position): number {
-  return Math.floor(ATTRIBUTE_SETS[position].length * GATES.opoyEliteShare);
+/** How many spikes OPOY asks for at this position. See opoySpikeShare. */
+export function spikeTraitsRequired(position: Position): number {
+  return Math.floor(ATTRIBUTE_SETS[position].length * GATES.opoySpikeShare);
 }
 
 export function recordLabel(position: Position): string {
@@ -154,73 +170,101 @@ export function recordLabel(position: Position): string {
 }
 
 /**
- * Gates are CALIBRATED, not guessed — see `npm run verify:scoring`.
+ * Gates are CALIBRATED, not guessed. See `npm run verify:scoring`.
  *
- * The spec's original numbers (80/86/88/91) were written before anyone knew what a
- * typical run actually scores. Measured against the real data they were far too low:
- * a naive-but-sensible player cleared MVP 74% of the time and made the Hall 97%, which
- * makes every trophy meaningless. The cause is supply — the best available number in
- * ANY franchise's pool is ~94 for every attribute, so a handful of competent picks land
- * near the ceiling by construction.
+ * THE WHOLE SET MOVED, AND THE REASON IS WORTH THE SPACE.
  *
- * THEY MOVED UP ONE AGAIN when durability, contact balance and catch radius came off the
- * build sheet. Durability was the scarcest slot in the game and therefore the main source
- * of holes, so deleting it stopped the weak link anchor biting and lifted every rating
- * about a point. At the old numbers a sensible player was back to an MVP 27% of the time.
- * These are 89, 93, 95 and 96 because that is what it took to put the trophies back where
- * they were, not because bigger numbers look harder.
+ * Every number in here used to be measured against a harness whose bot policies never
+ * called reroll(), while a person on normal mode had three of them. So the gates were
+ * calibrated against a strictly harder game than anybody was playing. One reroll is
+ * worth about a point of overall, and on a distribution this steep a point roughly
+ * doubles the top awards. The bots hold the reroll now, and measured against the real
+ * game the old gates produced this, for a sensible player:
  *
- * These values sit on the measured distribution instead, and are re-checked against a
- * SKILL LADDER of four bot policies whose accolade rates must rise monotonically. If a
- * careless policy ever out-earns a careful one, the weak link anchor has failed its job.
+ *   Pro Bowl 97 to 100% at three positions, All-Pro 77 to 94%, MVP 13 to 35%, and a
+ *   grand slam once every seven runs at running back.
  *
- * Reference medians for a finished build, by position and policy:
+ * The bottom of that is not an accolade, it is a participation line, and once the entry
+ * trophy is free nothing above it means anything either. So:
  *
- *            random  fan  sensible  sharp
- *     QB         70   87        93     94
- *     RB         77   89        94     94
- *     WR         79   90        94     95
- *     TE         73   80        90     90
+ * PRO BOWL IS GONE. Not retuned, deleted. It fired on 99.9% of sensible running back
+ * runs. There is no threshold that makes an award which everybody wins interesting, and
+ * five trophies that mean something beat six where one is free. All-Pro is the entry
+ * award now.
+ *
+ * ALL-PRO AND MVP EACH GAINED A FLOOR, and that is the important structural change. A
+ * lone overall threshold could not be lifted far enough to gate quarterbacks, backs and
+ * receivers without taking tight end to nearly zero, because tight end sits three to
+ * four points below everyone else. Asking for a whole player instead of a high average
+ * fixes that: "92 or better with nothing under 92" costs the big three positions about
+ * what a straight 94 would have cost them, and leaves tight end at 28% instead of 14%.
+ * It also puts the game's actual decision, chase the spike or patch the hole, directly
+ * on the entry trophy.
+ *
+ * OPOY ASKS FOR SPIKES AND NOW ACTUALLY DOES. Its old requirement was traits at 95 or
+ * better, which a sensible run cleared 97% of the time, so the award was really just its
+ * overall gate wearing a second condition that never bit. At SPIKE_AT it separates a
+ * player with genuine peaks from a merely well-rounded one, which is what the award is
+ * supposed to say.
+ *
+ * Measured rates for a sensible player, with the reroll modelled:
+ *
+ *            All-Pro   OPOY    MVP  record   ring    HoF   slam
+ *     QB        65%     31%     9%     13%    63%    11%    3.5%
+ *     RB        69%     37%    19%     22%    66%    19%    6.7%
+ *     WR        78%     62%    19%     12%    68%    19%    5.5%
+ *     TE        28%      3%     1%      6%    52%     2%    0.4%
+ *
+ * WIDE RECEIVER SITS HIGHEST AND TIGHT END LOWEST, and neither is a gate problem. The
+ * receiver pool offers four traits at 96 in a typical franchise, so receivers both grade
+ * well and spike often, which is why OPOY runs at 62% there against 31% at quarterback.
+ * Tight end plays five slots out of the thinnest pool in the dataset. The gates stay
+ * identical everywhere and the expectations differ, which is the same stance this file
+ * has always taken. If the receiver number is ever addressed it should be addressed in
+ * the receiver pool, not with a receiver-shaped gate.
  */
 export const GATES = {
   /**
-   * The four overall gates must be strictly spaced apart. If two of them share a number
-   * they stop being two awards, because in practice every build that clears one clears
-   * the other. That happened three times during calibration: through the old quarterback
-   * MVP bonus where 96 minus 1.5 rounded onto OPOY's 95, then when MVP dropped to 95 and
-   * met OPOY, then when OPOY dropped to 94 and met All-Pro. Each time the rates came back
-   * byte identical. OPOY must also stay strictly below MVP, since it is the lesser award. It is the lesser award, so if the two gates meet
-   * they stop being two awards. That happened twice during calibration: first through
-   * the old quarterback MVP bonus, where 96 minus 1.5 rounded onto OPOY's 95, and again
-   * when MVP was lowered to 95 outright. Both times the rates came back byte identical.
+   * The overall gates must be strictly spaced apart. If two of them share a number they
+   * stop being two awards, because every build that clears one clears the other. That
+   * happened three times during calibration, and it happened again while picking these:
+   * OPOY at 96 came back byte identical to MVP at 96 in every column. OPOY must also
+   * stay strictly below MVP, since it is the lesser award.
    */
-  proBowl: 89,
-  allPro: 93,
+  allPro: 92,
+  /**
+   * No rating under this. An All-Pro has no hole in him, which is the whole point of
+   * the award and the reason it can gate without a punishing overall number.
+   */
+  allProFloor: 92,
   opoy: 95,
   /**
-   * OPOY's elite-trait requirement, expressed as a SHARE of the position's attribute
-   * count rather than a fixed number.
+   * OPOY's spike requirement, expressed as a SHARE of the position's attribute count
+   * rather than a fixed number, so a shorter build asks for fewer.
    *
-   * The share comes from the eight-attribute positions, where five of eight was the
-   * calibrated answer, so 5/8 = 0.625. That fraction is the thing being carried across,
-   * not the number five.
-   *
-   * Rounding is FLOOR, and the reason is principle rather than outcome. A position with
-   * fewer slots should need fewer elite traits, not the same number. Seven times 0.625
-   * is 4.375, and rounding that up would land back on five, which would mean tight ends
-   * needing five of seven at the position with by far the fewest elite traits in the
-   * dataset. That is not a hard mode, it is arithmetically close to impossible, and it
-   * produced a grand slam rate of one run in a thousand.
+   * Half, floored: three spikes at quarterback, running back and receiver, two at tight
+   * end. The share used to be 0.625 against a 95 bar, which asked for four of seven and
+   * was free anyway. Half of a real bar beats five eighths of a fake one.
    */
-  opoyEliteShare: 0.625,
+  opoySpikeShare: 0.5,
   mvp: 96,
   /**
-   * 5 of 6, not the spec's 3. At 3 a mediocre run walked into Canton, and at 4 a
-   * perfect run made it two thirds of the time. At 5 the Hall is the capstone it
-   * should be, and it puts the Super Bowl roll directly in the path, so losing the
-   * ring at 94 overall costs you the gold jacket. Which is rather the point.
+   * MVP's floor. Same idea as All-Pro's and a harder number, because the best player in
+   * the league does not have a 91 sitting in his card.
+   *
+   * This is also what keeps quarterbacks in the conversation. Lifting MVP to 97 outright
+   * would have put it at 1.3% for quarterbacks against 13.9% for receivers, which is not
+   * one award. 96 with nothing under 95 lands at 9% and 19%, which is a spread rather
+   * than a different game.
    */
-  hofPoints: 5,
+  mvpFloor: 95,
+  /**
+   * 4 of 5, down from 5 of 6, because Pro Bowl left the list it counted from. The old
+   * threshold against the new list would have been 5 of 5, which is not a capstone, it
+   * is a second grand slam. Four of five keeps the Super Bowl roll in the path, so
+   * losing the ring still costs you the gold jacket.
+   */
+  hofPoints: 4,
 } as const;
 
 /**
@@ -261,20 +305,23 @@ export function superBowlRoll(seed: string): number {
  * twenty year outliers who own the actual records, so aiming at Brady would have made
  * this unreachable rather than hard.
  *
- *   QB  57,000  between Warren Moon at 49,325 and Eli Manning at 57,023
- *   RB  14,500  around Curtis Martin at 14,101, under Barry Sanders at 15,269
- *   WR  16,900  between Randy Moss at 15,292 and Larry Fitzgerald at 17,492
- *   TE  10,600  around Shannon Sharpe at 10,060, under Antonio Gates at 11,841
+ *   QB  60,000  between Eli Manning at 57,023 and Dan Marino at 61,361
+ *   RB  15,200  just under Barry Sanders at 15,269
+ *   WR  17,700  just past Larry Fitzgerald at 17,492
+ *   TE  11,100  between Shannon Sharpe at 10,060 and Antonio Gates at 11,841
  *
- * These land the trophy between OPOY and MVP in rarity, which is the right place for it.
- * A record is a bigger deal than a good season and a smaller one than being the best
- * player alive.
+ * THEY WENT UP ABOUT 5% WITH EVERYTHING ELSE. The old numbers were set against the
+ * no-reroll harness, and against the real game they handed a sensible running back the
+ * rushing record 32% of the time. A record nobody has to reach for is the same problem
+ * the Pro Bowl had. These land it at 12 to 22%, which puts the trophy between OPOY and
+ * MVP in rarity, and that is the right place for it. A record is a bigger deal than a
+ * good season and a smaller one than being the best player alive.
  */
 export const RECORD_YARDS: Record<Position, number> = {
-  QB: 57000,
-  RB: 14500,
-  WR: 16900,
-  TE: 10600,
+  QB: 60000,
+  RB: 15200,
+  WR: 17700,
+  TE: 11100,
 };
 
 export type CareerResult = {
@@ -300,30 +347,32 @@ export function simulateCareer(
   seed: string,
 ): CareerResult {
   const breakdown = computeOverall(position, build);
-  const { overall, eliteCount } = breakdown;
+  const { overall, spikeCount } = breakdown;
+  const floor = breakdown.weakest.value;
 
   // How long he lasted, then what he did with the time. Both are pure functions of the
   // seed, so a shared run gives two people the same career and not merely the same wheel.
   const { seasons } = careerLength(position, overall, seed);
   const stats = careerStats(position, build, overall, seasons, seed);
 
-  const proBowl = overall >= GATES.proBowl;
-  const allPro = overall >= GATES.allPro;
-  const opoy = overall >= GATES.opoy && eliteCount >= eliteTraitsRequired(position);
-  const mvp = overall >= GATES.mvp;
+  // Each award asks a different question on purpose. All-Pro wants a complete player,
+  // OPOY wants peaks, MVP wants both at the top end, the record wants a career.
+  const allPro = overall >= GATES.allPro && floor >= GATES.allProFloor;
+  const opoy = overall >= GATES.opoy && spikeCount >= spikeTraitsRequired(position);
+  const mvp = overall >= GATES.mvp && floor >= GATES.mvpFloor;
   const record = stats.yards >= RECORD_YARDS[position];
 
   const odds = superBowlOdds(overall);
   const roll = superBowlRoll(seed);
   const superBowl = roll < odds;
 
-  const hofPoints = [proBowl, allPro, opoy, mvp, record, superBowl].filter(Boolean).length;
+  const hofPoints = [allPro, opoy, mvp, record, superBowl].filter(Boolean).length;
   const hof = hofPoints >= GATES.hofPoints;
 
   return {
     overall,
     breakdown,
-    accolades: { proBowl, allPro, opoy, mvp, record, superBowl, hof },
+    accolades: { allPro, opoy, mvp, record, superBowl, hof },
     superBowl: { odds, roll, won: superBowl },
     hofPoints,
     seasons,
@@ -341,10 +390,9 @@ export function isGrandSlam(accolades: Record<AccoladeId, boolean>): boolean {
 
 export function accoladeDefs(position: Position): AccoladeDef[] {
   return [
-    { id: 'proBowl', label: 'Pro Bowl', trophy: 'football', requirement: `Overall ${GATES.proBowl}+` },
-    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+` },
-    { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy}+ with ${eliteTraitsRequired(position)} traits at 95 or better` },
-    { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp}+` },
+    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+ with nothing under ${GATES.allProFloor}` },
+    { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy}+ with ${spikeTraitsRequired(position)} traits at ${SPIKE_AT} or better` },
+    { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp}+ with nothing under ${GATES.mvpFloor}` },
     { id: 'record', label: recordLabel(position), trophy: 'stopwatch', requirement: `${RECORD_YARDS[position].toLocaleString()} career yards, which takes both a long career and a good one` },
     { id: 'superBowl', label: 'Super Bowl', trophy: 'ring', requirement: 'Down to the roll' },
     { id: 'hof', label: 'Hall of Fame', trophy: 'laurel', requirement: `Any ${GATES.hofPoints} of the ones above` },

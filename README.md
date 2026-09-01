@@ -120,6 +120,26 @@ The results screen never tells you what a trophy required. It says how close he 
 words instead. Learning the shape of the thresholds by playing is the point, and 17-0
 does not print its own rulebook either.
 
+## The trophies
+
+Five awards and a Hall of Fame, and each one asks a different question.
+
+First-team All-Pro wants a complete player: a high overall with no rating under 92. It is
+the entry award, and it is the one the whole game is about, because the way you lose it
+is by chasing a big number and leaving a hole three spins back.
+
+Offensive Player of the Year wants peaks instead. It asks for a high overall and a number
+of traits at 97 or better, scaled to how many slots your position has.
+
+MVP wants both at once, with a harder floor. The record wants a career rather than a
+rating, since it is a yardage total and yardage takes years. The Super Bowl is a weighted
+coin you cannot build for. The Hall of Fame is any four of those five.
+
+THERE USED TO BE A PRO BOWL AND IT WAS DELETED. It fired on 99.9% of sensible running
+back runs, which makes it a participation line rather than an award, and once the entry
+trophy is free nothing above it means anything either. Five trophies that mean something
+beat six where one is free.
+
 Full offense mode, the share card and the admin editor are not built yet.
 
 ## The voice
@@ -225,7 +245,12 @@ That runs seven suites, and they check more than types.
 - **scoring** plays thousands of games with four bot policies of increasing skill and
   asserts that every accolade gets more likely as you move up that ladder. If careless
   play ever out-earns careful play, it fails. It also reports what careers this pool
-  actually produces, which is what the record thresholds are placed against.
+  actually produces, which is what the record thresholds are placed against. The policies
+  spend the reroll, and that is load bearing rather than a detail: for most of this
+  project's life they did not, so every gate in the game was calibrated against a run
+  played with zero rerolls while a person had three. A fifth policy plays hard mode blind,
+  so the harness cannot report normal mode rates under a heading a hard mode player would
+  read as his own.
 - **career** drives the length, draft, uniform and stat models tens of thousands of times
   each. Three kinds of assertion, and the third is the one worth having. Structural ones
   cannot be argued with: stints have to add up to the career, a pick has to land in a

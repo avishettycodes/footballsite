@@ -55,11 +55,11 @@
  * prove is the direction: hard mode has to cost you something against sighted play, and
  * the assertion at the bottom of each position is that it does.
  */
-import { useGame } from '../src/store/gameStore';
+import { REROLLS_NORMAL, useGame } from '../src/store/gameStore';
 import { ATTRIBUTE_SETS, TEAMS, getPool, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import { hashSeed, nextRandom } from '../src/lib/rng';
-import { RECORD_YARDS, WEAK_LINK_SHARE, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
+import { GATES, RECORD_YARDS, WEAK_LINK_SHARE, WEIGHTS, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
 import type { AccoladeId } from '../src/lib/scoring';
 
 type Policy = 'random' | 'fan' | 'human' | 'sharp' | 'blind';
@@ -70,7 +70,7 @@ const ALL_POLICIES: Policy[] = [...POLICIES, 'blind'];
 const RUNS = Number(process.env.RUNS ?? 3000);
 
 type Column = AccoladeId | 'grandSlam';
-const COLUMNS: Column[] = ['proBowl', 'allPro', 'opoy', 'mvp', 'record', 'superBowl', 'hof', 'grandSlam'];
+const COLUMNS: Column[] = ['allPro', 'opoy', 'mvp', 'record', 'superBowl', 'hof', 'grandSlam'];
 
 /** Sampling noise we forgive before calling a ladder inversion a real regression. */
 const TOLERANCE = 1.5;
@@ -103,26 +103,39 @@ const TOLERANCE = 1.5;
  * That is a genuine difficulty reduction being paid for rather than a knob being turned.
  * The awards land near where they used to at three of the four positions.
  *
- * THE FOURTH IS TIGHT END AND IT GOT HARDER, which these bands now say out loud. It lost
- * two of its seven slots and plays a five pick game, so the two worst numbers carry a
- * proportionally larger share of the rating than anywhere else, and the same gate lift
- * costs it more. A sensible tight end run made a Pro Bowl 89% of the time before and
- * makes one 68% of the time now. That is a real change to that position and it is
- * defensible, since five spins with nowhere to hide a cold one is the harder game, but it
- * is a change rather than a rounding error.
+ * THESE WERE RE-MEASURED TWICE OVER. Once because the policies now spend the reroll, and
+ * once because the whole accolade set moved underneath them. Both changes push the same
+ * way: the reroll made every trophy commoner and the new gates made them rarer again, so
+ * a band that survived either change on its own would have been a coincidence.
  *
- * QUARTERBACK SITS LOWEST ON THE SLAM and that is the honest cost of the MVP gate. The
- * slam needs MVP, MVP needs 96, and the quarterback pool runs about a point under the
- * other two big positions. A sharp quarterback run slams roughly once in forty. That is
- * the thinnest of the four and it is at the edge of the design goal above, so if it drops
- * further the answer is the quarterback pool rather than the band.
+ * TIGHT END IS LOWEST AND STAYS LOWEST. It plays five slots out of the thinnest pool in
+ * the dataset, and the grand slam needs MVP, which needs an overall of 96 with nothing
+ * under 95. A tight end reaches that about once in a hundred runs. A ceiling of All-Pro
+ * and a ring is not unfaithful to the position, since no tight end has won the real MVP
+ * either, but it does mean somebody who picks TE is chasing something smaller.
  */
 type Band = readonly [number, number];
-const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [2, 11], sharp: [1, 15] };
+const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [2, 11], sharp: [1, 12] };
 
 /**
- * Per-position expectations, measured rather than wished for. Measured at RUNS=4000,
- * where the rarest of these is still a couple of hundred hits.
+ * Per-position expectations, measured rather than wished for. Measured at RUNS=4000
+ * against the current gates, with the policies spending the reroll.
+ *
+ * What was actually measured, and each band is that number with room either side for
+ * sampling noise and for a pool growing by a few players:
+ *
+ *              human  sharp
+ *     QB        4.0%   2.0%
+ *     RB        6.9%   5.2%
+ *     WR        5.4%   5.8%
+ *     TE        0.5%   0.1%
+ *
+ * SHARP NOW SITS UNDER HUMAN AT THE SLAM at three of four positions, and that is the
+ * ladder note below rather than a regression. The slam needs MVP and OPOY, which are a
+ * threshold and a spike count. Sharp maximises the expected rating, and maximising a
+ * mean is the wrong way to clear two gates sitting out in the tail. The previous WR band
+ * assumed the opposite and its lower bound was 6% against a policy that now lands at
+ * 5.8%, which is how a stale expectation fails a healthy game.
  *
  * Tight end's numbers are low and that is deliberate rather than a target anyone is
  * happy with. It is worth noting the grand slam requires MVP, and no tight end has ever
@@ -131,9 +144,9 @@ const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [2, 11], sharp: [1, 
  * live design question rather than a solved one.
  */
 const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
-  QB: { human: [2, 7], sharp: [1, 6] },
-  RB: { human: [4, 11], sharp: [4, 12] },
-  WR: { human: [4, 11], sharp: [6, 14] },
+  QB: { human: [2, 8], sharp: [1, 6] },
+  RB: { human: [4, 11], sharp: [3, 10] },
+  WR: { human: [3, 10], sharp: [3, 11] },
   TE: { human: [0, 3], sharp: [0, 3] },
 };
 
@@ -186,7 +199,54 @@ function expectedFill(position: Position): Record<string, number> {
   return out;
 }
 
-function playRun(position: Position, seed: string, policy: Policy, premium: Record<string, number>) {
+/**
+ * What the best player in a typical franchise pool peaks at. The fan's yardstick for
+ * whether he recognises anybody on this roster, and nothing else uses it.
+ */
+function typicalStar(position: Position): number {
+  const peaks = TEAMS
+    .map((t) => getPool(position, t.id))
+    .filter((pool) => pool.length > 0)
+    .map((pool) => Math.max(...pool.map((p) => Math.max(...ATTRIBUTE_SETS[position].map((k) => p.attributes[k] ?? 0)))));
+  peaks.sort((a, b) => a - b);
+  return peaks[Math.floor(peaks.length / 2)];
+}
+
+/**
+ * THE REROLL IS PART OF THE GAME AND THE POLICIES NOW SPEND IT.
+ *
+ * For most of this file's life not one of them called reroll(), so every rate it printed
+ * described a run played with zero while a person on normal mode had three. The gates,
+ * the slam bands and the whole skill ladder were calibrated against a strictly harder
+ * game than anybody was playing, and it took a tester saying the game felt too easy to
+ * find it. Nothing here is trustworthy unless the bots hold the same resources the
+ * player does.
+ *
+ * What each policy does with one, which is itself a rung of the ladder, because noticing
+ * you have a resource is part of care:
+ *
+ *   random  never rerolls. It does not know it has one.
+ *   fan     rerolls when he does not recognise anybody, meaning this roster's best
+ *           player peaks below what a typical roster's best player peaks at.
+ *   human   rerolls when the biggest number on the board is below what a typical pool
+ *           offers for that same slot. "There is nothing here for me."
+ *   sharp   rerolls when the best finished player it can reach through this pool grades
+ *           below the one it would expect from typical pools alone. That is the same
+ *           objective it already maximises, asked one question further out.
+ *   blind   cannot. Hard mode has no rerolls, which is the point of hard mode.
+ *
+ * All of them are GREEDY: they spend it on the first landing that fails the test rather
+ * than holding it for a worse one later. A person holds. This makes the bots slightly
+ * worse than a careful human with the same resource, so read these rates as the floor of
+ * what one reroll buys rather than the ceiling.
+ */
+function playRun(
+  position: Position,
+  seed: string,
+  policy: Policy,
+  premium: Record<string, number>,
+  starFloor: number,
+) {
   const s = useGame.getState();
   s.abandonRun();
   // The only policy that plays hard mode is the one that cannot see the numbers.
@@ -205,6 +265,8 @@ function playRun(position: Position, seed: string, policy: Policy, premium: Reco
 
     let pid = pool[0].id;
     let attr: AttributeKey = open[0];
+    /** Set when the policy has looked at this pool and decided it can do better. */
+    let wantsReroll = false;
 
     if (policy === 'random') {
       pid = pool[Math.floor(rnd() * pool.length)].id;
@@ -222,6 +284,8 @@ function playRun(position: Position, seed: string, policy: Policy, premium: Reco
         const v = star.attributes[k] ?? 0;
         if (v > best) { best = v; attr = k; }
       }
+      // Nobody on this roster is a name. That is the only reason a fan ever rerolls.
+      wantsReroll = starPeak < starFloor;
     } else if (policy === 'blind') {
       // Fame is the only thing still legible on a card in hard mode, so the star gets
       // picked the same way `fan` picks him. Peak rating stands in for fame here, which
@@ -243,6 +307,9 @@ function playRun(position: Position, seed: string, policy: Policy, premium: Reco
         const v = p.attributes[k] ?? 0;
         if (v > best) { best = v; pid = p.id; attr = k; }
       }
+      // The biggest number here is smaller than what a typical pool hands you for that
+      // same slot, so this landing is below average and the reroll is what it is for.
+      wantsReroll = best < premium[attr];
     } else {
       const filled: Partial<Record<AttributeKey, number>> = {};
       for (const k of ATTRIBUTE_SETS[g.position]) {
@@ -259,17 +326,31 @@ function playRun(position: Position, seed: string, policy: Policy, premium: Reco
         for (const rest of open) if (rest !== k) hypothetical[rest] = premium[rest];
         const r = computeOverall(g.position, hypothetical);
         const exact = r.weightedMean * (1 - WEAK_LINK_SHARE) + r.weakAnchor * WEAK_LINK_SHARE;
-        // Ties break toward elite traits first, then toward the bigger raw number.
+        // Ties break toward SPIKES first, then toward the bigger raw number. It used to
+        // break toward traits at 95, which stopped tracking anything once OPOY started
+        // asking for 97s. A bot chasing the old bar is not playing the current game.
         //
         // Maximising the expected rating alone is not actually the ceiling, because two
         // of the awards are thresholds rather than averages. OPOY wants a count of 95+
         // traits, and at tight end the overall gates sit far enough into the tail that a
         // higher variance policy was beating this one outright. A bot that ignores what
         // the awards ask for is not the ceiling, it is just a different style.
-        const score = exact + r.eliteCount / 100 + (p.attributes[k] ?? 0) / 10000;
+        const score = exact + r.spikeCount / 100 + (p.attributes[k] ?? 0) / 10000;
         if (score > best) { best = score; pid = p.id; attr = k; }
       }
+
+      // What this pool is worth against walking away from it. The baseline fills every
+      // open slot with a typical pool's offering and takes nothing here, so if the best
+      // reachable player through this roster grades below that, the roster is a net loss.
+      const baseline: Partial<Record<AttributeKey, number>> = { ...filled };
+      for (const rest of open) baseline[rest] = premium[rest];
+      const b = computeOverall(g.position, baseline);
+      const bExact = b.weightedMean * (1 - WEAK_LINK_SHARE) + b.weakAnchor * WEAK_LINK_SHARE;
+      wantsReroll = best < bExact + b.spikeCount / 100;
     }
+
+    // Spending it is the last decision, after the policy has seen what this pool offers.
+    if (wantsReroll && g.rerollsLeft > 0) { useGame.getState().reroll(); continue; }
 
     useGame.getState().takeAttribute(pid, attr);
   }
@@ -284,6 +365,50 @@ const pct = (n: number, d: number) => ((100 * n) / d).toFixed(1).padStart(5) + '
 const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
 
 const positions = positionsWithData();
+
+/**
+ * THE FLOORS BITE. A deterministic check before any of the statistical work.
+ *
+ * All-Pro and MVP are the two awards made of an overall AND a floor, and a floor that
+ * quietly did nothing would not show up in the tables below: the rates would simply look
+ * like a slightly generous overall gate, which is exactly what the old OPOY spike
+ * requirement was doing for months before anybody measured it. So this builds the same
+ * player twice, once clean and once with a single rating one point under the floor, and
+ * asserts the award turns off.
+ *
+ * The hole is put in the position's LOWEST WEIGHTED trait on purpose. That is the one a
+ * weighted anchor forgives most, so if the floor bites there it bites everywhere.
+ */
+function floorsBite(): boolean {
+  let ok = true;
+  for (const position of positions) {
+    const keys = ATTRIBUTE_SETS[position];
+    const weights = WEIGHTS[position];
+    const softest = [...keys].sort((a, b) => (weights[a] ?? 1) - (weights[b] ?? 1))[0];
+
+    for (const [award, floor] of [['allPro', GATES.allProFloor], ['mvp', GATES.mvpFloor]] as const) {
+      // Everything at 99 except the one trait, which sits on the floor and then under it.
+      const clean: Partial<Record<AttributeKey, number>> = {};
+      for (const k of keys) clean[k] = 99;
+      clean[softest] = floor;
+      const holed = { ...clean, [softest]: floor - 1 };
+
+      const a = simulateCareer(position, clean, 'FLOORCHECK').accolades[award];
+      const b = simulateCareer(position, holed, 'FLOORCHECK').accolades[award];
+      if (a && !b) continue;
+      ok = false;
+      console.log(
+        `  x ${position} ${award}: floor ${floor} on ${softest} did not bite ` +
+        `(at the floor ${a ? 'won' : 'lost'}, one under ${b ? 'won' : 'lost'})`,
+      );
+    }
+  }
+  console.log(ok
+    ? '  floors bite: PASS, a single rating under the floor loses All-Pro and MVP at every position'
+    : '  floors bite: FAIL');
+  return ok;
+}
+
 console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}`);
 /**
  * Printed rather than left in a comment, because the person who needs it is reading the
@@ -296,10 +421,12 @@ console.log(
   '  trait to take. It is the floor for hard mode rather than what a good player gets.\n',
 );
 
-let failed = false;
+let failed = !floorsBite();
+console.log();
 
 for (const position of positions) {
   const premium = expectedFill(position);
+  const starFloor = typicalStar(position);
   const thin = Object.entries(premium).sort((a, b) => a[1] - b[1]);
 
   console.log(`${'='.repeat(72)}\n${position}`);
@@ -315,9 +442,12 @@ for (const position of positions) {
     const seasons: number[] = [];
     const yardage: number[] = [];
     const hits: Record<string, number> = Object.fromEntries(COLUMNS.map((c) => [c, 0]));
+    /** Runs that spent the reroll. Printed so a policy that quietly never uses it shows. */
+    let rerolled = 0;
 
     for (let i = 0; i < RUNS; i++) {
-      const r = playRun(position, `CAL-${position}-${policy}-${i}`, policy, premium);
+      const r = playRun(position, `CAL-${position}-${policy}-${i}`, policy, premium, starFloor);
+      if (policy !== 'blind' && useGame.getState().rerollsLeft < REROLLS_NORMAL) rerolled++;
       overalls.push(r.overall);
       weakest.push(r.breakdown.weakest.value);
       seasons.push(r.seasons);
@@ -345,6 +475,10 @@ for (const position of positions) {
      * threshold in RECORD_YARDS is meant to sit up around the p85 of a sensible run,
      * which is where the old durability gate used to land.
      */
+    console.log(
+      `    reroll   spent in ${((100 * rerolled) / RUNS).toFixed(1)}% of runs` +
+      `${policy === 'blind' ? ' (hard mode has none)' : ''}`,
+    );
     console.log(
       `    seasons  med ${quantile(seasons, 0.5)}  p90 ${quantile(seasons, 0.9)}  max ${seasons[seasons.length - 1]}` +
       `   yards  med ${quantile(yardage, 0.5).toLocaleString()}` +

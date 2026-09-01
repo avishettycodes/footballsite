@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { GATES, RECORD_YARDS, accoladeDefs } from '../lib/scoring';
+import { GATES, RECORD_YARDS, SPIKE_AT, accoladeDefs } from '../lib/scoring';
 import type { AccoladeId, CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
@@ -68,12 +68,25 @@ function missedBecause(
   run: RunShape,
 ): string {
   switch (id) {
-    case 'proBowl':
-      return nearness(GATES.proBowl - career.overall);
+    /*
+      The two awards with a floor can be missed two different ways, and saying which is
+      most of the value of this line. A build that grades 95 and carries an 88 did not
+      come up short on rating, it came up short on one number, and telling him he was
+      close would be answering a question he did not ask.
+    */
     case 'allPro':
-      return nearness(GATES.allPro - career.overall);
+      return career.overall >= GATES.allPro
+        // The label goes in as a bare object, with no article in front of it and no verb
+        // after it. The first draft read "a man with an ${label} that low", which produced
+        // "an juke", and the fix for that produced "whose reads is that low". No single
+        // article or verb is right across a list holding arm strength, juke and reads, so
+        // the sentence stopped asking the label to agree with anything.
+        ? `The rating was there. They kept coming back to the ${ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()}.`
+        : nearness(GATES.allPro - career.overall);
     case 'mvp':
-      return nearness(GATES.mvp - career.overall);
+      return career.overall >= GATES.mvp
+        ? 'The rating was there and the hole in him was not something the best player alive gets to have.'
+        : nearness(GATES.mvp - career.overall);
     case 'opoy':
       return career.overall >= GATES.opoy
         ? 'The rating was there. They wanted more of him at the very top of the league.'
@@ -535,8 +548,15 @@ export function ResultsScreen({
             style={{ borderLeftColor: ratingColor(career.breakdown.weakest.value) }}
           >
             <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">THE WEAK LINK</div>
+            {/*
+              "No hole to find" is pinned to the All-Pro floor rather than to a round 90,
+              because the game now has an opinion about where a hole starts and this box
+              was disagreeing with it. A build whose softest number was 90 was told there
+              was no hole in him on the same screen that the All-Pro vote had just turned
+              him down over exactly that number.
+            */}
             <p className="mt-1 text-[13px] leading-snug text-white/85">
-              {career.breakdown.weakest.value >= 90 ? (
+              {career.breakdown.weakest.value >= GATES.allProFloor ? (
                 <>
                   Nothing on him drops below{' '}
                   <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
@@ -552,7 +572,7 @@ export function ResultsScreen({
                     {career.breakdown.weakest.value}
                   </b>
                   {career.breakdown.weakest.value >= 86
-                    ? '. That is a soft spot rather than a hole, and it cost him a couple of points.'
+                    ? '. That is a soft spot rather than a hole, and it still cost him a couple of points and the votes that go with them.'
                     : career.breakdown.weakest.value >= 75
                       ? '. Half of the overall comes from your two worst numbers, so that cost you a few points.'
                       : '. Half of the overall comes from your two worst numbers, so a hole that size costs far more than any one big number gave back.'}
@@ -562,7 +582,7 @@ export function ResultsScreen({
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
               <span>AVERAGE OF THE {keys.length} <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
               <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
-              <span>ELITE TRAITS <b className="text-white/75">{career.breakdown.eliteCount}</b></span>
+              <span>TRAITS AT {SPIKE_AT}+ <b className="text-white/75">{career.breakdown.spikeCount}</b></span>
             </div>
           </div>
 
@@ -678,7 +698,7 @@ export function ResultsScreen({
                 */}
                 {earned.length === 0 && (
                   <div className="font-display text-xl text-white/40 uppercase">
-                    {emptyCaseLine(career.overall, career.breakdown.eliteCount, run)}
+                    {emptyCaseLine(career.overall, career.breakdown.spikeCount, run)}
                   </div>
                 )}
                 {earned.length > 0 && earned.length < 3 && position === 'TE' && (
