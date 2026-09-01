@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { DATA_STATS } from '../data';
 import type { Position } from '../data';
+import type { SavedPlayer } from '../lib/hall';
 import { makeSeed, parseSeedInput, seedFromUrl } from '../lib/rng';
+import { HallOfBuilds } from './HallOfBuilds';
 
 const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
@@ -9,9 +11,14 @@ type Props = {
   onStart: (opts: { position: Position; hardMode: boolean; seed?: string }) => void;
   canResume: boolean;
   onResume: () => void;
+  hall: SavedPlayer[];
+  onOpenSaved: (player: SavedPlayer) => void;
+  onDeleteSaved: (id: string) => void;
 };
 
-export function StartScreen({ onStart, canResume, onResume }: Props) {
+export function StartScreen({
+  onStart, canResume, onResume, hall, onOpenSaved, onDeleteSaved,
+}: Props) {
   const [position, setPosition] = useState<Position>('RB');
   const [hardMode, setHardMode] = useState(false);
   const [linkSeed] = useState(() => seedFromUrl());
@@ -160,6 +167,8 @@ export function StartScreen({ onStart, canResume, onResume }: Props) {
       >
         {pasted === 'junk' ? 'Fix the seed first' : 'Build a player'}
       </button>
+
+      <HallOfBuilds hall={hall} onOpen={onOpenSaved} onDelete={onDeleteSaved} />
     </div>
   );
 }

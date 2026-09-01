@@ -201,7 +201,7 @@ export default function DataInspector() {
       </main>
 
       <footer className="mt-8 border-t border-white/10 px-4 py-6 text-center font-mono text-[10px] leading-relaxed text-white/30">
-        Megatron is a fan project. It has nothing to do with the NFL and no team has endorsed
+        GridironLab is a fan project. It has nothing to do with the NFL and no team has endorsed
         it. Team names are here so you know whose history you are digging through. Every
         rating was written by hand for fun, and none of it comes from a real scouting source.
         If you disagree with a number, you are probably right.

@@ -224,7 +224,7 @@ const pct = (n: number, d: number) => ((100 * n) / d).toFixed(1).padStart(5) + '
 const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
 
 const positions = positionsWithData();
-console.log(`MEGATRON scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}\n`);
+console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}\n`);
 
 let failed = false;
 

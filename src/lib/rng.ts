@@ -1,5 +1,5 @@
 /**
- * Every random event in MEGATRON comes through here — spins, tiebreaks, and the
+ * Every random event in GridironLab comes through here — spins, tiebreaks, and the
  * Super Bowl roll. Nothing calls Math.random() in game logic. Ever.
  *
  * The generator is mulberry32, written as a PURE function of a uint32 state so

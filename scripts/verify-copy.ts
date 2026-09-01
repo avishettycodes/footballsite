@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import { PLAYERS } from '../src/data';
 
 const SCREEN_DIRS = ['src/components'];
-const SCREEN_FILES = ['src/App.tsx', 'src/DataInspector.tsx'];
+const SCREEN_FILES = ['src/App.tsx', 'src/DataInspector.tsx', 'src/lib/narrative.ts'];
 /** Only the strings players read, not the calibration commentary around them. */
 const PARTIAL_FILES: Record<string, RegExp> = { 'src/lib/scoring.ts': /\b(label|requirement):/ };
 

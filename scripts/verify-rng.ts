@@ -60,7 +60,7 @@ const flat = min > 9300 && max < 10700;
 
 // THE ROUND TRIP. What the results screen copies must survive being pasted back in.
 const SEED = 'GRIDIRON-7QX3';
-const shared = `https://megatron.example/?seed=${SEED}`;
+const shared = `https://gridironlab.example/?seed=${SEED}`;
 const boxCases: { name: string; input: string; seed: string; junk: boolean }[] = [
   { name: 'the copied link', input: shared, seed: SEED, junk: false },
   { name: 'a link inside a sentence', input: `beat this: ${shared} good luck`, seed: SEED, junk: false },

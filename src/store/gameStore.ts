@@ -5,27 +5,9 @@ import type { AttributeKey, Player, Position } from '../data';
 import { hashSeed, makeSeed, nextPick } from '../lib/rng';
 import { simulateCareer } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
-
-/**
- * Autosave storage. Falls back to memory when localStorage is missing or throws —
- * Safari private mode, blocked site data, and headless test runs all hit this.
- * The run just doesn't survive a reload there, instead of the store screaming.
- */
-const memory = new Map<string, string>();
-const safeStorage = {
-  getItem: (name: string) => {
-    try { return globalThis.localStorage?.getItem(name) ?? memory.get(name) ?? null; }
-    catch { return memory.get(name) ?? null; }
-  },
-  setItem: (name: string, value: string) => {
-    memory.set(name, value);
-    try { globalThis.localStorage?.setItem(name, value); } catch { /* quota or blocked */ }
-  },
-  removeItem: (name: string) => {
-    memory.delete(name);
-    try { globalThis.localStorage?.removeItem(name); } catch { /* blocked */ }
-  },
-};
+import { loadHall, removeFromHall, saveToHall } from '../lib/hall';
+import type { SavedPlayer } from '../lib/hall';
+import { safeStorage } from '../lib/storage';
 
 export const REROLLS_NORMAL = 3;
 export const REROLLS_HARD = 0;
@@ -90,8 +72,14 @@ type GameStore = RunState & {
   soundOn: boolean;
   /** Not persisted — a rehydrated run waits on the start screen until you opt in. */
   entered: boolean;
+  /**
+   * Saved players, newest first. Lives under its own storage key rather than in this
+   * store's persisted slice, because it outlives every run and must survive QUIT.
+   */
+  hall: SavedPlayer[];
   toggleSound: () => void;
   resumeRun: () => void;
+  deleteSaved: (id: string) => void;
 
   startRun: (opts: { position: Position; hardMode: boolean; seed?: string }) => void;
   spin: () => void;
@@ -190,9 +178,11 @@ export const useGame = create<GameStore>()(
       ...emptyRun(),
       soundOn: true,
       entered: false,
+      hall: loadHall(),
 
       toggleSound: () => set((s) => ({ soundOn: !s.soundOn })),
       resumeRun: () => set({ entered: true }),
+      deleteSaved: (id) => set({ hall: removeFromHall(id) }),
 
       /**
        * The seed passed in is the only seed. It used to fall back to `?seed=` in the
@@ -322,7 +312,42 @@ export const useGame = create<GameStore>()(
         set({ career: simulateCareer(state.position, build, state.seed), phase: 'results' });
       },
 
-      setCreationName: (name) => set({ creationName: name.slice(0, 28) }),
+      /**
+       * NAMING IS SAVING.
+       *
+       * A tester asked to name his player and keep him, named one, and then lost him to
+       * the next tap, because the name field wrote to a run that BUILD ANOTHER PLAYER
+       * deletes. Rather than adding a save button he has to notice, the act of naming
+       * him is the act of keeping him: every keystroke upserts the finished career into
+       * the hall under this run's id, and emptying the field takes him back out again,
+       * which doubles as the undo.
+       *
+       * Only ever on a finished run. A name typed mid build has nothing to save yet,
+       * and half a player in the hall would be worse than none.
+       */
+      setCreationName: (name) => {
+        const state = get();
+        const creationName = name.slice(0, 28);
+        set({ creationName });
+
+        if (state.phase !== 'results' || !state.career) return;
+        const trimmed = creationName.trim();
+        set({
+          hall: trimmed
+            ? saveToHall({
+                id: state.runId,
+                name: trimmed,
+                position: state.position,
+                hardMode: state.hardMode,
+                seed: state.seed,
+                savedAt: Date.now(),
+                pickOrder: state.pickOrder,
+                slots: state.slots,
+                career: state.career,
+              })
+            : removeFromHall(state.runId),
+        });
+      },
 
       abandonRun: () => set({ ...emptyRun(), entered: false }),
       clearEvent: () => set({ lastEventMessage: null }),
@@ -342,6 +367,14 @@ export const useGame = create<GameStore>()(
       },
     }),
     {
+      /**
+       * DO NOT RENAME THIS KEY. The game is called GridironLab now and this still says
+       * megatron, on purpose: the key is the address of everybody's autosaved run, and
+       * changing it would strand every half finished player currently sitting in a
+       * browser. A storage key is not player-facing copy, it is a pointer, and pointers
+       * do not get renamed for taste. `megatron.hall.v1` is left alone for the same
+       * reason, and it now holds saved players people intend to keep.
+       */
       name: 'megatron.run.v1',
       storage: createJSONStorage(() => safeStorage),
       // Autosave the run itself; UI-only flags stay out except the sound preference.

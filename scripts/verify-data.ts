@@ -8,7 +8,7 @@ const issues = validateData();
 const errors = issues.filter((i) => i.level === 'error');
 const warnings = issues.filter((i) => i.level === 'warn');
 
-console.log('MEGATRON — data check\n');
+console.log('GridironLab — data check\n');
 console.log(`teams:   ${DATA_STATS.teams}`);
 console.log(`players: ${DATA_STATS.players}`);
 for (const [pos, count] of Object.entries(DATA_STATS.byPosition)) {

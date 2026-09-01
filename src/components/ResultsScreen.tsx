@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
-import type { Position } from '../data';
+import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
 import { GATES, accoladeDefs } from '../lib/scoring';
 import type { AccoladeId, CareerResult } from '../lib/scoring';
+import { draftLine, draftedBy, franchisesUsed, honorsLine, seasonsPlayed, tenureLine } from '../lib/narrative';
+import { inkOn } from '../lib/contrast';
 import { deflate, fanfare, heartbeat } from '../lib/audio';
 import { ratingColor } from './AttributeBar';
 
 type Props = {
   position: Position;
-  slots: Partial<Record<import('../data').AttributeKey, FilledSlot>>;
+  slots: Partial<Record<AttributeKey, FilledSlot>>;
+  /** Which slot was filled first. The franchise behind it is the one that drafted him. */
+  pickOrder: AttributeKey[];
   career: CareerResult;
   seed: string;
   hardMode: boolean;
@@ -17,6 +21,15 @@ type Props = {
   onName: (name: string) => void;
   onRestart: () => void;
   soundOn: boolean;
+  /**
+   * Reopening a saved player out of the hall rather than finishing a run.
+   *
+   * The reveal is a first-time thing. Sitting through the count up, seven heartbeats
+   * and the ring again to look at a player you built last week is not suspense, it is a
+   * loading screen, and the outcome was decided the day he was built. So a replay opens
+   * fully revealed and silent, and the name is set rather than editable.
+   */
+  replay?: boolean;
 };
 
 /** Reveal stages. The OUTCOME is already decided — this only paces the telling. */
@@ -65,12 +78,17 @@ function missedBecause(id: AccoladeId, career: CareerResult, durability: number)
 }
 
 export function ResultsScreen({
-  position, slots, career, seed, hardMode, creationName, onName, onRestart, soundOn,
+  position, slots, pickOrder, career, seed, hardMode, creationName,
+  onName, onRestart, soundOn, replay = false,
 }: Props) {
-  const [stage, setStage] = useState<Stage>('overall');
+  const [stage, setStage] = useState<Stage>(replay ? 'done' : 'overall');
   const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [counter, setCounter] = useState(0);
   const defs = accoladeDefs(position);
+
+  const draftTeam = draftedBy(position, pickOrder, slots);
+  const careerTeams = franchisesUsed(position, pickOrder, slots);
+  const seasons = seasonsPlayed(slots.durability?.value, career.overall);
 
   // Count the overall up. Cosmetic only — reads career.overall, never rolls anything.
   useEffect(() => {
@@ -135,7 +153,7 @@ export function ResultsScreen({
         {/* Both halves of this bar wrapped onto two lines each on a phone. */}
         <div className="flex items-center justify-between gap-2 bg-hazard px-4 py-1.5">
           <span className="truncate font-display text-[11px] tracking-[0.15em] text-turf-950 uppercase sm:text-sm sm:tracking-[0.2em]">
-            Megatron · Career Report
+            GridironLab · Career Report
           </span>
           <span className="shrink-0 font-mono text-[10px] font-bold whitespace-nowrap text-turf-950">
             {hardMode ? 'HARD · ' : ''}{seed}
@@ -162,16 +180,31 @@ export function ResultsScreen({
               treatment. THE ALL AMERICAN NIGHTMARE needs 324px at 24px and there are
               243px to give it, and a name you cannot read back is not worth typing.
             */}
-            <input
-              value={creationName}
-              onChange={(e) => onName(e.target.value)}
-              placeholder="NAME YOUR PLAYER"
-              className={`w-full bg-transparent font-display leading-none tracking-tighter uppercase placeholder:text-white/25 focus:outline-none sm:text-4xl md:text-5xl ${
-                creationName.length > 20 ? 'text-base' : creationName.length > 14 ? 'text-lg' : 'text-2xl'
-              }`}
-            />
+            {replay ? (
+              <h2
+                className={`w-full font-display leading-none tracking-tighter uppercase sm:text-4xl md:text-5xl ${
+                  creationName.length > 20 ? 'text-base' : creationName.length > 14 ? 'text-lg' : 'text-2xl'
+                }`}
+              >
+                {creationName}
+              </h2>
+            ) : (
+              <input
+                value={creationName}
+                onChange={(e) => onName(e.target.value)}
+                placeholder="NAME YOUR PLAYER"
+                className={`w-full bg-transparent font-display leading-none tracking-tighter uppercase placeholder:text-white/25 focus:outline-none sm:text-4xl md:text-5xl ${
+                  creationName.length > 20 ? 'text-base' : creationName.length > 14 ? 'text-lg' : 'text-2xl'
+                }`}
+              />
+            )}
+            {/*
+              This used to read BUILT OUT OF N TEAMS. The career block below now says how
+              many uniforms he wore and prints every one of their badges, so the same
+              fact was on screen three times. Seasons is the thing that was missing.
+            */}
             <div className="mt-1.5 font-mono text-[10px] tracking-[0.15em] text-white/40 sm:text-[11px] sm:tracking-[0.2em]">
-              {position} · BUILT OUT OF {new Set(Object.values(slots).map((s) => s?.teamId)).size} TEAMS
+              {position} · {seasons} SEASONS
             </div>
           </div>
           <div className="shrink-0 text-center">
@@ -185,6 +218,53 @@ export function ResultsScreen({
               OVERALL
             </div>
           </div>
+        </div>
+
+        {/*
+          THE CAREER. A tester said this screen opens on a rating when it should open on
+          a story, so it now does, and every word of it is derived from the run that
+          already happened. See src/lib/narrative.ts for where each clause comes from.
+
+          The honours sentence is held back until the reveal is over, and only that
+          sentence. Telling somebody he made the Hall of Fame directly above seven
+          heartbeats and a Super Bowl reveal would hand him the ending first, which is
+          the one thing the reveal exists to avoid.
+        */}
+        <div className="mx-5 mb-4 rounded-lg border-l-4 border-white/25 bg-turf-800 py-3 pr-4 pl-4">
+          <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">
+            THE CAREER
+          </div>
+          <p className="mt-1 text-[14px] leading-snug text-white/85">
+            {/*
+              The draft sentence comes out of narrative.ts whole rather than being
+              reassembled here with the city in a <b>. Composing it in the JSX would put
+              the same sentence in two places and let the two drift, and the copy checker
+              would then be reading the wrong one.
+            */}
+            <b className="text-white">{draftLine(draftTeam)}</b>{' '}
+            {tenureLine(seasons, careerTeams, draftTeam)}
+            {stage === 'done' && <> {honorsLine(career)}</>}
+          </p>
+          {/*
+            Every franchise he passed through, readable on a phone. The heist table
+            further down credits these too, but it hides the team column below the sm
+            breakpoint, so on the device most people play this on the teams were not
+            actually anywhere on the screen.
+          */}
+          {careerTeams.length > 1 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {careerTeams.map((t) => (
+                <span
+                  key={t.id}
+                  title={`${t.city} ${t.name}`}
+                  className="rounded px-1.5 py-px font-mono text-[9px] font-bold"
+                  style={{ backgroundColor: t.primary, color: inkOn(t.primary) }}
+                >
+                  {t.abbr}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/*
@@ -221,7 +301,8 @@ export function ResultsScreen({
             )}
           </p>
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
-            <span>AVERAGE OF THE EIGHT <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
+            {/* Was hardcoded to EIGHT, which was already wrong for a seven slot tight end. */}
+            <span>AVERAGE OF THE {ATTRIBUTE_SETS[position].length} <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
             <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
             <span>ELITE TRAITS <b className="text-white/75">{career.breakdown.eliteCount}</b></span>
           </div>
@@ -282,8 +363,8 @@ export function ResultsScreen({
                 </span>
                 <span className="hidden w-44 shrink-0 items-center gap-1.5 sm:flex">
                   <span
-                    className="rounded px-1.5 py-px font-mono text-[9px] font-bold text-white"
-                    style={{ backgroundColor: team.primary }}
+                    className="rounded px-1.5 py-px font-mono text-[9px] font-bold"
+                    style={{ backgroundColor: team.primary, color: inkOn(team.primary) }}
                   >
                     {team.abbr}
                   </span>
@@ -423,7 +504,7 @@ export function ResultsScreen({
               onClick={onRestart}
               className="flex-1 rounded-lg bg-hazard px-6 py-4 font-display text-2xl tracking-tight text-turf-950 uppercase transition-transform hover:scale-[1.02]"
             >
-              Build another player
+              {replay ? 'Back to the start' : 'Build another player'}
             </button>
             <button
               onClick={copyLink}

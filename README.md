@@ -1,4 +1,4 @@
-# MEGATRON
+# GRIDIRONLAB
 
 Build a Frankenstein football player by spinning a wheel of NFL teams. Each spin lands
 on a franchise, you look at every notable player at your position in that team's history,
@@ -30,6 +30,17 @@ hard mode you have no way to talk your way out of it.
 QUIT in the header walks out of a run from anywhere, including mid spin, and asks first.
 It deletes the build and the autosave with it, which is why it asks.
 
+Naming your player on the report saves him. He goes into YOUR HALL at the bottom of the
+start screen, where opening him replays the whole report as it came out, fully revealed
+and without sitting through the reveal a second time. Clearing the name takes him back
+out, which is also the undo. Twenty players are kept, newest first.
+
+The report opens on the story rather than the rating. It says which franchise drafted
+him, how many seasons he lasted and which badges he wore on the way, all of it derived
+from the run that already happened rather than rolled. The one sentence that says what
+he actually won is held back until after the Super Bowl reveal, because printing the
+ending above the reveal defeats the reveal.
+
 ## On a phone
 
 Test the layout at 390px with the display font FORCED to `system-ui`, not with whatever
@@ -44,8 +55,18 @@ The results screen never tells you what a trophy required. It says how close he 
 words instead. Learning the shape of the thresholds by playing is the point, and 17-0
 does not print its own rulebook either.
 
-Full offense mode, the Hall of Builds history, the share card and the admin editor are
-not built yet.
+Full offense mode, the share card and the admin editor are not built yet.
+
+## The name, and the storage keys
+
+The game was called MEGATRON and is now called GridironLab, because Megatron reads as a
+receiver game and this one has four positions in it.
+
+The localStorage keys did NOT move. They are `megatron.run.v1` for the autosaved run and
+`megatron.hall.v1` for saved players. A key is the address of somebody's data rather
+than player-facing copy, so renaming it strands every half finished run and every saved
+player currently sitting in a browser. Calvin Johnson's blurb still says Megatron too,
+since that is his name.
 
 ## The data
 

@@ -1,5 +1,5 @@
 /**
- * MEGATRON data layer.
+ * GridironLab data layer.
  *
  * Every rating in this app is hand-authored, subjective, and made up for fun.
  * No licensed dataset, no scraped source, no API. If you disagree with a number,

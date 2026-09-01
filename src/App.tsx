@@ -3,6 +3,7 @@ import { ATTRIBUTE_SETS, getTeam } from './data';
 import type { AttributeKey } from './data';
 import { useGame } from './store/gameStore';
 import { audioState, lock, primeAudio, setSoundEnabled, subscribeAudio } from './lib/audio';
+import type { SavedPlayer } from './lib/hall';
 import { SlotMachine } from './components/SlotMachine';
 import { BuildSheet } from './components/BuildSheet';
 import { PoolPicker } from './components/PoolPicker';
@@ -16,6 +17,12 @@ export default function App() {
   const [sheetOpen, setSheetOpen] = useState(false);
   /** Confirm step for walking out on a run. See the quit control in the header. */
   const [quitting, setQuitting] = useState(false);
+  /**
+   * A saved player being read back out of the hall. This is not a run and never becomes
+   * one: it renders the frozen report and nothing else, so opening somebody you built
+   * last week cannot disturb a half finished build sitting in the autosave.
+   */
+  const [viewing, setViewing] = useState<SavedPlayer | null>(null);
   /**
    * Whether a sound played right now would actually be heard. A tester could not tell
    * the toggle apart from a browser that had simply never let the audio start, so the
@@ -45,11 +52,15 @@ export default function App() {
       <header className="sticky top-0 z-40 border-b border-white/10 bg-turf-900/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
           <button
-            onClick={() => (inRun ? setQuitting(true) : g.abandonRun())}
+            onClick={() => {
+              if (inRun) { setQuitting(true); return; }
+              setViewing(null);
+              g.abandonRun();
+            }}
             className="text-left"
           >
             <h1 className="font-display text-2xl leading-none tracking-tighter uppercase sm:text-3xl">
-              Mega<span className="text-hazard">tron</span>
+              Gridiron<span className="text-hazard">Lab</span>
             </h1>
           </button>
 
@@ -118,11 +129,32 @@ export default function App() {
         </div>
       </header>
 
-      {g.phase === 'setup' || !g.entered ? (
+      {viewing ? (
+        <main className="mx-auto max-w-7xl px-4 py-5">
+          <ResultsScreen
+            position={viewing.position}
+            slots={viewing.slots}
+            pickOrder={viewing.pickOrder}
+            career={viewing.career}
+            seed={viewing.seed}
+            hardMode={viewing.hardMode}
+            creationName={viewing.name}
+            // A saved report is a record of what happened. Renaming him happens on the
+            // run that made him, not here.
+            onName={() => {}}
+            onRestart={() => setViewing(null)}
+            soundOn={g.soundOn}
+            replay
+          />
+        </main>
+      ) : g.phase === 'setup' || !g.entered ? (
         <StartScreen
           onStart={(opts) => { primeAudio(); g.startRun(opts); }}
           canResume={g.hasSavedRun()}
           onResume={() => { primeAudio(); g.resumeRun(); }}
+          hall={g.hall}
+          onOpenSaved={setViewing}
+          onDeleteSaved={g.deleteSaved}
         />
       ) : (
         <main
@@ -228,6 +260,7 @@ export default function App() {
               <ResultsScreen
                 position={g.position}
                 slots={g.slots}
+                pickOrder={g.pickOrder}
                 career={g.career}
                 seed={g.seed}
                 hardMode={g.hardMode}
@@ -327,7 +360,7 @@ export default function App() {
       )}
 
       <footer className="mt-8 border-t border-white/10 px-4 py-6 text-center font-mono text-[10px] leading-relaxed text-white/30">
-        Megatron is a fan project. It has nothing to do with the NFL and no team has endorsed
+        GridironLab is a fan project. It has nothing to do with the NFL and no team has endorsed
         it. Team names are here so you know whose history you are digging through. Every
         rating was written by hand for fun, and none of it comes from a real scouting source.
         If you disagree with a number, you are probably right.
