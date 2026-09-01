@@ -57,6 +57,25 @@ does not print its own rulebook either.
 
 Full offense mode, the share card and the admin editor are not built yet.
 
+## The voice
+
+Write like a person explaining something to a smart friend over coffee. Professional but
+natural, clear and direct, with a bit of warmth. No buzzwords, nothing stiff, nothing
+that sounds like a press release.
+
+Two habits are worth naming because they are the ones that creep back in. Do not use em
+dashes. And do not pile up short descriptors inside a sentence, the "x, y, and z" shape
+where the items are bare things with no verb in them. "Six foot three, 220 pounds, and
+ran a 4.39" is a spec sheet. "Threw it sidearm, ran like a statue, and outthought
+everybody on the field" is somebody talking, and that one is fine, so the test is
+whether there is a verb in the things being listed rather than how short they are.
+
+`npm run verify:copy` enforces all of this on anything a player can read, which now
+includes the two lines the store says out loud when a run deadlocks or a spin comes back
+free. Those went unchecked for months because they live in the store rather than a
+component. If you write a sentence somebody will see on screen, put the file it lives in
+on one of the lists at the top of `scripts/verify-copy.ts`.
+
 ## The name, and the storage keys
 
 The game was called MEGATRON and is now called GridironLab, because Megatron reads as a
@@ -137,8 +156,12 @@ That runs six suites, and they check more than types.
   WebAudio to prove the recovery path works, walks the voice table to prove every sound
   carries on a small speaker, and asserts the playback session is declared on the first
   gesture, never at import and never while the sound is switched off.
-- **copy** reads only what a player sees, and fails on em dashes, stacked descriptors,
-  overlong blurbs and two cards making the same joke.
+- **copy** reads only what a player sees, and it enforces the voice below. Em dashes
+  fail. So does corporate vocabulary, because there is no honest reason for a game about
+  stealing Barry Sanders' vision to say "seamless". And so does the "x, y, and z" shape
+  when the piled-up items have no verb in them, though real clauses joined with "and"
+  are fine because those read as somebody talking. It also catches overlong blurbs and
+  two cards making the same joke.
 
 `src/lib/scoring.ts` is fenced. The weights and gates in there are calibrated against
 measured distributions, so if `verify:scoring` fails after new data lands, the data is
