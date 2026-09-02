@@ -83,6 +83,47 @@ a journeyman is desperate, one with an all-time great on the wall is not. At the
 top that stops mattering, because nobody passes on the best player in the class over a
 depth chart.
 
+## The numbers have to be believable
+
+Every stat on the report is simulated, and the whole point of it is that somebody can
+read the line and recognise it as a career. So the model is checked against real ones.
+
+It was not, for a while. Production ran off a curve that saturated at an overall of 96,
+which meant everything from 92 up produced within a few percent of the same season, and
+that season was the best anybody has ever had. A merely good 94 build retired with the
+sixth most rushing yards in history. A 96 threw for 5,561 in its best year, which is
+eighty yards past the real single season record, and it did that every single time.
+
+Production is convex in rating now and it runs to 99 rather than 96, because the gap
+between a good starter and a great one is much bigger than the gap between a replacement
+and a bad starter. That pulls the middle of the range down to where real careers sit and
+leaves the very top alone. Efficiency is capped at real career averages WITH the trait
+bonuses included rather than without them, since that is where the old model went past
+what anybody has done: 7.65 yards an attempt at 99 becomes 8.6 once you have stolen the
+best deep ball and the best arm in the league, and 8.6 is Otto Graham. A back at 4.6
+becomes 5.2 with the best vision and the best burst, and 5.2 is Jim Brown.
+
+Where it lands, by rating, as a median career:
+
+```
+        overall 90      overall 94       overall 96        overall 99
+   QB   18,399 yds      33,792           44,162            60,212
+   RB    5,379          10,206           13,160            18,271
+   WR    4,974           9,745           12,992            18,869
+   TE    3,861           7,755           10,374            15,698
+```
+
+A 94 is Jim Kelly or Corey Dillon or Hines Ward. A 96 is Philip Rivers or Eric Dickerson
+or Torry Holt. A 99 is at the top of the all-time list, and that is the ONE place this
+model is allowed to be unrealistic, because you had to build a perfect player to get
+there. The single season records are set where real people set them, so 5,477 passing
+yards, 2,105 rushing, 1,964 receiving and 1,416 for a tight end are reachable at 99 and
+nowhere else.
+
+The record trophies are real career totals now, to the yard, rather than a percentile of
+whatever the game happened to produce. You have to pass Warren Moon, Curtis Martin,
+Terrell Owens or Shannon Sharpe. That is what makes a seed worth sending somebody.
+
 ## On a phone
 
 Test the layout at 390px. You no longer have to force the font first, and that is worth
@@ -145,11 +186,16 @@ What a sensible player actually walks away with, measured over 3,000 runs a posi
 
 ```
            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-    QB        87%     40%    12%     15%    65%    14%    4.6%      6.2%
-    RB        86%     57%    21%     16%    68%    21%    5.7%      5.3%
-    WR        89%     73%    23%     16%    68%    24%    7.2%      4.1%
-    TE        67%      8%     1%     16%    56%     5%    0.7%     17.5%
+    QB        87%     40%    12%    2.6%    65%     9%    1.8%      6.2%
+    RB        86%     57%    21%    6.4%    68%    17%    3.7%      5.3%
+    WR        89%     73%    23%    5.1%    68%    18%    3.8%      4.1%
+    TE        67%      8%     1%    3.1%    56%     2%    0.4%      17.5%
 ```
+
+All-Pro sitting near 90% is not a broken gate. You built a player out of the best trait on
+seven different rosters, so of course he is good. What should be rare is being the best
+there has ever been, and that is the bottom half of the table: a record one run in twenty,
+a Hall of Fame call one in six, a grand slam one in thirty.
 
 Every one of those went up when normal mode went to two rerolls, and none of the overall
 gates was moved to pull them back down. A second reroll was asked for in order to make

@@ -115,22 +115,26 @@ const TOLERANCE = 1.5;
  * either, but it does mean somebody who picks TE is chasing something smaller.
  */
 type Band = readonly [number, number];
-const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [2, 11], sharp: [1, 12] };
+const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [1, 8], sharp: [0.4, 8] };
 
 /**
  * Per-position expectations, measured rather than wished for. Measured at RUNS=4000
  * against the current gates, with the policies spending the reroll.
  *
  * What was actually measured, and each band is that number with room either side for
- * sampling noise and for a pool growing by a few players. Re-measured at 3,000 runs after
- * size and toughness landed and normal mode went to two rerolls, and every band survived
- * both changes without being touched:
+ * sampling noise and for a pool growing by a few players.
+ *
+ * THEY ALL CAME DOWN WHEN THE CAREER MODEL STOPPED HANDING OUT RECORDS. The slam needs
+ * the record, the record is a real man's career total now rather than the p85 of whatever
+ * the game happened to produce, and it went from one run in six to one in twenty. So the
+ * slam went with it, which is the intended shape: the rarest thing in the game should be
+ * gated by the hardest thing in the game.
  *
  *              human  sharp
- *     QB        4.6%   2.0%
- *     RB        5.7%   4.4%
- *     WR        7.2%   7.3%
- *     TE        0.7%   0.3%
+ *     QB        1.8%   0.5%
+ *     RB        3.7%   2.0%
+ *     WR        3.8%   3.4%
+ *     TE        0.4%   0.3%
  *
  * SHARP NOW SITS UNDER HUMAN AT THE SLAM at three of four positions, and that is the
  * ladder note below rather than a regression. The slam needs MVP and OPOY, which are a
@@ -146,10 +150,10 @@ const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [2, 11], sharp: [1, 
  * live design question rather than a solved one.
  */
 const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
-  QB: { human: [2, 8], sharp: [1, 6] },
-  RB: { human: [4, 11], sharp: [3, 10] },
-  WR: { human: [3, 10], sharp: [3, 11] },
-  TE: { human: [0, 3], sharp: [0, 3] },
+  QB: { human: [1, 5], sharp: [0.4, 4] },
+  RB: { human: [1.5, 6], sharp: [0.8, 5] },
+  WR: { human: [2, 7], sharp: [1.5, 7] },
+  TE: { human: [0, 2], sharp: [0, 2] },
 };
 
 /**

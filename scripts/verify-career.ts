@@ -399,21 +399,36 @@ for (const position of positions) {
    * How rare the trophy is overall then falls out of how rare a 97 is, which is what
    * `npm run verify:scoring` measures against real play.
    */
+  // Sampled fresh rather than read off `bands`, so the ratings this asks about are the
+  // ones the record cares about instead of whichever ones the row above happens to print.
   const rate = (overall: number) => {
-    const runs = bands.find((b) => b.overall === overall)!.stats;
+    const runs = at(overall);
     return runs.filter((s) => s.yards >= RECORD_YARDS[position]).length / runs.length;
   };
-  const good = rate(93);
+  /*
+    THE SHAPE OF THIS CHANGED WHEN THE RECORD BECAME A REAL CAREER TOTAL, and the check
+    had to change with it rather than the gate being softened to keep the check happy.
+
+    It used to ask a 97 to clear the record most of the time, which was the right question
+    while the bar sat at the p85 of ordinary play. It is Barry Sanders' actual career now,
+    so the transition happens later and much more sharply: nobody at 95 gets near it,
+    somewhere between a fifth and a half of 97s do, and a near perfect build usually does.
+    That is the discrimination the trophy needs. Asking a 97 to own the all-time record
+    most of the time would be asking for the old inflation back.
+  */
+  const ordinary = rate(95);
   const great = rate(97);
+  const perfect = rate(99);
   check(
-    `${position} a good career does not just walk into the record`,
-    good < 0.3,
-    `${(good * 100).toFixed(0)}% of 93 overall careers cleared ${RECORD_YARDS[position].toLocaleString()}`,
+    `${position} an ordinary good career does not walk into the record`,
+    ordinary < 0.3,
+    `${(ordinary * 100).toFixed(0)}% of 95 overall careers cleared ${RECORD_YARDS[position].toLocaleString()}`,
   );
   check(
-    `${position} a great one usually does`,
-    great > 0.4 && great > good + 0.25,
-    `${(great * 100).toFixed(0)}% of 97 overall careers cleared it`,
+    `${position} a near perfect one usually does`,
+    perfect > 0.5 && great > ordinary + 0.15,
+    `95 -> ${(ordinary * 100).toFixed(0)}%, 97 -> ${(great * 100).toFixed(0)}%, ` +
+    `99 -> ${(perfect * 100).toFixed(0)}%`,
   );
 
   if (position === 'QB') {
@@ -546,8 +561,14 @@ function misses(position: Position, overall: number) {
 
 let onPaceAnywhere = 0;
 for (const position of positions) {
-  // The good build, for the sentence that was actually wrong.
-  const good = misses(position, 95);
+  /*
+    The build that can be ON PACE for the record, which is now a much better player than
+    it was. The record is a real man's career total rather than a percentile of whatever
+    the game produces, so the only careers whose rate projects past it belong to builds
+    up near the top. Sampling this at 95 used to work and now reports zero of zero, which
+    is the vacuous shape this section has already been caught in once at the other end.
+  */
+  const good = misses(position, 98);
   const onPace = good.filter((m) => m.projected >= m.gate);
   onPaceAnywhere += onPace.length;
   check(

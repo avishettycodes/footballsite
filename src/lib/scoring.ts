@@ -254,13 +254,21 @@ export function recordLabel(position: Position): string {
  * 0.04 traits at 97 or better per player against 0.27 at receiver, and no gate should
  * paper over that. Those two stay blind.
  *
- * Measured after the floor was derived, sensible player, 3,000 runs a position:
+ * Measured after the floor was derived and the career model was made honest, sensible
+ * player, 3,000 runs a position:
  *
  *            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
- *     QB        87%     40%    12%     15%    65%    14%    4.6%      6.2%
- *     RB        86%     57%    21%     16%    68%    21%    5.7%      5.3%
- *     WR        89%     73%    23%     16%    68%    24%    7.2%      4.1%
- *     TE        67%      8%     1%     16%    56%     5%    0.7%     17.5%
+ *     QB        87%     40%    12%    2.6%    65%     9%    1.8%      6.2%
+ *     RB        86%     57%    21%    6.4%    68%    17%    3.7%      5.3%
+ *     WR        89%     73%    23%    5.1%    68%    18%    3.8%      4.1%
+ *     TE        67%      8%     1%    3.1%    56%     2%    0.4%     17.5%
+ *
+ * THE RECORD IS THE RARE ONE NOW and the Hall of Fame followed it down, which is the
+ * shape this list should have had all along. Chasing a real man's career total is the
+ * thing worth sending somebody a seed about. All-Pro sitting up near 90% is not a bug in
+ * the gate: you built a player out of the best trait on seven different rosters, so of
+ * course he is a good player. What should be rare is being the best there has ever been,
+ * and that is what the bottom half of this table now measures.
  *
  * QUARTERBACK MOVED TOO, from 79% to 87%, and that is the rule working rather than a side
  * effect to be trimmed off. The median roster offers 90 mobility, so a 92 floor was
@@ -418,29 +426,32 @@ export function superBowlRoll(seed: string): number {
  * twenty year outliers who own the actual records, so aiming at Brady would have made
  * this unreachable rather than hard.
  *
- *   QB  61,000  just under Dan Marino at 61,361
- *   RB  16,900  just past Walter Payton at 16,726, well under Emmitt at 18,355
- *   WR  17,600  just past Larry Fitzgerald at 17,492
- *   TE  11,200  between Shannon Sharpe at 10,060 and Antonio Gates at 11,841
+ *   QB  49,325  Warren Moon, to the yard
+ *   RB  14,101  Curtis Martin, to the yard
+ *   WR  15,934  Terrell Owens, to the yard
+ *   TE  10,060  Shannon Sharpe, to the yard
  *
- * THEY MOVED AGAIN WHEN NORMAL MODE WENT TO TWO REROLLS, and the running back one moved
- * a long way. A second reroll is worth about a point of overall and a good deal more
- * than that in carries, so the old 15,200 was being cleared by 40% of sensible backs. A
- * record two players in five own is not a record, it is a milestone, which is the exact
- * problem that got the Pro Bowl deleted.
+ * THEY ARE REAL CAREER TOTALS NOW, TO THE YARD, and that is a change of method rather
+ * than of number. Every earlier version sat at the p85 of whatever a sensible run
+ * produced, which meant the record moved every time the career model did and always
+ * landed on a number that one run in seven owned. A record one player in seven owns is a
+ * milestone, and it also made the tile stamped ALL-TIME RECORD faintly ridiculous.
  *
- * The method has not changed and it is the only thing here worth copying: each gate sits
- * at the p85 of what a sensible run at that position actually produces, read straight off
- * `npm run verify:scoring`. Re-read that table after anything that touches careers, the
- * reroll count included, because all four of these are downstream of it. They land the
- * record at 13 to 17% now, which puts the trophy between OPOY and MVP in rarity. A record
- * is a bigger deal than a good season and a smaller one than being the best player alive.
+ * So the bar is a man's actual career now. You have to pass Barry Sanders. Once the
+ * production curve was fixed these landed between the p95 and the p97 of sensible play
+ * without being aimed there, which is the check that the two halves agree: a career
+ * model that produces realistic numbers should put a real record just out of reach of a
+ * good run and inside reach of a great one.
+ *
+ * If the career model changes again, re-read the yardage percentiles in
+ * `npm run verify:scoring` and confirm these are still near p95. Do not move them to hit
+ * a rate. Move them only if the game stops producing careers a real name belongs next to.
  */
 export const RECORD_YARDS: Record<Position, number> = {
-  QB: 61000,
-  RB: 16900,
-  WR: 17600,
-  TE: 11200,
+  QB: 49325,
+  RB: 14101,
+  WR: 15934,
+  TE: 10060,
 };
 
 export type CareerResult = {

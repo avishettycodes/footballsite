@@ -52,6 +52,33 @@ function grade(overall: number): number {
   return clamp((overall - 58) / 38, 0, 1);
 }
 
+/**
+ * THE SAME RATING, ON THE CURVE PRODUCTION ACTUALLY FOLLOWS, and this is the fix for the
+ * stat line reading like a list of all-time records.
+ *
+ * grade() above saturates at 96, which is fine for deciding how long somebody lasts and
+ * wrong for deciding what he puts up. Everything from 96 to 99 produced an identical
+ * season, and everything from 92 to 96 produced very nearly one, so the whole band this
+ * game actually deals landed within a few percent of the ceiling. Measured, a merely good
+ * 94 build was retiring with the sixth most rushing yards in history and a 96 was putting
+ * up a 5,561 yard passing season, which is eighty yards past the real record. Not once.
+ * Every time.
+ *
+ * Production is convex in rating, unlike availability. The gap between a good starter and
+ * a great one is much bigger than the gap between a replacement and a bad starter,
+ * because the great one gets the volume AND the efficiency AND the whole season. So this
+ * runs to 99 rather than 96 and it curves, which pulls the middle of the range down to
+ * where real careers sit while leaving the very top alone.
+ *
+ * The exponent is what makes the top of the game feel like the top. At 99 you get the
+ * numbers that break records, and that is the one place this model is allowed to be
+ * unrealistic, because you had to build a perfect player to get there.
+ */
+const PRODUCTION_CURVE = 2.2;
+function production(overall: number): number {
+  return Math.pow(clamp((overall - 58) / 41, 0, 1), PRODUCTION_CURVE);
+}
+
 /** How far a single trait leans from an ordinary one, as roughly -1 to 1. */
 function lean(build: Partial<Record<AttributeKey, number>>, key: AttributeKey): number {
   return clamp(((build[key] ?? 76) - 76) / 20, -1.2, 1.2);
@@ -430,9 +457,11 @@ function arc(index: number, seasons: number): number {
  * What a prime season looks like at this rating, before the arc and before the dice.
  *
  * Anchored on real prime seasons rather than on what felt generous. An elite passer year
- * is around 4,800 and 36, a replacement one is around 2,700 and 13. An elite back is
- * 1,750 on 330 carries, which is Emmitt's best year, while the league is full of 700
- * yard seasons. Traits push these around the edges, so a build with a 96 deep ball
+ * is around 4,300 and 34, a replacement one is around 2,200 and 11. An elite back is
+ * around 1,500 on 300 carries, while the league is full of 700 yard seasons. The single
+ * season records are deliberately OUT of reach of everything except a near perfect build:
+ * 5,477 passing yards, 2,105 rushing, 1,964 receiving and 1,416 for a tight end are real
+ * numbers set by real people having the best year anybody has ever had. Traits push these around the edges, so a build with a 96 deep ball
  * scores more than one that dinks it, and a passer who cannot read a defence throws it
  * to the wrong team more often.
  *
@@ -448,7 +477,7 @@ function primeSeason(
   build: Partial<Record<AttributeKey, number>>,
   overall: number,
 ): { yards: number; touchdowns: number; volume: number; secondary: number; secondaryYards: number } {
-  const p = grade(overall);
+  const p = production(overall);
 
   /**
    * SNAPS, WHICH IS THE THING THIS MODEL WAS MISSING ENTIRELY.
@@ -466,7 +495,15 @@ function primeSeason(
 
   if (position === 'QB') {
     const attempts = (330 + 210 * p) * workload;
-    const perAttempt = (6.3 + 2.4 * p) * (1 + 0.09 * lean(build, 'deepBall') + 0.04 * lean(build, 'armStrength'));
+    /*
+      THE CEILING HERE IS A REAL CAREER AVERAGE, and it has to be checked WITH the traits
+      rather than without them. The base is 7.65 yards an attempt at 99, which is about
+      Aaron Rodgers, and a build that also steals the best deep ball and the best arm in
+      the league pushes it to 8.6, which is Otto Graham and the highest anybody has ever
+      sustained. It used to be 8.7 before the traits and 9.4 after them, a number no
+      quarterback in history has come near.
+    */
+    const perAttempt = (5.9 + 1.75 * p) * (1 + 0.09 * lean(build, 'deepBall') + 0.04 * lean(build, 'armStrength'));
     const touchdowns = attempts * (0.030 + 0.030 * p) * (1 + 0.14 * lean(build, 'deepBall') + 0.08 * lean(build, 'clutch'));
     // Absolute interceptions RISE with playing time even as the rate falls, and that is
     // correct rather than a bug. Brees threw 243 of them and your backup threw four.
@@ -489,7 +526,10 @@ function primeSeason(
 
   if (position === 'RB') {
     const carries = (185 + 120 * p) * workload * (1 + 0.08 * lean(build, 'power') + 0.06 * lean(build, 'size'));
-    const perCarry = (3.7 + 1.2 * p) * (1 + 0.07 * lean(build, 'vision') + 0.05 * lean(build, 'burst'));
+    // Same check as the passer above, done with the traits included. 4.6 at 99 becomes 5.2
+    // once you have stolen the best vision and the best burst in the league, and 5.2 is
+    // Jim Brown, who has the highest career average anybody has ever managed.
+    const perCarry = (3.6 + 1.0 * p) * (1 + 0.07 * lean(build, 'vision') + 0.05 * lean(build, 'burst'));
     // Size shows up at the goal line, which is the one place a 250 pound back is a
     // different player from a 190 pound one who runs the same speed.
     const touchdowns = carries * (0.020 + 0.026 * p) * (1 + 0.20 * lean(build, 'power') + 0.10 * lean(build, 'size'));
