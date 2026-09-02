@@ -131,10 +131,13 @@ export function StartScreen({
               been a joke, a pitch and an explanation of why the rule is good, and every
               version got the same note back: say what it does. A player reading a
               settings screen is deciding, not being entertained.
+
+              No comma before an "and" here either, which is a small thing that was asked
+              for twice. Two short sentences beat one that pauses in the middle.
             */}
             {hardMode
-              ? 'No rerolls, and every rating in the pool is hidden until it lands on your build sheet.'
-              : 'Two rerolls, and every rating in the pool is visible. You can land on the same team more than once.'}
+              ? 'No rerolls. The pool hides every rating. You pick a player and choose the attribute you think is his best. You find out the rating as you go.'
+              : 'Two rerolls. Every rating in the pool is visible. You can land on the same franchise multiple times.'}
           </div>
         </div>
         <div

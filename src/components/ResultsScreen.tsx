@@ -496,7 +496,7 @@ export function ResultsScreen({
                   <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
                     {career.breakdown.weakest.value}
                   </b>
-                  . There is no hole to find, which is most of why the number held up.
+                  . There is no hole to find.
                 </>
               ) : (
                 <>
@@ -506,17 +506,21 @@ export function ResultsScreen({
                     {career.breakdown.weakest.value}
                   </b>
                   {/*
-                    NO POINTS AND NO VOTES IN HERE ANY MORE. Both of those were currencies
-                    the game never shows you a balance of, so "it cost him a couple of
-                    points and the votes that go with them" was two invented units in one
-                    sentence. What is true and worth saying is the thing the two numbers
-                    underneath already show: your worst two carry half the rating.
+                    THIS BOX NO LONGER EXPLAINS THE POINT SYSTEM AT ALL.
+
+                    It used to say the hole cost him a couple of points and the votes that
+                    go with them, which is two invented currencies in one sentence. The
+                    first fix only deleted the words and kept the lesson, "your worst two
+                    numbers are half of the rating", and the note back was that nobody
+                    asked for the lesson either. So it says what the soft number is and
+                    how bad it is, and that is all. The three figures underneath are there
+                    for anybody who wants to work the rest out.
                   */}
                   {career.breakdown.weakest.value >= 86
-                    ? '. That is a soft spot rather than a hole, and it is still the first thing anybody game planning for him would go at.'
+                    ? '. That is a soft spot rather than a hole.'
                     : career.breakdown.weakest.value >= 75
-                      ? '. Your worst two numbers are half of the rating, and that is one of them.'
-                      : '. Your worst two numbers are half of the rating, so a hole that size takes back more than any one big number gave you.'}
+                      ? '. That is soft enough to hurt him.'
+                      : '. That is a hole.'}
                 </>
               )}
             </p>

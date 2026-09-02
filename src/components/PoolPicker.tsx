@@ -36,7 +36,8 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
     <>
       {blind && (
         <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 font-mono text-[11px] leading-relaxed tracking-wide text-red-300">
-          Hard mode hides the ratings. You see a number once it is on your build sheet.
+          Hard mode hides the ratings. You find out what you took once it is on your
+          build sheet.
         </p>
       )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

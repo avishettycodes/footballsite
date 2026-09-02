@@ -25,10 +25,13 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
 
   return (
     <section className="mt-10">
+      {/*
+        THE SUBTITLE IS GONE. It said to open one to read his career report again,
+        exactly as it came out, and the note back was "so unnecessary bro". It was: the
+        heading says what this is, the rows are obviously rows, and tapping one is the
+        only thing you can do to it.
+      */}
       <h2 className="font-display text-2xl tracking-tight uppercase">Your hall</h2>
-      <p className="font-mono text-[11px] text-white/45">
-        Everybody you named. Open one to read his report again.
-      </p>
 
       <ul className="mt-3 space-y-2">
         {hall.map((player) => {

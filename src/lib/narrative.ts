@@ -158,20 +158,20 @@ export type RunShape = { seasons: number; expected: number; cutShort: boolean };
 export function recordMissLine(position: Position, careerYards: number, run: RunShape): string {
   const gate = RECORD_YARDS[position];
   const short = gate - careerYards;
-  if (short <= gate * 0.05) return 'He finished within touching distance of it.';
+  if (short <= gate * 0.05) return 'He finished just short of it.';
 
   const projected = (careerYards / Math.max(1, run.seasons)) * run.expected;
   if (projected >= gate) {
     return run.cutShort
-      ? 'He was on pace for it right up until it ended. Nobody gets those years back.'
+      ? 'He was on pace for it until his career ended.'
       : 'The rate was there. The seasons were not.';
   }
   if (projected >= gate * 0.85) {
-    return 'A full career at that rate and he would have been in the argument.';
+    return 'A full career at that rate and he would have been close.';
   }
 
-  if (short <= gate * 0.25) return 'A couple more healthy years and it was his.';
-  return 'He was never producing at the rate that record asks for.';
+  if (short <= gate * 0.25) return 'A couple more healthy years and he would have had it.';
+  return 'He never produced at the rate that record needs.';
 }
 
 /**
@@ -212,16 +212,16 @@ export function ringMissLine(overall: number): string {
  */
 export function emptyCaseLine(overall: number, spikeCount: number, run: RunShape): string {
   if (spikeCount >= 3) {
-    return `${spikeCount} traits at the very top of the league and an empty case. This one was a robbery.`;
+    return `${spikeCount} traits at the very top of the league and nothing to show for it.`;
   }
   if (overall >= 84 && run.seasons < run.expected * 0.75) {
     return run.cutShort
-      ? 'He was on his way and the league took the years back. There was never time to win anything.'
-      : 'Good enough to win something, and gone before he could.';
+      ? 'His career ended before he had the time to win anything.'
+      : 'He was good enough to win something and did not last long enough.';
   }
-  if (spikeCount >= 1) return 'A real weapon in there and nothing to show for it.';
-  if (overall >= 84) return 'A real NFL starter who never got a trophy for it. Most of them never do.';
-  return 'The trophy case is empty. Somebody has to play the other games.';
+  if (spikeCount >= 1) return 'One elite trait in there and nothing to show for it.';
+  if (overall >= 84) return 'A real NFL starter who never won anything. Most of them never do.';
+  return 'The trophy case is empty.';
 }
 
 /**
@@ -231,14 +231,12 @@ export function emptyCaseLine(overall: number, spikeCount: number, run: RunShape
  */
 export function honorsLine(career: CareerResult): string {
   const a = career.accolades;
-  if (a.hof) return 'They put him in Canton.';
-  if (a.mvp && a.superBowl) return 'He won an MVP and a ring, and the Hall still said no.';
-  if (a.mvp) return 'There is an MVP on the mantelpiece and no ring next to it.';
-  // "Whatever else the voters thought" read as a shrug at an award nobody had mentioned,
-  // on a line that is supposed to be the happy ending. The ring is the point of it.
-  if (a.superBowl) return 'He has a ring, which is more than almost anybody gets.';
-  if (a.record) return 'He owns a record, which is the kind of thing they read out at funerals.';
-  if (a.allPro) return 'First team All-Pro, and that was as high as it went.';
+  if (a.hof) return 'He made the Hall of Fame.';
+  if (a.mvp && a.superBowl) return 'He won an MVP and a ring and the Hall of Fame still said no.';
+  if (a.mvp) return 'He won an MVP and never won a ring.';
+  if (a.superBowl) return 'He won a Super Bowl.';
+  if (a.record) return 'He retired holding a record.';
+  if (a.allPro) return 'He made first team All-Pro and that was as high as it went.';
   return 'He retired with an empty trophy case.';
 }
 
@@ -268,27 +266,34 @@ export function honorsLine(career: CareerResult): string {
  * about at the bar" and then "MVP: close enough to argue about at the bar" directly
  * underneath. Two awards, one sentence, printed twice. A reader takes that as a bug in
  * the game rather than as a coincidence of thresholds, and they are more or less right.
+ *
+ * THEY ARE ALSO FLAT NOW. The first rewrite fixed the repetition and kept the jokes, and
+ * the whole block came back circled a second time. Arguing about it at the bar and
+ * having nothing on the mantelpiece are somebody being funny at a reader who wanted to
+ * know why he did not win. Each line says how near he came and stops. The wording still
+ * has to differ per award, which is what the check in verify:career enforces, but that
+ * difference now comes from what each award was asking for rather than from a punchline.
  */
 type Nearly = readonly [hair: string, close: string, distant: string, never: string];
 
 const NEARLY: Record<'allPro' | 'opoy' | 'mvp', Nearly> = {
   allPro: [
-    'He missed it by a hair.',
-    'He was close, and close is not what the voters reward.',
-    'A good player in a league that had three better ones at his spot.',
-    'He was never in that conversation.',
+    'He came up a hair short.',
+    'He came up short.',
+    'He was not one of the best at his position.',
+    'He was never close to this one.',
   ],
   opoy: [
-    'One more big afternoon and it was his.',
-    'Somebody else had the season everybody ended up talking about.',
-    'A fine year. Not the year of the year.',
-    'Nobody outside his own building brought his name up.',
+    'Somebody else edged him out.',
+    'Somebody else had the better season.',
+    'He had a good year in a league with better ones.',
+    'Nobody put his name forward.',
   ],
   mvp: [
-    'He finished second, and second is nobody.',
-    'He was in the argument until the last week of it.',
-    'Very good is a long way from best in the league.',
-    'That award was for other people.',
+    'He finished second.',
+    'He was in the argument and lost it.',
+    'He was not the best player in the league.',
+    'He was never in the running.',
   ],
 };
 
@@ -321,23 +326,25 @@ export function missedBecause(
         // "an juke", and the fix for that produced "whose reads is that low". No single
         // article or verb is right across a list holding arm strength, juke and reads, so
         // the sentence stopped asking the label to agree with anything.
-        ? `The rating was there. They kept coming back to the ${ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()}.`
+        ? `His rating was high enough. The ${ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()} was not.`
         : nearness('allPro', GATES.allPro - career.overall);
     case 'mvp':
       return career.overall >= GATES.mvp
-        ? 'The rating was there and the hole in him was not something the best player alive gets to have.'
+        ? 'His rating was high enough. The best player in the league does not carry a number that low.'
         : nearness('mvp', GATES.mvp - career.overall);
     case 'opoy':
       return career.overall >= GATES.opoy
-        ? 'The rating was there. They wanted more of him at the very top of the league.'
+        ? 'His rating was high enough. He did not have enough elite numbers.'
         : nearness('opoy', GATES.opoy - career.overall);
     // The only one of these that can be WRONG rather than merely blunt, which is why it
     // is a function of the career rather than of the rating.
     case 'record':
       return recordMissLine(position, career.careerYards, run);
     case 'superBowl':
-      return 'A ring is the one thing you cannot build for him.';
+      // Not "you cannot build for this one", which was both a shrug and untrue. A better
+      // player really does get better odds here. See superBowlOdds in scoring.ts.
+      return 'Better players get better odds at this one and his did not come in.';
     case 'hof':
-      return 'Not enough on the mantelpiece to get him in.';
+      return 'He did not win enough to get in.';
   }
 }

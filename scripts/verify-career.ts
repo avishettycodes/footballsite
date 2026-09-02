@@ -520,8 +520,8 @@ console.log('\nwhat it tells him about the record he missed');
  * for it turns into if you only check one side, since a line that never blames the player
  * is as useless as one that always does.
  */
-const NEVER = 'He was never producing at the rate that record asks for.';
-const ON_PACE = ['He was on pace for it right up until it ended. Nobody gets those years back.',
+const NEVER = 'He never produced at the rate that record needs.';
+const ON_PACE = ['He was on pace for it until his career ended.',
   'The rate was there. The seasons were not.'];
 
 /** Every career at this rating that missed the record, with what it was told about it. */
@@ -607,7 +607,7 @@ console.log('\nwhat it tells him when he won nothing');
  * hard is not worth reading either.
  */
 const NEVER_IN_IT = 'He was never really in it.';
-const NOBODY = 'The trophy case is empty. Somebody has to play the other games.';
+const NOBODY = 'The trophy case is empty.';
 
 {
   const wrong: string[] = [];
