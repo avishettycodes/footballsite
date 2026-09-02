@@ -10,19 +10,20 @@ import type { SavedPlayer } from '../lib/hall';
 import { safeStorage } from '../lib/storage';
 
 /**
- * ONE REROLL, NOT THREE.
+ * TWO REROLLS, NOT THREE AND NOT ONE.
  *
- * A run is five to seven spins, so three rerolls meant you could escape almost every
- * pool you did not like and the wheel stopped being a constraint. One lets you dodge
- * the single worst landing of a run and no more, which is the difference between
- * getting out of trouble once and shopping until the pool suits you.
+ * Three meant you could escape almost every pool you did not like and the wheel stopped
+ * being a constraint. One went too far the other way: a run is seven spins now, and a
+ * single reroll against seven landings is close enough to none that people played as if
+ * they had none. Two lets you walk away from the two worst rosters of a run and still
+ * live with the other five, which is the difference between getting out of trouble and
+ * shopping until the pool suits you.
  *
- * Nothing in `npm run verify:scoring` moves when this number changes, and that is worth
- * knowing rather than reassuring. None of the calibration policies ever calls reroll,
- * so every rate that harness prints has always described a run played with zero of
- * them. See the note at the top of scripts/verify-scoring.ts.
+ * This number is now load-bearing on every rate `npm run verify:scoring` prints, because
+ * the policies there spend rerolls. It did not used to be, and that was the bug rather
+ * than the feature. Changing it means re-reading that output.
  */
-export const REROLLS_NORMAL = 1;
+export const REROLLS_NORMAL = 2;
 export const REROLLS_HARD = 0;
 
 export type FilledSlot = {
@@ -145,8 +146,8 @@ const emptyRun = (): RunState => ({
  *      respin is drawn from the franchises that still have somebody left, so one retry
  *      is always enough.
  *   2. Otherwise you must take something. Not liking the pool is not a deadlock, it is
- *      the game. Escaping a live pool costs your one reroll, and hard mode does not give
- *      you one at all.
+ *      the game. Escaping a live pool costs a reroll, and hard mode does not give you
+ *      any.
  *
  * HARD MODE USED TO CARRY HALF OF THIS AND NO LONGER DOES. It excluded already-visited
  * franchises from the reel, which meant the exhausted-pool case was nearly unreachable:
@@ -155,12 +156,13 @@ const emptyRun = (): RunState => ({
  * to live with it is the funnier game. That puts the whole weight of the no-strand
  * guarantee on rule 1 above, so it is worth being precise about why it holds.
  *
- * Draining one franchise takes 7 or more picks out of the same pool, and a run makes at
- * most 8. So it is reachable now rather than impossible, which is the point of testing
- * it. It still cannot strand: `eligible` is every franchise with an unused player, and
- * rule 1 redraws from that set, so the only way to fail is for all 32 pools to be empty
- * at once. That needs 200-odd picks in an 8-pick run. `npm run verify:run` fuzzes every
- * position in both modes and asserts it never happens.
+ * The thinnest pool in the game holds 7 players and a run makes exactly 7 picks, so
+ * draining one means landing on the same short roster every single spin. It is reachable
+ * rather than impossible, which is the point of testing it. It still cannot strand:
+ * `eligible` is every franchise with an unused player, and rule 1 redraws from that set,
+ * so the only way to fail is for all 32 pools to be empty at once. That needs 200-odd
+ * picks in a 7-pick run. `npm run verify:run` fuzzes every position in both modes and
+ * asserts it never happens.
  */
 function drawTeam(state: RunState): { teamId: string | null; rngState: number; freeRespin: boolean } {
   const { position, usedPlayerIds } = state;

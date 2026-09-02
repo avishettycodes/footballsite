@@ -488,9 +488,11 @@ function primeSeason(
   }
 
   if (position === 'RB') {
-    const carries = (185 + 120 * p) * workload * (1 + 0.08 * lean(build, 'power'));
+    const carries = (185 + 120 * p) * workload * (1 + 0.08 * lean(build, 'power') + 0.06 * lean(build, 'size'));
     const perCarry = (3.7 + 1.2 * p) * (1 + 0.07 * lean(build, 'vision') + 0.05 * lean(build, 'burst'));
-    const touchdowns = carries * (0.020 + 0.026 * p) * (1 + 0.20 * lean(build, 'power'));
+    // Size shows up at the goal line, which is the one place a 250 pound back is a
+    // different player from a 190 pound one who runs the same speed.
+    const touchdowns = carries * (0.020 + 0.026 * p) * (1 + 0.20 * lean(build, 'power') + 0.10 * lean(build, 'size'));
     /**
      * Catching swings this hard on purpose. At the old 0.25 a back with 38 hands still
      * came out with 40 catches a year, which is not what a man nobody throws to looks
@@ -506,14 +508,18 @@ function primeSeason(
 
   if (position === 'WR') {
     const catches = (35 + 48 * p) * workload * (1 + 0.07 * lean(build, 'hands') + 0.05 * lean(build, 'routeRunning'));
-    const perCatch = (11 + 4.0 * p) * (1 + 0.06 * lean(build, 'deepThreat') + 0.03 * lean(build, 'yac'));
-    const touchdowns = catches * (0.055 + 0.055 * p) * (1 + 0.16 * lean(build, 'contestedCatch'));
+    // Yards per catch used to run off deep threat. Speed took that job when deep threat
+    // left the card, which is most of what deep threat was measuring anyway.
+    const perCatch = (11 + 4.0 * p) * (1 + 0.06 * lean(build, 'speed') + 0.03 * lean(build, 'yac'));
+    const touchdowns = catches * (0.055 + 0.055 * p) * (1 + 0.12 * lean(build, 'contestedCatch') + 0.10 * lean(build, 'size'));
     return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0, secondaryYards: 0 };
   }
 
-  const catches = (26 + 43 * p) * workload * (1 + 0.16 * lean(build, 'hands'));
+  // Toughness is volume at tight end. It is the trait that keeps him on the field for
+  // the third down and the goal line rather than coming off for a blocker.
+  const catches = (26 + 43 * p) * workload * (1 + 0.16 * lean(build, 'hands') + 0.06 * lean(build, 'toughness'));
   const perCatch = (9.5 + 3.8 * p) * (1 + 0.10 * lean(build, 'speed') + 0.07 * lean(build, 'yac'));
-  const touchdowns = catches * (0.050 + 0.045 * p) * (1 + 0.14 * lean(build, 'hands'));
+  const touchdowns = catches * (0.050 + 0.045 * p) * (1 + 0.14 * lean(build, 'hands') + 0.12 * lean(build, 'size'));
   return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0, secondaryYards: 0 };
 }
 

@@ -3,11 +3,11 @@ import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
 import { GATES, RECORD_YARDS, SPIKE_AT, accoladeDefs } from '../lib/scoring';
-import type { AccoladeId, CareerResult } from '../lib/scoring';
+import type { CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
   bestSeasonLine, draftBadge, draftLine, emptyCaseLine, franchisesRaided, honorsLine,
-  productionLine, recordMissLine, ringMissLine, tenureLine,
+  missedBecause, productionLine, ringMissLine, tenureLine,
 } from '../lib/narrative';
 import type { RunShape } from '../lib/narrative';
 import { inkOn, teamMark } from '../lib/contrast';
@@ -40,67 +40,6 @@ type Props = {
 
 /** Reveal stages. The OUTCOME is already decided — this only paces the telling. */
 type Stage = 'overall' | 'rolling' | 'ring' | 'done';
-
-/**
- * How close he came, in words, never in numbers.
- *
- * This screen used to print the requirement straight off the accolade definition, so
- * "WHAT HE MISSED OUT ON" read "Offensive Player of the Year: Overall 94+ with 4 traits
- * at 95 or better". That turns a game into a spec sheet. Nobody tells you what 17-0 or
- * 82-0 needs either, and finding out by playing is the whole appeal.
- *
- * The gates are still READ here to work out how near he was. They are simply never
- * shown. The requirement strings on the definitions stay where they are, unused by the
- * UI, because they are what the calibration script reports against.
- */
-function nearness(gap: number): string {
-  if (gap <= 1) return 'He missed it by a hair.';
-  if (gap <= 3) return 'He was close, and close is not what the voters reward.';
-  if (gap <= 7) return 'Close enough to argue about at the bar. Not close enough to win it.';
-  return 'He was never in that conversation.';
-}
-
-function missedBecause(
-  id: AccoladeId,
-  position: Position,
-  career: CareerResult,
-  /** How the career actually went, which the record needs and nothing else does. */
-  run: RunShape,
-): string {
-  switch (id) {
-    /*
-      The two awards with a floor can be missed two different ways, and saying which is
-      most of the value of this line. A build that grades 95 and carries an 88 did not
-      come up short on rating, it came up short on one number, and telling him he was
-      close would be answering a question he did not ask.
-    */
-    case 'allPro':
-      return career.overall >= GATES.allPro
-        // The label goes in as a bare object, with no article in front of it and no verb
-        // after it. The first draft read "a man with an ${label} that low", which produced
-        // "an juke", and the fix for that produced "whose reads is that low". No single
-        // article or verb is right across a list holding arm strength, juke and reads, so
-        // the sentence stopped asking the label to agree with anything.
-        ? `The rating was there. They kept coming back to the ${ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()}.`
-        : nearness(GATES.allPro - career.overall);
-    case 'mvp':
-      return career.overall >= GATES.mvp
-        ? 'The rating was there and the hole in him was not something the best player alive gets to have.'
-        : nearness(GATES.mvp - career.overall);
-    case 'opoy':
-      return career.overall >= GATES.opoy
-        ? 'The rating was there. They wanted more of him at the very top of the league.'
-        : nearness(GATES.opoy - career.overall);
-    // The only near-miss line that can be wrong rather than merely blunt, so it lives in
-    // narrative.ts where the career suite can drive it.
-    case 'record':
-      return recordMissLine(position, career.careerYards, run);
-    case 'superBowl':
-      return 'A ring is the one thing you cannot build for him.';
-    case 'hof':
-      return 'Not enough on the mantelpiece to get him in.';
-  }
-}
 
 /**
  * Every block on the report is a numbered section, and that is the whole layout idea.
@@ -491,18 +430,13 @@ export function ResultsScreen({
         */}
         <Section index="04" title="THE BUILD" aside={`${keys.length} PICKS`}>
           {/*
-            THIS CAPTION EXISTS BECAUSE THE TWO TEAM LISTS ON THIS REPORT MEAN DIFFERENT
-            THINGS AND LOOKED IDENTICAL.
-
-            Section 03 is who he played for and this table is who you took each number
-            off, and now that the first one is a realistic one to four franchises instead
-            of everybody you spun, the two lists disagree on purpose. A reader glancing at
-            five badges here under a nameplate reading 1 TEAM had to work the distinction
-            out on their own, from two sets of the same coloured chips.
+            THERE WAS A CAPTION HERE AND IT IS GONE. It read "who you stole from, which is
+            not who he played for", and it existed because the two team lists on this
+            report mean different things and look identical. The answer from the first
+            person to read it was "why would it be who he played for", which is the right
+            answer: nobody arrives at this table expecting it to be a career history. It
+            was a sentence explaining a confusion that only its author had.
           */}
-          <p className="mb-2 font-mono text-[10px] tracking-[0.12em] text-white/35">
-            WHO YOU STOLE FROM, WHICH IS NOT WHO HE PLAYED FOR
-          </p>
           <div className="overflow-hidden rounded-lg bg-turf-800">
             {keys.map((key) => {
               const slot = slots[key];
@@ -571,11 +505,18 @@ export function ResultsScreen({
                     {ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()} at{' '}
                     {career.breakdown.weakest.value}
                   </b>
+                  {/*
+                    NO POINTS AND NO VOTES IN HERE ANY MORE. Both of those were currencies
+                    the game never shows you a balance of, so "it cost him a couple of
+                    points and the votes that go with them" was two invented units in one
+                    sentence. What is true and worth saying is the thing the two numbers
+                    underneath already show: your worst two carry half the rating.
+                  */}
                   {career.breakdown.weakest.value >= 86
-                    ? '. That is a soft spot rather than a hole, and it still cost him a couple of points and the votes that go with them.'
+                    ? '. That is a soft spot rather than a hole, and it is still the first thing anybody game planning for him would go at.'
                     : career.breakdown.weakest.value >= 75
-                      ? '. Half of the overall comes from your two worst numbers, so that cost you a few points.'
-                      : '. Half of the overall comes from your two worst numbers, so a hole that size costs far more than any one big number gave back.'}
+                      ? '. Your worst two numbers are half of the rating, and that is one of them.'
+                      : '. Your worst two numbers are half of the rating, so a hole that size takes back more than any one big number gave you.'}
                 </>
               )}
             </p>
@@ -703,8 +644,8 @@ export function ResultsScreen({
                 )}
                 {earned.length > 0 && earned.length < 3 && position === 'TE' && (
                   <div className="w-full font-mono text-[11px] text-white/40">
-                    Tight end is the hard one. Five slots means five spins, so getting
-                    this far with one is more than it looks like.
+                    Tight end is the hard one. A typical roster has less on it at every
+                    slot, so getting this far with one is more than it looks like.
                   </div>
                 )}
               </div>

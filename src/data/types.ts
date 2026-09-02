@@ -18,9 +18,11 @@ export type AttributeKey =
   // RB
   | 'speed' | 'burst' | 'juke' | 'power' | 'vision' | 'hands'
   // WR
-  | 'routeRunning' | 'release' | 'contestedCatch' | 'yac' | 'deepThreat'
+  | 'routeRunning' | 'release' | 'contestedCatch' | 'yac'
   // TE
-  | 'blocking'
+  | 'blocking' | 'toughness'
+  // RB, WR and TE all share this one
+  | 'size'
   // OL
   | 'passBlock' | 'runBlock' | 'strength' | 'agility';
 
@@ -64,15 +66,28 @@ export type Player = {
  * lasts is now rolled at the end from his overall against how long players at that level
  * really lasted. See src/lib/career.ts.
  *
- * Positions are deliberately uneven now. A quarterback build is seven picks, a receiver
- * seven, a running back six and a tight end five, and a shorter build is a harder build
- * because there is nowhere to hide a cold spin.
+ * SIZE ARRIVED AND DEEP THREAT LEFT, and the second half of that is the interesting one.
+ *
+ * Deep threat was too narrow to be one of seven picks. Most of the receivers anybody
+ * actually wants are not deep threats, and most of the players who are get picked for
+ * that and nothing else, so the slot kept handing out a trait that described a niche
+ * rather than a receiver. Size does the job the position really wants: it is the first
+ * thing anybody says about a receiver, it separates cleanly from speed, and it is what
+ * you are giving up when you take the burner.
+ *
+ * Size is on the running back and the tight end for the same reason. A back who is 250
+ * pounds and a back who is 190 are not the same player even when they run the same
+ * speed, and that difference had no slot to live in.
+ *
+ * Positions are even now at seven picks each, and tight end got the two it was short:
+ * size and toughness. It stays the hard one because its pool is genuinely thinner, not
+ * because it plays a shorter build.
  */
 export const ATTRIBUTE_SETS: Record<Position, AttributeKey[]> = {
   QB: ['armStrength', 'accuracy', 'deepBall', 'pocketPresence', 'mobility', 'processing', 'clutch'],
-  RB: ['speed', 'burst', 'juke', 'power', 'vision', 'hands'],
-  WR: ['speed', 'hands', 'routeRunning', 'release', 'contestedCatch', 'yac', 'deepThreat'],
-  TE: ['hands', 'blocking', 'speed', 'routeRunning', 'yac'],
+  RB: ['speed', 'burst', 'juke', 'power', 'vision', 'hands', 'size'],
+  WR: ['speed', 'hands', 'routeRunning', 'release', 'contestedCatch', 'yac', 'size'],
+  TE: ['hands', 'blocking', 'speed', 'routeRunning', 'yac', 'toughness', 'size'],
 };
 
 export const OL_ATTRIBUTES: AttributeKey[] = ['passBlock', 'runBlock', 'strength', 'agility'];
@@ -104,8 +119,9 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   release: 'RELEASE',
   contestedCatch: 'CONTESTED CATCH',
   yac: 'YAC',
-  deepThreat: 'DEEP THREAT',
   blocking: 'BLOCKING',
+  toughness: 'TOUGHNESS',
+  size: 'SIZE',
   passBlock: 'PASS BLOCK',
   runBlock: 'RUN BLOCK',
   strength: 'STRENGTH',
@@ -125,6 +141,6 @@ export const ATTRIBUTE_ABBR: Record<AttributeKey, string> = {
   mobility: 'MOB', processing: 'RDS', clutch: 'CLT', speed: 'SPD', burst: 'ACC',
   juke: 'JKE', power: 'PWR', vision: 'VIS', hands: 'CAT',
   routeRunning: 'RTE', release: 'RLS', contestedCatch: 'CTC', yac: 'YAC',
-  deepThreat: 'DPT', blocking: 'BLK', passBlock: 'PBK',
+  blocking: 'BLK', toughness: 'TGH', size: 'SZE', passBlock: 'PBK',
   runBlock: 'RBK', strength: 'STR', agility: 'AGI',
 };

@@ -36,12 +36,21 @@ export type Build = Partial<Record<AttributeKey, number>>;
 /**
  * Positional weights. Higher = this trait defines the position.
  * RB leans on vision and burst; QB on accuracy and processing.
+ *
+ * SIZE IS WEIGHTED LOW EVERYWHERE IT APPEARS, and that is the honest answer rather than
+ * a cautious one. Barry Sanders was 203 pounds and Darren Sproles was 190, so a
+ * position that punished a small back the way it punishes a blind one would be arguing
+ * with its own pool. It matters most at tight end, where a small one really is a
+ * different job, and least at running back.
+ *
+ * Toughness sits just above blocking at tight end. It is the trait that makes the other
+ * six survive contact, and unlike blocking it is not something a scheme can hide.
  */
 export const WEIGHTS: Record<Position, Partial<Record<AttributeKey, number>>> = {
-  RB: { vision: 1.50, speed: 1.15, burst: 1.15, power: 1.10, juke: 1.05, hands: 0.70 },
+  RB: { vision: 1.50, speed: 1.15, burst: 1.15, power: 1.10, juke: 1.05, size: 0.80, hands: 0.70 },
   QB: { accuracy: 1.55, processing: 1.45, pocketPresence: 1.15, deepBall: 1.05, armStrength: 1.00, clutch: 0.95, mobility: 0.80 },
-  WR: { hands: 1.40, routeRunning: 1.35, speed: 1.15, release: 1.05, contestedCatch: 1.00, yac: 1.00, deepThreat: 0.95 },
-  TE: { hands: 1.45, routeRunning: 1.15, blocking: 1.05, yac: 0.95, speed: 0.90 },
+  WR: { hands: 1.40, routeRunning: 1.35, speed: 1.15, release: 1.05, contestedCatch: 1.00, yac: 1.00, size: 0.85 },
+  TE: { hands: 1.45, routeRunning: 1.15, toughness: 1.05, blocking: 1.05, size: 0.95, yac: 0.95, speed: 0.90 },
 };
 
 /**
@@ -207,21 +216,35 @@ export function recordLabel(position: Position): string {
  * player with genuine peaks from a merely well-rounded one, which is what the award is
  * supposed to say.
  *
- * Measured rates for a sensible player, with the reroll modelled:
+ * THE GATES DID NOT MOVE FOR THE SECOND REROLL, AND THAT WAS A CHOICE. Normal mode gives
+ * two now instead of one, which is worth about a point of overall, and a point on this
+ * distribution is worth a lot at the top. Every rate below went up and none of them was
+ * pulled back down, because the second reroll was asked for in order to make the game
+ * kinder and quietly raising the bar to cancel it out would have been a way of refusing
+ * while looking like agreement. The record gates are the exception and they moved for a
+ * different reason: 40% of backs owning the all-time rushing record is not a difficulty
+ * setting, it is a factual absurdity.
  *
- *            All-Pro   OPOY    MVP  record   ring    HoF   slam
- *     QB        65%     31%     9%     13%    63%    11%    3.5%
- *     RB        69%     37%    19%     22%    66%    19%    6.7%
- *     WR        78%     62%    19%     12%    68%    19%    5.5%
- *     TE        28%      3%     1%      6%    52%     2%    0.4%
+ * Measured rates for a sensible player at 3,000 runs a position, with both rerolls spent:
  *
- * WIDE RECEIVER SITS HIGHEST AND TIGHT END LOWEST, and neither is a gate problem. The
- * receiver pool offers four traits at 96 in a typical franchise, so receivers both grade
- * well and spike often, which is why OPOY runs at 62% there against 31% at quarterback.
- * Tight end plays five slots out of the thinnest pool in the dataset. The gates stay
- * identical everywhere and the expectations differ, which is the same stance this file
- * has always taken. If the receiver number is ever addressed it should be addressed in
- * the receiver pool, not with a receiver-shaped gate.
+ *            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
+ *     QB        79%     40%    12%     15%    65%    14%    4.6%      8.7%
+ *     RB        86%     57%    21%     16%    68%    21%    5.7%      5.3%
+ *     WR        89%     73%    23%     16%    68%    24%    7.2%      4.1%
+ *     TE        39%      8%     1%     16%    56%     5%    0.7%     27.9%
+ *
+ * THE LAST COLUMN IS THE ONE TO READ. Six rates in the 20s look like a game with plenty
+ * going on until you ask how often all six miss at once, and at tight end that is more
+ * than a quarter of every run against one in twenty at receiver.
+ *
+ * TIGHT END IS STILL THE OUTLIER AFTER THE SEVEN SLOT PASS, which was the fix everyone
+ * expected to work. It went from five slots to seven and from 37% empty to 28%, and the
+ * reason it did not go further is visible in the harness output rather than in any gate:
+ * a typical tight end pool offers 86 for YAC and 88 for route running, while All-Pro asks
+ * for nothing under 92. The floor is not hard at tight end, it is unreachable from the
+ * supply, so the position loses the entry award to two slots it can never fill. That is a
+ * pool problem and it stays a pool problem. The gates are identical at every position and
+ * the expectations differ, which is the stance this file has always taken.
  */
 export const GATES = {
   /**
@@ -305,23 +328,29 @@ export function superBowlRoll(seed: string): number {
  * twenty year outliers who own the actual records, so aiming at Brady would have made
  * this unreachable rather than hard.
  *
- *   QB  60,000  between Eli Manning at 57,023 and Dan Marino at 61,361
- *   RB  15,200  just under Barry Sanders at 15,269
- *   WR  17,700  just past Larry Fitzgerald at 17,492
- *   TE  11,100  between Shannon Sharpe at 10,060 and Antonio Gates at 11,841
+ *   QB  61,000  just under Dan Marino at 61,361
+ *   RB  16,900  just past Walter Payton at 16,726, well under Emmitt at 18,355
+ *   WR  17,600  just past Larry Fitzgerald at 17,492
+ *   TE  11,200  between Shannon Sharpe at 10,060 and Antonio Gates at 11,841
  *
- * THEY WENT UP ABOUT 5% WITH EVERYTHING ELSE. The old numbers were set against the
- * no-reroll harness, and against the real game they handed a sensible running back the
- * rushing record 32% of the time. A record nobody has to reach for is the same problem
- * the Pro Bowl had. These land it at 12 to 22%, which puts the trophy between OPOY and
- * MVP in rarity, and that is the right place for it. A record is a bigger deal than a
- * good season and a smaller one than being the best player alive.
+ * THEY MOVED AGAIN WHEN NORMAL MODE WENT TO TWO REROLLS, and the running back one moved
+ * a long way. A second reroll is worth about a point of overall and a good deal more
+ * than that in carries, so the old 15,200 was being cleared by 40% of sensible backs. A
+ * record two players in five own is not a record, it is a milestone, which is the exact
+ * problem that got the Pro Bowl deleted.
+ *
+ * The method has not changed and it is the only thing here worth copying: each gate sits
+ * at the p85 of what a sensible run at that position actually produces, read straight off
+ * `npm run verify:scoring`. Re-read that table after anything that touches careers, the
+ * reroll count included, because all four of these are downstream of it. They land the
+ * record at 13 to 17% now, which puts the trophy between OPOY and MVP in rarity. A record
+ * is a bigger deal than a good season and a smaller one than being the best player alive.
  */
 export const RECORD_YARDS: Record<Position, number> = {
-  QB: 60000,
-  RB: 15200,
-  WR: 17700,
-  TE: 11100,
+  QB: 61000,
+  RB: 16900,
+  WR: 17600,
+  TE: 11200,
 };
 
 export type CareerResult = {

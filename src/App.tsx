@@ -327,8 +327,8 @@ export default function App() {
 
       {/*
         Confirm, because this is the one button in the app that destroys something. The
-        slot count is in the sentence on purpose: seven of eight filled reads very
-        differently from one of eight, and it is the number that changes your mind.
+        slot count is in the sentence on purpose: six of seven filled reads very
+        differently from one of seven, and it is the number that changes your mind.
       */}
       {quitting && (
         <div
@@ -375,20 +375,22 @@ export default function App() {
         rating was written by hand for fun, and none of it comes from a real scouting source.
         If you disagree with a number, you are probably right.
         <br />
+        {/*
+          THE DATA INSPECTOR IS NOT LINKED ANY MORE, and it has not been deleted either.
+          It is a wall of raw ratings for whoever is editing the pools, and a link to it
+          sitting under the disclaimer on a public site is an invitation to read the
+          answers before playing. `?debug` still opens it for anyone who knows.
+        */}
         {import.meta.env.VITE_FEEDBACK_URL && (
-          <>
-            <a
-              href={import.meta.env.VITE_FEEDBACK_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-block text-hazard/70 underline hover:text-hazard"
-            >
-              Something feel wrong? Tell me about it
-            </a>{' '}
-            ·{' '}
-          </>
+          <a
+            href={import.meta.env.VITE_FEEDBACK_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block text-hazard/70 underline hover:text-hazard"
+          >
+            Something feel wrong? Tell me about it
+          </a>
         )}
-        <a href="?debug" className="mt-2 inline-block underline hover:text-white/50">data inspector</a>
       </footer>
     </div>
   );

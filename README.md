@@ -23,11 +23,12 @@ Solo build mode is playable end to end. Pick a position, spin, steal attributes,
 simulate a career. The wheel, the build sheet, the scoring engine, the accolades and the
 Super Bowl roll are all in.
 
-Normal mode gives you one reroll, which is enough to walk away from the single worst
-landing of a run and not enough to shop. Hard mode gives you none, and it also hides
-every rating in the pool: each number renders as a question mark, so you take a player
-on his name and his era and the line under it, and you only see what you got once it
-lands on your build sheet. Your own build is never hidden, because a run where you
+Normal mode gives you two rerolls against seven spins, which is enough to walk away from
+the two worst landings of a run and not enough to shop. It was one for a while and one
+was too close to none. Hard mode gives you none, and it also hides every rating in the
+pool: each number renders as a question mark, so you pick a player on his name and the
+line under it and take whichever attribute you think is his best, and the number turns up
+on your build sheet afterwards. Your own build is never hidden, because a run where you
 cannot see what you already have is not harder, it is unplayable.
 
 Every franchise stays in the wheel the whole way in both modes, so landing on the same
@@ -135,6 +136,23 @@ MVP wants both at once, with a harder floor. The record wants a career rather th
 rating, since it is a yardage total and yardage takes years. The Super Bowl is a weighted
 coin you cannot build for. The Hall of Fame is any four of those five.
 
+What a sensible player actually walks away with, measured over 3,000 runs a position:
+
+```
+           All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
+    QB        79%     40%    12%     15%    65%    14%    4.6%      8.7%
+    RB        86%     57%    21%     16%    68%    21%    5.7%      5.3%
+    WR        89%     73%    23%     16%    68%    24%    7.2%      4.1%
+    TE        39%      8%     1%     16%    56%     5%    0.7%     27.9%
+```
+
+Every one of those went up when normal mode went to two rerolls, and none of the overall
+gates was moved to pull them back down. A second reroll was asked for in order to make
+the game kinder, and quietly raising the bar to cancel it out is a way of refusing while
+looking like agreement. The record thresholds are the exception and they moved for a
+different reason: 40% of backs owning the all-time rushing record is not a difficulty
+setting, it is a factual absurdity.
+
 THERE USED TO BE A PRO BOWL AND IT WAS DELETED. It fired on 99.9% of sensible running
 back runs, which makes it a participation line rather than an award, and once the entry
 trophy is free nothing above it means anything either. Five trophies that mean something
@@ -183,9 +201,26 @@ Johnson has 99 speed and 60 power, Jimmy Graham catches everything and blocks no
 and Gus Edwards catches at 38. Some cards are bad on purpose, because a cold spin should
 hurt.
 
-The positions are deliberately uneven. A quarterback build is seven picks, a receiver
-seven, a running back six and a tight end five, and a shorter build is a harder build
-because there is nowhere to hide a cold spin.
+Every position is seven picks now. They were uneven for a while, on the theory that a
+shorter build is a harder build, and tight end drew the short straw twice over: five
+slots out of the thinnest pool in the game.
+
+**Size went on and deep threat came off.** Deep threat was too narrow to be one of seven
+picks at receiver. Most of the receivers anybody wants are not deep threats and most of
+the ones who are get picked for that alone, so the slot kept handing out a niche instead
+of a receiver. Size is the first thing anybody says about a receiver, it separates
+cleanly from speed, and it is what you give up when you take the burner. It went on the
+running back and the tight end for the same reason: a 250 pound back and a 190 pound
+back are not the same player even when they run the same speed.
+
+**Tight end also got toughness**, which took it from five slots to seven. It is the one
+position where being willing to get hit is a skill rather than a compliment, and it is
+not blocking wearing a different hat. Antonio Gates played on a torn plantar fascia and
+never blocked anybody. Across the pool the two correlate at 0.67, which is entangled the
+way football is entangled rather than the way a lazy pool is.
+
+Tight end is still the hard one and the seven slot pass is not what fixed it. See the
+tight end section below.
 
 **Three attributes were deleted and none of them is coming back.** Contact balance moved
 with power at 0.93 correlation and catch radius said what hands and contested work
@@ -205,6 +240,33 @@ weights and the whole verification suite. The words on screen come from
 rather than by renaming a key. That is why the key is still `hands` while the screen says
 CATCHING, still `processing` while the screen says READS, and still `burst` while the
 screen says ACCELERATION.
+
+## Tight end, and the number nobody has settled
+
+Tight end ends a sensible run with an empty trophy case 28% of the time. Every other
+position sits between 4 and 9%. That is measured rather than guessed, and
+`npm run verify:scoring` prints it per position now so it stops being measured by hand.
+
+Going from five slots to seven was supposed to fix it and it did not. It moved 37% to
+28%, and most of that was the second reroll rather than the slots. The reason is visible
+in the harness output: a typical tight end roster offers 86 for YAC and 88 for route
+running, while first-team All-Pro asks for an overall of 92 with nothing under 92. The
+floor is not hard at tight end, it is unreachable from the supply, so the position loses
+the entry award to two slots it can never fill and then loses everything above it too.
+
+Three ways out, and the project has deliberately not picked one yet:
+
+The gates stay position blind and the tight end POOL gets better, which is the stance
+`src/lib/scoring.ts` has always taken. Honest, and it means re-rating a couple of hundred
+tight ends without rating them to the metric, which this project has already done wrong
+once and written up in that file.
+
+Or the gates learn about position, which is what a tester asked for in as many words:
+tight end needs 93 where everyone else needs 94. It is the fastest fix and it is also the
+special casing that came out of MVP for good reasons.
+
+Or the position keeps a lower ceiling and the game says so out loud, which is what THE
+HARD ONE under the button on the start screen is currently doing.
 
 ## Deploying
 
@@ -229,7 +291,7 @@ That runs seven suites, and they check more than types.
 
 - **data** looks for duplicate ids, out of range values and thin pools, and it flags
   dead cards, meaning players with no elite trait and no funny weakness. It also measures
-  correlation between attributes, so if speed and deep threat ever collapse into the same
+  correlation between attributes, so if speed and size ever collapse into the same
   pick, you hear about it.
 - **rng** proves the `?seed=` contract on both sides of the generator. The same seed
   replays exactly, different seeds diverge, and a run serialized mid-game resumes on the
@@ -246,13 +308,19 @@ That runs seven suites, and they check more than types.
   asserts that every accolade gets more likely as you move up that ladder. If careless
   play ever out-earns careful play, it fails. It also reports what careers this pool
   actually produces, which is what the record thresholds are placed against. The policies
-  spend the reroll, and that is load bearing rather than a detail: for most of this
-  project's life they did not, so every gate in the game was calibrated against a run
+  spend both rerolls, and that is load bearing rather than a detail: for most of this
+  project's life they spent none, so every gate in the game was calibrated against a run
   played with zero rerolls while a person had three. A fifth policy plays hard mode blind,
   so the harness cannot report normal mode rates under a heading a hard mode player would
-  read as his own.
+  read as his own. It also prints how often each policy finishes with NOTHING in the
+  trophy case, which is the number a player feels and the one no per-award rate shows
+  you.
 - **career** drives the length, draft, uniform and stat models tens of thousands of times
-  each. Three kinds of assertion, and the third is the one worth having. Structural ones
+  each, and since the near-miss sentences moved into `src/lib/narrative.ts` it drives
+  those too. The trophy case printed the same excuse under two different awards, because
+  three of them shared one ladder of phrases and their thresholds sit close enough
+  together that most builds miss them by a similar margin. The check sweeps every overall
+  and asserts no two awards ever hand the same player the same reason. Three kinds of assertion, and the third is the one worth having. Structural ones
   cannot be argued with: stints have to add up to the career, a pick has to land in a
   round that exists, a best season has to be one of the seasons. Directional ones are the
   design: a better player lasts longer, goes earlier, produces more and moves teams less.

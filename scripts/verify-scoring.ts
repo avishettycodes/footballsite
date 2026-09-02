@@ -108,7 +108,7 @@ const TOLERANCE = 1.5;
  * way: the reroll made every trophy commoner and the new gates made them rarer again, so
  * a band that survived either change on its own would have been a coincidence.
  *
- * TIGHT END IS LOWEST AND STAYS LOWEST. It plays five slots out of the thinnest pool in
+ * TIGHT END IS LOWEST AND STAYS LOWEST. It plays seven slots out of the thinnest pool in
  * the dataset, and the grand slam needs MVP, which needs an overall of 96 with nothing
  * under 95. A tight end reaches that about once in a hundred runs. A ceiling of All-Pro
  * and a ring is not unfaithful to the position, since no tight end has won the real MVP
@@ -122,13 +122,15 @@ const DEFAULT_SLAM: { human: Band; sharp: Band } = { human: [2, 11], sharp: [1, 
  * against the current gates, with the policies spending the reroll.
  *
  * What was actually measured, and each band is that number with room either side for
- * sampling noise and for a pool growing by a few players:
+ * sampling noise and for a pool growing by a few players. Re-measured at 3,000 runs after
+ * size and toughness landed and normal mode went to two rerolls, and every band survived
+ * both changes without being touched:
  *
  *              human  sharp
- *     QB        4.0%   2.0%
- *     RB        6.9%   5.2%
- *     WR        5.4%   5.8%
- *     TE        0.5%   0.1%
+ *     QB        4.6%   2.0%
+ *     RB        5.7%   4.4%
+ *     WR        7.2%   7.3%
+ *     TE        0.7%   0.3%
  *
  * SHARP NOW SITS UNDER HUMAN AT THE SLAM at three of four positions, and that is the
  * ladder note below rather than a regression. The slam needs MVP and OPOY, which are a
@@ -415,8 +417,8 @@ console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions
  * table and not this file.
  */
 console.log(
-  '  random, fan, human and sharp play NORMAL mode with every rating visible, and none of\n' +
-  '  them ever rerolls, so the reroll count does not enter a single number below.\n' +
+  '  random, fan, human and sharp play NORMAL mode with every rating visible and spend the\n' +
+  '  two rerolls a person gets, greedily, on the first landing each one dislikes.\n' +
   '  blind plays HARD mode: no rerolls, no numbers, famous name and then a guess at which\n' +
   '  trait to take. It is the floor for hard mode rather than what a good player gets.\n',
 );
@@ -444,6 +446,16 @@ for (const position of positions) {
     const hits: Record<string, number> = Object.fromEntries(COLUMNS.map((c) => [c, 0]));
     /** Runs that spent the reroll. Printed so a policy that quietly never uses it shows. */
     let rerolled = 0;
+    /**
+     * Runs that finished with NOTHING in the trophy case.
+     *
+     * This is the number a player feels rather than any of the ones in the table. Six
+     * separate rates in the 20s read as a game with plenty going on, right up until you
+     * work out how often all six miss at once, and at tight end that used to be more
+     * than a third of every run. It is printed here because it was measured by hand
+     * three times before anybody thought to put it in the harness.
+     */
+    let emptyCase = 0;
 
     for (let i = 0; i < RUNS; i++) {
       const r = playRun(position, `CAL-${position}-${policy}-${i}`, policy, premium, starFloor);
@@ -455,6 +467,7 @@ for (const position of positions) {
       for (const c of COLUMNS) {
         if (c === 'grandSlam' ? isGrandSlam(r.accolades) : r.accolades[c]) hits[c]++;
       }
+      if (!Object.values(r.accolades).some(Boolean)) emptyCase++;
     }
 
     overalls.sort((a, b) => a - b);
@@ -479,6 +492,7 @@ for (const position of positions) {
       `    reroll   spent in ${((100 * rerolled) / RUNS).toFixed(1)}% of runs` +
       `${policy === 'blind' ? ' (hard mode has none)' : ''}`,
     );
+    console.log(`    empty    ${((100 * emptyCase) / RUNS).toFixed(1)}% of runs won nothing at all`);
     console.log(
       `    seasons  med ${quantile(seasons, 0.5)}  p90 ${quantile(seasons, 0.9)}  max ${seasons[seasons.length - 1]}` +
       `   yards  med ${quantile(yardage, 0.5).toLocaleString()}` +

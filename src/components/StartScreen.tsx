@@ -21,7 +21,7 @@ export function StartScreen({
 }: Props) {
   const [position, setPosition] = useState<Position>('RB');
   const [hardMode, setHardMode] = useState(false);
-  const [linkSeed] = useState(() => seedFromUrl());
+  const [linkSeed, setLinkSeed] = useState(() => seedFromUrl());
   const [seed, setSeed] = useState(linkSeed ?? '');
   /** What the last thing typed or pasted in the seed box turned out to be. */
   const [pasted, setPasted] = useState<'clean' | 'recovered' | 'junk'>('clean');
@@ -36,6 +36,30 @@ export function StartScreen({
     const parsed = parseSeedInput(raw);
     setSeed(parsed.junk ? raw.slice(0, 120) : parsed.seed);
     setPasted(parsed.junk ? 'junk' : parsed.recovered ? 'recovered' : 'clean');
+  }
+
+  /**
+   * DELETING THE SEED DID NOT DELETE THE SEED, and this is the whole of the fix.
+   *
+   * A `?seed=` link is read fresh every time this screen mounts, which is correct for
+   * arriving on somebody's challenge and wrong for every visit after it. A tester cleared
+   * the box, played his random run, came back for another and found the box refilled with
+   * the same code, so the second run was the first run again. From where he was sitting
+   * the seed was surviving being deleted, which is exactly what it was doing.
+   *
+   * A link seed is a one-shot instruction, so starting a run spends it and takes it out
+   * of the address bar. The run keeps the seed it was given, `history.replaceState` adds
+   * no entry to go back through, and reloading mid run resumes off the autosave rather
+   * than off the URL.
+   */
+  function startRun() {
+    if (new URLSearchParams(window.location.search).has('seed')) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('seed');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      setLinkSeed(null);
+    }
+    onStart({ position, hardMode, seed: seed || undefined });
   }
 
   return (
@@ -73,14 +97,12 @@ export function StartScreen({
               {!live && <div className="font-mono text-[9px] opacity-60">SOON</div>}
               {/*
                 Tight end really is harder, and saying so turns a broken promise into
-                the point. It plays the shortest build in the game at five slots, so the
-                two worst numbers carry more of the rating than they do anywhere else,
-                and it has by far the fewest elite players in its history, so the top
-                awards sit further away too.
-
-                This comment used to say tight end was the only seven attribute position,
-                which was left over from before the attribute cut and had been false for
-                a while. Seven is QB and WR. Tight end is five.
+                the point. It plays seven slots like everybody else now, and it is still
+                the hard one for the reason that has nothing to do with slot count: its
+                history has by far the fewest elite players in it, so a typical roster
+                offers less at every position on the card and the top awards sit further
+                away. Measured, a sensible tight end run ends with an empty trophy case
+                more than a quarter of the time against one run in twenty at receiver.
               */}
               {pos === 'TE' && live && (
                 <div className="font-mono text-[8px] tracking-wider text-red-400">
@@ -105,8 +127,8 @@ export function StartScreen({
           </div>
           <div className="font-mono text-[11px] text-white/50">
             {hardMode
-              ? 'No reroll at all, and the pool hides every rating. You take him on his name and find out what you got once he is yours.'
-              : 'One reroll, so you can get out of one bad landing and no more. Every franchise stays in the wheel the whole way.'}
+              ? 'No rerolls and no ratings. You pick a player on his name and take the attribute you think is his best, then you see the number once it lands on your sheet.'
+              : 'Two rerolls, so you can walk away from a couple of bad landings. You can land on the same team more than once.'}
           </div>
         </div>
         <div
@@ -121,8 +143,7 @@ export function StartScreen({
       <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">3 · Seed (optional)</h2>
       <p className="font-mono text-[11px] text-white/45">
         The same seed always gives you the same spins. Send one to somebody and you both
-        face the identical wheel, so it comes down to who builds the better player. Paste
-        a link somebody sent you and the seed comes out of it.
+        face the identical wheel. Pasting a whole link in here works too.
       </p>
       <div className="mt-2 flex gap-2">
         <input
@@ -167,7 +188,7 @@ export function StartScreen({
       */}
       <button
         disabled={pasted === 'junk'}
-        onClick={() => onStart({ position, hardMode, seed: seed || undefined })}
+        onClick={startRun}
         className="mt-8 w-full rounded-lg bg-hazard py-5 font-display text-3xl tracking-tight text-turf-950 uppercase transition-transform enabled:hover:scale-[1.02] enabled:active:scale-100 disabled:opacity-40"
       >
         {pasted === 'junk' ? 'Fix the seed first' : 'Build a player'}

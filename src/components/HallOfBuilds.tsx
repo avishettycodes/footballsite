@@ -27,8 +27,7 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
     <section className="mt-10">
       <h2 className="font-display text-2xl tracking-tight uppercase">Your hall</h2>
       <p className="font-mono text-[11px] text-white/45">
-        Everybody you named. Open one to read his career report again, exactly as it
-        came out.
+        Everybody you named. Open one to read his report again.
       </p>
 
       <ul className="mt-3 space-y-2">
@@ -68,12 +67,16 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
                     className="flex shrink-0 items-center gap-1"
                     title={trophies.map((d) => d.label).join(', ')}
                   >
+                    {/*
+                      Every trophy on this row is the same grey, including the gold
+                      jacket. It used to draw the Hall of Fame in hazard yellow, which
+                      made a row of five icons look like four of one kind and one of
+                      another with nothing on screen explaining the difference. The
+                      trophy case on the report is where a Hall of Famer gets singled
+                      out. A 16px icon in a list is not.
+                    */}
                     {trophies.map((d) => (
-                      <TrophyIcon
-                        key={d.id}
-                        id={d.trophy}
-                        className={`h-4 w-4 ${d.id === 'hof' ? 'text-hazard' : 'text-white/45'}`}
-                      />
+                      <TrophyIcon key={d.id} id={d.trophy} className="h-4 w-4 text-white/45" />
                     ))}
                   </span>
                 )}

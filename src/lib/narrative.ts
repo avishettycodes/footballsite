@@ -1,9 +1,9 @@
-import { ATTRIBUTE_SETS } from '../data';
+import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS } from '../data';
 import type { AttributeKey, Position, Team } from '../data';
 import { STAT_LABELS, commas } from './career';
 import type { CareerStats, DraftSlot, Stint } from './career';
-import { RECORD_YARDS, superBowlOdds } from './scoring';
-import type { CareerResult } from './scoring';
+import { GATES, RECORD_YARDS, superBowlOdds } from './scoring';
+import type { AccoladeId, CareerResult } from './scoring';
 
 /**
  * THE WORDS. Every sentence on the career report comes out of this file whole.
@@ -185,7 +185,10 @@ export function recordMissLine(position: Position, careerYards: number, run: Run
 export function ringMissLine(overall: number): string {
   const odds = superBowlOdds(overall);
   if (overall >= 92) return 'A career that good and no ring. That is the one that stings.';
-  if (odds >= 0.4) return 'It came down to a coin he did not call. That is all it ever is.';
+  // This branch used to say the ring came down to a coin he did not call, which is a
+  // sentence about how the game works rather than about his career, and the first person
+  // to read it asked what it meant. He was about as likely to win one as not. Say that.
+  if (odds >= 0.4) return 'He was as likely to win one as not, and it never happened.';
   if (odds >= 0.18) return 'He had his chances. None of them fell his way.';
   return 'He was never really in it.';
 }
@@ -231,8 +234,110 @@ export function honorsLine(career: CareerResult): string {
   if (a.hof) return 'They put him in Canton.';
   if (a.mvp && a.superBowl) return 'He won an MVP and a ring, and the Hall still said no.';
   if (a.mvp) return 'There is an MVP on the mantelpiece and no ring next to it.';
-  if (a.superBowl) return 'He got his ring out of it, whatever else the voters thought.';
+  // "Whatever else the voters thought" read as a shrug at an award nobody had mentioned,
+  // on a line that is supposed to be the happy ending. The ring is the point of it.
+  if (a.superBowl) return 'He has a ring, which is more than almost anybody gets.';
   if (a.record) return 'He owns a record, which is the kind of thing they read out at funerals.';
   if (a.allPro) return 'First team All-Pro, and that was as high as it went.';
   return 'He retired with an empty trophy case.';
+}
+
+/**
+ * WHY HE DID NOT WIN EACH ONE, which is the list under the trophy case.
+ *
+ * These lived in the results component until the day two of them came out identical on
+ * screen. They are sentences a player reads, so they belong here with the rest of the
+ * report's words, and being here means `npm run verify:career` can drive every branch of
+ * them and assert no two awards ever say the same thing.
+ */
+/**
+ * How close he came, in words, never in numbers.
+ *
+ * This screen used to print the requirement straight off the accolade definition, so
+ * "WHAT HE MISSED OUT ON" read "Offensive Player of the Year: Overall 94+ with 4 traits
+ * at 95 or better". That turns a game into a spec sheet. Nobody tells you what 17-0 or
+ * 82-0 needs either, and finding out by playing is the whole appeal.
+ *
+ * The gates are still READ here to work out how near he was. They are simply never
+ * shown. The requirement strings on the definitions stay where they are, unused by the
+ * UI, because they are what the calibration script reports against.
+ *
+ * EACH AWARD GETS ITS OWN WORDS, and it is worth saying why that is not decoration. One
+ * shared ladder served three awards, and All-Pro, OPOY and MVP are usually missed by a
+ * similar margin, so the list read "Offensive Player of the Year: close enough to argue
+ * about at the bar" and then "MVP: close enough to argue about at the bar" directly
+ * underneath. Two awards, one sentence, printed twice. A reader takes that as a bug in
+ * the game rather than as a coincidence of thresholds, and they are more or less right.
+ */
+type Nearly = readonly [hair: string, close: string, distant: string, never: string];
+
+const NEARLY: Record<'allPro' | 'opoy' | 'mvp', Nearly> = {
+  allPro: [
+    'He missed it by a hair.',
+    'He was close, and close is not what the voters reward.',
+    'A good player in a league that had three better ones at his spot.',
+    'He was never in that conversation.',
+  ],
+  opoy: [
+    'One more big afternoon and it was his.',
+    'Somebody else had the season everybody ended up talking about.',
+    'A fine year. Not the year of the year.',
+    'Nobody outside his own building brought his name up.',
+  ],
+  mvp: [
+    'He finished second, and second is nobody.',
+    'He was in the argument until the last week of it.',
+    'Very good is a long way from best in the league.',
+    'That award was for other people.',
+  ],
+};
+
+function nearness(award: keyof typeof NEARLY, gap: number): string {
+  const lines = NEARLY[award];
+  if (gap <= 1) return lines[0];
+  if (gap <= 3) return lines[1];
+  if (gap <= 7) return lines[2];
+  return lines[3];
+}
+
+export function missedBecause(
+  id: AccoladeId,
+  position: Position,
+  career: CareerResult,
+  /** How the career actually went, which the record needs and nothing else does. */
+  run: RunShape,
+): string {
+  switch (id) {
+    /*
+      The two awards with a floor can be missed two different ways, and saying which is
+      most of the value of this line. A build that grades 95 and carries an 88 did not
+      come up short on rating, it came up short on one number, and telling him he was
+      close would be answering a question he did not ask.
+    */
+    case 'allPro':
+      return career.overall >= GATES.allPro
+        // The label goes in as a bare object, with no article in front of it and no verb
+        // after it. The first draft read "a man with an ${label} that low", which produced
+        // "an juke", and the fix for that produced "whose reads is that low". No single
+        // article or verb is right across a list holding arm strength, juke and reads, so
+        // the sentence stopped asking the label to agree with anything.
+        ? `The rating was there. They kept coming back to the ${ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()}.`
+        : nearness('allPro', GATES.allPro - career.overall);
+    case 'mvp':
+      return career.overall >= GATES.mvp
+        ? 'The rating was there and the hole in him was not something the best player alive gets to have.'
+        : nearness('mvp', GATES.mvp - career.overall);
+    case 'opoy':
+      return career.overall >= GATES.opoy
+        ? 'The rating was there. They wanted more of him at the very top of the league.'
+        : nearness('opoy', GATES.opoy - career.overall);
+    // The only one of these that can be WRONG rather than merely blunt, which is why it
+    // is a function of the career rather than of the rating.
+    case 'record':
+      return recordMissLine(position, career.careerYards, run);
+    case 'superBowl':
+      return 'A ring is the one thing you cannot build for him.';
+    case 'hof':
+      return 'Not enough on the mantelpiece to get him in.';
+  }
 }

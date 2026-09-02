@@ -30,7 +30,7 @@ import {
   careerLength, careerPath, careerStats, draftSlot, positionalNeed,
 } from '../src/lib/career';
 import { RECORD_YARDS, computeOverall, superBowlOdds } from '../src/lib/scoring';
-import { emptyCaseLine, recordMissLine, ringMissLine } from '../src/lib/narrative';
+import { emptyCaseLine, missedBecause, recordMissLine, ringMissLine } from '../src/lib/narrative';
 
 const SEEDS = Number(process.env.SEEDS ?? 4000);
 
@@ -465,9 +465,10 @@ const RATING_ONLY: Record<Position, AttributeKey[]> = {
   // Breaking a tackle and outrunning the angle both land in yards per carry, which vision
   // and burst already carry. Worth revisiting; it is a gap rather than a principle.
   RB: ['speed', 'juke'],
-  // Same shape at receiver. Getting off the line is release, and it ends up in the catch
-  // count that route running already moves.
-  WR: ['speed', 'release'],
+  // Getting off the line is release, and it ends up in the catch count that route running
+  // already moves. Speed came off this list when deep threat left the card: yards per
+  // catch runs off speed now, so a receiver's fastest pick finally shows up in his yards.
+  WR: ['release'],
   // Blocking genuinely has no stat. Nobody has ever been handed a trophy for it, which is
   // most of why a blocking tight end is a hard card to love.
   TE: ['blocking', 'routeRunning'],
@@ -657,6 +658,61 @@ for (const position of positions) {
   // The other end. A genuinely poor player at this position does get told.
   const poor = emptyCaseLine(70, 0, { seasons: 3, expected: shape.floor + 2, cutShort: false });
   check(`${position} a poor career is still told the truth`, poor === NOBODY, `"${poor}"`);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\nno two awards give the same excuse');
+// ---------------------------------------------------------------------------
+/**
+ * THE TROPHY CASE READ OUT THE SAME SENTENCE TWICE, and nothing here noticed.
+ *
+ * "What he missed out on" listed Offensive Player of the Year and then MVP with the
+ * identical line under both, because three awards shared one ladder of near-miss phrases
+ * and their thresholds sit close enough together that a build usually misses them by a
+ * similar margin. It is not a rare case. It is what most of the list looked like.
+ *
+ * So the assertion is per BUILD rather than per award: whatever he missed, no two of the
+ * reasons he was given may be the same string. Sweeping the whole range of overalls also
+ * walks every rung of every ladder, which is what makes this a check on the words rather
+ * than on one lucky player.
+ */
+for (const position of positions) {
+  let repeats = 0;
+  let worst = '';
+  for (let overall = 60; overall <= 99; overall++) {
+    for (const weakest of [40, 70, 88, 91, 94, 99] as const) {
+      const career = {
+        overall,
+        breakdown: {
+          overall,
+          weightedMean: overall,
+          weakAnchor: weakest,
+          weakest: { attribute: ATTRIBUTE_SETS[position][0], value: weakest },
+          eliteCount: 0,
+          spikeCount: 0,
+        },
+        accolades: { allPro: false, opoy: false, mvp: false, record: false, superBowl: false, hof: false },
+        superBowl: { odds: 0.3, roll: 0.9, won: false },
+        hofPoints: 0,
+        seasons: 10,
+        careerYards: Math.round(RECORD_YARDS[position] * 0.6),
+      };
+      const run = { seasons: 10, expected: 12, cutShort: false };
+      const lines = (['allPro', 'opoy', 'mvp', 'record', 'superBowl', 'hof'] as const)
+        .map((id) => missedBecause(id, position, career, run));
+      const seen = new Set(lines);
+      if (seen.size !== lines.length) {
+        repeats++;
+        const dupe = lines.find((l, i) => lines.indexOf(l) !== i) ?? '';
+        worst = `overall ${overall}, weakest ${weakest}: "${dupe}"`;
+      }
+    }
+  }
+  check(
+    `${position} never gives two awards the same reason`,
+    repeats === 0,
+    repeats === 0 ? '240 builds swept, every reason distinct' : `${repeats} builds repeat themselves, e.g. ${worst}`,
+  );
 }
 
 console.log();
