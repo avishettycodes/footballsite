@@ -115,15 +115,31 @@ export function StartScreen({
       </div>
 
       <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">2 · Set the rules</h2>
+      {/*
+        THE PANEL NAMES THE MODE YOU ARE IN, and nothing here says ON or OFF any more.
+
+        It used to be one setting called HARD MODE with a state on the end of it, so the
+        default read "HARD MODE · OFF" with the normal rules printed underneath. That is
+        a heading and a body that disagree: the words say hard mode and the sentence
+        describes the other one, and you have to hold the OFF in your head to read it.
+
+        Two modes, one switch, and the box always shows the name and the rules of the
+        mode it is currently set to. `aria-pressed` still carries the hard mode state,
+        since that is the thing being turned on underneath.
+      */}
       <button
         onClick={() => setHardMode(!hardMode)}
-        className={`mt-3 flex w-full items-center justify-between rounded-lg border-2 px-4 py-3 text-left transition-colors ${
+        aria-pressed={hardMode}
+        aria-label={hardMode ? 'Hard mode, switch to normal' : 'Normal mode, switch to hard'}
+        className={`mt-3 flex w-full items-center justify-between gap-3 rounded-lg border-2 px-4 py-3 text-left transition-colors ${
           hardMode ? 'border-red-500 bg-red-500/12' : 'border-white/12 bg-turf-800'
         }`}
       >
-        <div>
-          <div className="font-display text-lg tracking-tight uppercase">
-            Hard mode {hardMode ? '· ON' : '· OFF'}
+        <div className="min-w-0">
+          <div
+            className={`font-display text-lg tracking-tight uppercase ${hardMode ? 'text-red-400' : ''}`}
+          >
+            {hardMode ? 'Hard mode' : 'Normal mode'}
           </div>
           <div className="font-mono text-[11px] text-white/50">
             {/*
@@ -140,12 +156,21 @@ export function StartScreen({
               : 'Two rerolls. Every rating in the pool is visible. You can land on the same franchise multiple times.'}
           </div>
         </div>
-        <div
-          className={`h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${hardMode ? 'bg-red-500' : 'bg-white/20'}`}
-        >
+        <div className="shrink-0 text-center">
           <div
-            className={`h-5 w-5 rounded-full bg-white transition-transform ${hardMode ? 'translate-x-5' : ''}`}
-          />
+            className={`h-6 w-11 rounded-full p-0.5 transition-colors ${hardMode ? 'bg-red-500' : 'bg-white/20'}`}
+          >
+            <div
+              className={`h-5 w-5 rounded-full bg-white transition-transform ${hardMode ? 'translate-x-5' : ''}`}
+            />
+          </div>
+          {/*
+            The switch on its own does not say what is on the other side of it, and with
+            the ON and OFF gone there is nothing else to work it out from. This does.
+          */}
+          <div className="mt-1 font-mono text-[9px] tracking-wider whitespace-nowrap text-white/35">
+            {hardMode ? 'GO NORMAL' : 'GO HARD'}
+          </div>
         </div>
       </button>
 
