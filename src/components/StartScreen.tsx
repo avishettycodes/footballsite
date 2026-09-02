@@ -126,9 +126,15 @@ export function StartScreen({
             Hard mode {hardMode ? '· ON' : '· OFF'}
           </div>
           <div className="font-mono text-[11px] text-white/50">
+            {/*
+              Both lines are a plain statement of the rules and nothing else. They have
+              been a joke, a pitch and an explanation of why the rule is good, and every
+              version got the same note back: say what it does. A player reading a
+              settings screen is deciding, not being entertained.
+            */}
             {hardMode
-              ? 'No rerolls and no ratings. You pick a player on his name and take the attribute you think is his best, then you see the number once it lands on your sheet.'
-              : 'Two rerolls, so you can walk away from a couple of bad landings. You can land on the same team more than once.'}
+              ? 'No rerolls, and every rating in the pool is hidden until it lands on your build sheet.'
+              : 'Two rerolls, and every rating in the pool is visible. You can land on the same team more than once.'}
           </div>
         </div>
         <div
