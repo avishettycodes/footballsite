@@ -59,7 +59,7 @@ import { REROLLS_NORMAL, useGame } from '../src/store/gameStore';
 import { ATTRIBUTE_SETS, TEAMS, getPool, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import { hashSeed, nextRandom } from '../src/lib/rng';
-import { GATES, RECORD_YARDS, WEAK_LINK_SHARE, WEIGHTS, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
+import { GATES, RECORD_YARDS, WEAK_LINK_SHARE, WEIGHTS, allProFloor, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
 import type { AccoladeId } from '../src/lib/scoring';
 
 type Policy = 'random' | 'fan' | 'human' | 'sharp' | 'blind';
@@ -388,7 +388,7 @@ function floorsBite(): boolean {
     const weights = WEIGHTS[position];
     const softest = [...keys].sort((a, b) => (weights[a] ?? 1) - (weights[b] ?? 1))[0];
 
-    for (const [award, floor] of [['allPro', GATES.allProFloor], ['mvp', GATES.mvpFloor]] as const) {
+    for (const [award, floor] of [['allPro', allProFloor(position)], ['mvp', GATES.mvpFloor]] as const) {
       // Everything at 99 except the one trait, which sits on the floor and then under it.
       const clean: Partial<Record<AttributeKey, number>> = {};
       for (const k of keys) clean[k] = 99;
@@ -411,6 +411,48 @@ function floorsBite(): boolean {
   return ok;
 }
 
+/**
+ * THE ALL-PRO FLOOR IS DERIVED, AND THIS IS WHAT STOPS IT BECOMING A DIAL.
+ *
+ * It is the only gate in the game that reads the position, and the argument for it is
+ * that it is not picked at all: it is the league standard of 92 unless the thinnest slot
+ * on that position's card cannot supply 92, in which case it is what that slot supplies.
+ * Written down as an assertion so nobody can quietly nudge one position's floor to move a
+ * rate, and so a future session that improves the tight end pool sees the floor rise on
+ * its own rather than wondering why 86 is hard-coded.
+ *
+ * The failure it is really guarding is the opposite one to floorsBite below. That check
+ * proves a floor still bites. This one proves it bites for a reason.
+ */
+function floorsFitTheirPools(): boolean {
+  let ok = true;
+  for (const position of positions) {
+    // The same statistic allProFloor uses: the median, over the 32 rosters, of the best
+    // number each roster offers for that slot. Recomputed here rather than imported, so
+    // the check would survive the implementation being rewritten.
+    const supply = ATTRIBUTE_SETS[position].map((key) => {
+      const bests = TEAMS
+        .map((t) => getPool(position, t.id))
+        .filter((pool) => pool.length > 0)
+        .map((pool) => Math.max(...pool.map((p) => p.attributes[key] ?? 0)))
+        .sort((a, b) => a - b);
+      return { key, at: bests[Math.floor(bests.length / 2)] };
+    }).sort((a, b) => a.at - b.at)[0];
+
+    const want = Math.min(GATES.allProFloor, supply.at);
+    const got = allProFloor(position);
+    if (got !== want) ok = false;
+    console.log(
+      `    ${position} floor ${got}  thinnest slot ${supply.key} supplies ${supply.at}` +
+      `  ${got === want ? '' : `x should be ${want}`}`,
+    );
+  }
+  console.log(ok
+    ? '  floors fit their pools: PASS, every floor is the league standard or what the position can reach'
+    : '  floors fit their pools: FAIL, a floor has been picked rather than derived');
+  return ok;
+}
+
 console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}`);
 /**
  * Printed rather than left in a comment, because the person who needs it is reading the
@@ -424,6 +466,7 @@ console.log(
 );
 
 let failed = !floorsBite();
+failed = !floorsFitTheirPools() || failed;
 console.log();
 
 for (const position of positions) {

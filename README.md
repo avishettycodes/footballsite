@@ -125,9 +125,14 @@ does not print its own rulebook either.
 
 Five awards and a Hall of Fame, and each one asks a different question.
 
-First-team All-Pro wants a complete player: a high overall with no rating under 92. It is
-the entry award, and it is the one the whole game is about, because the way you lose it
-is by chasing a big number and leaving a hole three spins back.
+First-team All-Pro wants a complete player: a high overall with no hole in him. It is the
+entry award, and it is the one the whole game is about, because the way you lose it is by
+chasing a big number and leaving a hole three spins back.
+
+Where a hole starts is read off the position rather than fixed at one number, and that is
+the only gate in the game that knows what position it is looking at. See the tight end
+section below for why, and `allProFloor` in `src/lib/scoring.ts` for the argument in
+full.
 
 Offensive Player of the Year wants peaks instead. It asks for a high overall and a number
 of traits at 97 or better, scaled to how many slots your position has.
@@ -140,10 +145,10 @@ What a sensible player actually walks away with, measured over 3,000 runs a posi
 
 ```
            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-    QB        79%     40%    12%     15%    65%    14%    4.6%      8.7%
+    QB        87%     40%    12%     15%    65%    14%    4.6%      6.2%
     RB        86%     57%    21%     16%    68%    21%    5.7%      5.3%
     WR        89%     73%    23%     16%    68%    24%    7.2%      4.1%
-    TE        39%      8%     1%     16%    56%     5%    0.7%     27.9%
+    TE        67%      8%     1%     16%    56%     5%    0.7%     17.5%
 ```
 
 Every one of those went up when normal mode went to two rerolls, and none of the overall
@@ -241,32 +246,46 @@ rather than by renaming a key. That is why the key is still `hands` while the sc
 CATCHING, still `processing` while the screen says READS, and still `burst` while the
 screen says ACCELERATION.
 
-## Tight end, and the number nobody has settled
+## Tight end, and the one gate that reads the position
 
-Tight end ends a sensible run with an empty trophy case 28% of the time. Every other
-position sits between 4 and 9%. That is measured rather than guessed, and
-`npm run verify:scoring` prints it per position now so it stops being measured by hand.
+Tight end used to end a sensible run with an empty trophy case 28% of the time against 4
+to 9% everywhere else. Half of that was the game's fault and it is fixed. The rest is the
+position being genuinely harder and it is staying.
 
-Going from five slots to seven was supposed to fix it and it did not. It moved 37% to
-28%, and most of that was the second reroll rather than the slots. The reason is visible
-in the harness output: a typical tight end roster offers 86 for YAC and 88 for route
-running, while first-team All-Pro asks for an overall of 92 with nothing under 92. The
-floor is not hard at tight end, it is unreachable from the supply, so the position loses
-the entry award to two slots it can never fill and then loses everything above it too.
+The seven slot pass was supposed to fix it and did not, moving 37% to 28%, most of which
+was really the second reroll. The cause was in the supply. A typical tight end roster
+offers 86 for YAC and 88 for route running, while first-team All-Pro asked for nothing
+under 92. Two slots on the card could not be filled to the bar off a normal roster, so the
+position lost the entry award for a reason that had nothing to do with how well you
+played. A gate you cannot clear by playing well is not difficulty. It is a bug wearing a
+difficulty costume.
 
-Three ways out, and the project has deliberately not picked one yet:
+So the All-Pro floor is read per position now. It is the league standard of 92 unless the
+thinnest slot on that position's card cannot supply 92, in which case it is what that slot
+supplies. Nothing here was picked:
 
-The gates stay position blind and the tight end POOL gets better, which is the stance
-`src/lib/scoring.ts` has always taken. Honest, and it means re-rating a couple of hundred
-tight ends without rating them to the metric, which this project has already done wrong
-once and written up in that file.
+```
+    QB  mobility     90   the statue is a real card and always has been
+    RB  juke         92   unchanged, and this is why 92 was right in the first place
+    WR  release      92   unchanged
+    TE  yac          86
+```
 
-Or the gates learn about position, which is what a tester asked for in as many words:
-tight end needs 93 where everyone else needs 94. It is the fastest fix and it is also the
-special casing that came out of MVP for good reasons.
+Running back and receiver coming back at exactly 92 is the evidence that 92 was this
+statistic all along rather than a number somebody liked. Quarterback moved from 92 to 90
+and its All-Pro rate went 79% to 87%, because the median roster offers 90 mobility and a
+92 floor was quietly asking every pocket passer to go and find a scrambler. Tight end goes
+to 67% All-Pro and 17.5% empty.
 
-Or the position keeps a lower ceiling and the game says so out loud, which is what THE
-HARD ONE under the button on the start screen is currently doing.
+`npm run verify:scoring` asserts each floor equals that derivation and fails if one is
+ever hand-picked, so if the tight end pool gets deeper the floor rises on its own and the
+exception dissolves without anybody editing it.
+
+**Everything above All-Pro stays position blind**, and that is not an oversight. OPOY at
+8% and MVP at 1% for tight end come from the position producing 0.04 traits at 97 or
+better per player against 0.27 at receiver. That is a real fact about tight end history,
+it is what THE HARD ONE on the start screen is promising, and no gate should paper over
+it.
 
 ## Deploying
 

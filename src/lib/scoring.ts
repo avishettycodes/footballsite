@@ -1,4 +1,4 @@
-import { ATTRIBUTE_SETS } from '../data';
+import { ATTRIBUTE_SETS, TEAMS, getPool } from '../data';
 import type { AttributeKey, Position } from '../data';
 import { careerLength, careerStats } from './career';
 import { hashSeed, nextRandom } from './rng';
@@ -206,9 +206,15 @@ export function recordLabel(position: Position): string {
  * receivers without taking tight end to nearly zero, because tight end sits three to
  * four points below everyone else. Asking for a whole player instead of a high average
  * fixes that: "92 or better with nothing under 92" costs the big three positions about
- * what a straight 94 would have cost them, and leaves tight end at 28% instead of 14%.
- * It also puts the game's actual decision, chase the spike or patch the hole, directly
- * on the entry trophy.
+ * what a straight 94 would have cost them. It also puts the game's actual decision,
+ * chase the spike or patch the hole, directly on the entry trophy.
+ *
+ * ALL-PRO'S FLOOR IS THEN READ PER POSITION off what that position's pools can supply,
+ * and that is the single exception to the paragraph below about gates staying blind. It
+ * is derived rather than chosen, it is asserted in `npm run verify:scoring`, and the
+ * whole argument for it lives on allProFloor() further down this file. Read that before
+ * you touch it, because from a distance it looks exactly like the MVP offset that was
+ * removed for good reasons and it is not the same thing.
  *
  * OPOY ASKS FOR SPIKES AND NOW ACTUALLY DOES. Its old requirement was traits at 95 or
  * better, which a sensible run cleared 97% of the time, so the award was really just its
@@ -237,14 +243,31 @@ export function recordLabel(position: Position): string {
  * going on until you ask how often all six miss at once, and at tight end that is more
  * than a quarter of every run against one in twenty at receiver.
  *
- * TIGHT END IS STILL THE OUTLIER AFTER THE SEVEN SLOT PASS, which was the fix everyone
- * expected to work. It went from five slots to seven and from 37% empty to 28%, and the
- * reason it did not go further is visible in the harness output rather than in any gate:
- * a typical tight end pool offers 86 for YAC and 88 for route running, while All-Pro asks
- * for nothing under 92. The floor is not hard at tight end, it is unreachable from the
- * supply, so the position loses the entry award to two slots it can never fill. That is a
- * pool problem and it stays a pool problem. The gates are identical at every position and
- * the expectations differ, which is the stance this file has always taken.
+ * TIGHT END WAS THE OUTLIER AND HALF OF IT WAS OUR FAULT. The seven slot pass moved it
+ * from 37% empty to 28% and no further, because a typical tight end pool offers 86 for
+ * YAC and 88 for route running while All-Pro asked for nothing under 92. Two slots on the
+ * card could not be filled to the bar off a normal roster, so the position lost the entry
+ * award for a reason that had nothing to do with how well anybody played. Reading that
+ * floor off the supply instead takes tight end to 67% All-Pro and 17.5% empty.
+ *
+ * What is left at tight end is real. OPOY at 8% and MVP at 1% are the position producing
+ * 0.04 traits at 97 or better per player against 0.27 at receiver, and no gate should
+ * paper over that. Those two stay blind.
+ *
+ * Measured after the floor was derived, sensible player, 3,000 runs a position:
+ *
+ *            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
+ *     QB        87%     40%    12%     15%    65%    14%    4.6%      6.2%
+ *     RB        86%     57%    21%     16%    68%    21%    5.7%      5.3%
+ *     WR        89%     73%    23%     16%    68%    24%    7.2%      4.1%
+ *     TE        67%      8%     1%     16%    56%     5%    0.7%     17.5%
+ *
+ * QUARTERBACK MOVED TOO, from 79% to 87%, and that is the rule working rather than a side
+ * effect to be trimmed off. The median roster offers 90 mobility, so a 92 floor was
+ * quietly asking every pocket passer to go and find a scrambler. Marino at 18 mobility is
+ * a card this game is built around. Running back and receiver came back at exactly 92,
+ * which is the evidence that 92 was this statistic all along rather than a number
+ * somebody liked.
  */
 export const GATES = {
   /**
@@ -258,6 +281,10 @@ export const GATES = {
   /**
    * No rating under this. An All-Pro has no hole in him, which is the whole point of
    * the award and the reason it can gate without a punishing overall number.
+   *
+   * THE LEAGUE STANDARD, and the only gate in this file a position can be measured
+   * against instead. Read allProFloor() below before touching it, and read the note
+   * above it before deleting that.
    */
   allProFloor: 92,
   opoy: 95,
@@ -289,6 +316,69 @@ export const GATES = {
    */
   hofPoints: 4,
 } as const;
+
+/**
+ * What a typical franchise can hand you for one slot: the median, across the 32 rosters,
+ * of the best number that roster offers for that attribute. It is the same statistic
+ * `npm run verify:scoring` prints as "what a typical franchise pool offers".
+ */
+function typicalSupply(position: Position, key: AttributeKey): number {
+  const bests = TEAMS
+    .map((team) => getPool(position, team.id))
+    .filter((pool) => pool.length > 0)
+    .map((pool) => Math.max(...pool.map((p) => p.attributes[key] ?? 0)))
+    .sort((a, b) => a - b);
+  return bests[Math.floor(bests.length / 2)];
+}
+
+const FLOORS = new Map<Position, number>();
+
+/**
+ * THE ONE GATE IN THIS FILE THAT KNOWS WHAT POSITION IT IS LOOKING AT, and the reason it
+ * is not the special casing this file threw out of MVP.
+ *
+ * The rule everywhere else is that gates stay position blind and the expectations differ.
+ * That rule is right, and the MVP offset broke it for a bad reason: it was a thumb on the
+ * scale duplicating something the weights already said, so it added nothing and hid a
+ * collision between two awards.
+ *
+ * This is a different thing. Measured across the current pools, the median franchise
+ * offers a tight end 86 for YAC and 88 for route running. All-Pro asks for nothing under
+ * 92. Those two slots on the card cannot be filled to the bar off a typical roster, so a
+ * tight end loses the ENTRY award for a reason that has nothing to do with how he was
+ * built or how well the player played. A gate you cannot clear by playing well is not
+ * difficulty. It is a bug wearing a difficulty costume, and 28% of tight end runs were
+ * ending with an empty case because of it.
+ *
+ * So the floor asks the same QUESTION at every position, "is there a hole in him", and
+ * reads the answer off what the position can actually supply. It is the league standard
+ * of 92 unless the thinnest slot on the card cannot reach 92, in which case it is what
+ * that slot can reach. It never goes above 92: a rich pool does not earn a harder award.
+ *
+ * DERIVED, NOT PICKED. Nobody chose 86 because it made a rate look nice, and if the tight
+ * end pool ever gets deeper this number rises on its own and the exception dissolves
+ * without anybody editing it. The two positions where 92 was already right come back as
+ * exactly 92, which is the evidence that 92 was this statistic all along:
+ *
+ *   QB  mobility     90   the statue is a real card and always has been
+ *   RB  juke         92   unchanged
+ *   WR  release      92   unchanged
+ *   TE  yac          86
+ *
+ * The everything ABOVE this stays blind on purpose. OPOY and MVP are missed at tight end
+ * because it produces 0.04 traits at 97 or better per player against 0.27 at receiver,
+ * and that is the position genuinely being harder rather than a bar it cannot reach.
+ */
+export function allProFloor(position: Position): number {
+  const cached = FLOORS.get(position);
+  if (cached !== undefined) return cached;
+  const thinnest = Math.min(
+    ...ATTRIBUTE_SETS[position].map((key) => typicalSupply(position, key)),
+  );
+  const floor = Math.min(GATES.allProFloor, thinnest);
+  FLOORS.set(position, floor);
+  return floor;
+}
 
 /**
  * P(ring) as a function of overall. Capped at 85% so a 99 still loses sometimes, and
@@ -386,7 +476,7 @@ export function simulateCareer(
 
   // Each award asks a different question on purpose. All-Pro wants a complete player,
   // OPOY wants peaks, MVP wants both at the top end, the record wants a career.
-  const allPro = overall >= GATES.allPro && floor >= GATES.allProFloor;
+  const allPro = overall >= GATES.allPro && floor >= allProFloor(position);
   const opoy = overall >= GATES.opoy && spikeCount >= spikeTraitsRequired(position);
   const mvp = overall >= GATES.mvp && floor >= GATES.mvpFloor;
   const record = stats.yards >= RECORD_YARDS[position];
@@ -419,7 +509,7 @@ export function isGrandSlam(accolades: Record<AccoladeId, boolean>): boolean {
 
 export function accoladeDefs(position: Position): AccoladeDef[] {
   return [
-    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+ with nothing under ${GATES.allProFloor}` },
+    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+ with nothing under ${allProFloor(position)}` },
     { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy}+ with ${spikeTraitsRequired(position)} traits at ${SPIKE_AT} or better` },
     { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp}+ with nothing under ${GATES.mvpFloor}` },
     { id: 'record', label: recordLabel(position), trophy: 'stopwatch', requirement: `${RECORD_YARDS[position].toLocaleString()} career yards, which takes both a long career and a good one` },

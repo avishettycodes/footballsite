@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { GATES, RECORD_YARDS, SPIKE_AT, accoladeDefs } from '../lib/scoring';
+import { RECORD_YARDS, SPIKE_AT, accoladeDefs, allProFloor } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
@@ -488,9 +488,13 @@ export function ResultsScreen({
               was disagreeing with it. A build whose softest number was 90 was told there
               was no hole in him on the same screen that the All-Pro vote had just turned
               him down over exactly that number.
+
+              That floor is read per position now, so a tight end whose softest number is
+              88 is told there is no hole in him and the All-Pro vote agrees with the box.
+              See allProFloor in src/lib/scoring.ts.
             */}
             <p className="mt-1 text-[13px] leading-snug text-white/85">
-              {career.breakdown.weakest.value >= GATES.allProFloor ? (
+              {career.breakdown.weakest.value >= allProFloor(position) ? (
                 <>
                   Nothing on him drops below{' '}
                   <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
