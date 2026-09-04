@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import type { AttributeKey, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { RECORD_YARDS, SPIKE_AT, accoladeDefs, allProFloor } from '../lib/scoring';
+import { RECORD_YARDS, SPIKE_AT, accoladeDefs, allProFloor, softestSlot } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
@@ -101,6 +101,8 @@ export function ResultsScreen({
   const path = careerPath(position, career.overall, seasons, franchisesRaided(position, pickOrder, slots), seed);
   const stats = careerStats(position, build, career.overall, seasons, seed);
   const labels = STAT_LABELS[position];
+  /** The lowest number he actually has, which the weak link box talks about. */
+  const softest = softestSlot(position, build);
 
   // Count the overall up. Cosmetic only — reads career.overall, never rolls anything.
   useEffect(() => {
@@ -479,7 +481,7 @@ export function ResultsScreen({
           */}
           <div
             className="mt-3 rounded-lg border-l-4 bg-turf-800 py-2.5 pr-3 pl-3"
-            style={{ borderLeftColor: ratingColor(career.breakdown.weakest.value) }}
+            style={{ borderLeftColor: ratingColor(softest.value) }}
           >
             <div className="font-mono text-[10px] tracking-[0.2em] text-white/40">THE WEAK LINK</div>
             {/*
@@ -492,22 +494,25 @@ export function ResultsScreen({
               That floor is read per position now, so a tight end whose softest number is
               88 is told there is no hole in him and the All-Pro vote agrees with the box.
               See allProFloor in src/lib/scoring.ts.
+
+              AND IT READS THE CARD RATHER THAN THE RATING'S OPINION OF THE CARD. This
+              used to run off breakdown.weakest, which is the lowest number AFTER the
+              position weights have had their say, so a quarterback with a 92 clutch and
+              nothing else under 95 was told nothing on him dropped below 95 with the 92
+              sitting three rows up the same screen. See softestSlot in scoring.ts.
             */}
             <p className="mt-1 text-[13px] leading-snug text-white/85">
-              {career.breakdown.weakest.value >= allProFloor(position) ? (
+              {softest.value >= allProFloor(position) ? (
                 <>
                   Nothing on him drops below{' '}
-                  <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
-                    {career.breakdown.weakest.value}
-                  </b>
+                  <b style={{ color: ratingColor(softest.value) }}>{softest.value}</b>
                   . There is no hole to find.
                 </>
               ) : (
                 <>
                   His softest number is{' '}
-                  <b style={{ color: ratingColor(career.breakdown.weakest.value) }}>
-                    {ATTRIBUTE_LABELS[career.breakdown.weakest.attribute].toLowerCase()} at{' '}
-                    {career.breakdown.weakest.value}
+                  <b style={{ color: ratingColor(softest.value) }}>
+                    {ATTRIBUTE_LABELS[softest.attribute].toLowerCase()} at {softest.value}
                   </b>
                   {/*
                     THIS BOX NO LONGER EXPLAINS THE POINT SYSTEM AT ALL.
@@ -520,9 +525,9 @@ export function ResultsScreen({
                     how bad it is, and that is all. The three figures underneath are there
                     for anybody who wants to work the rest out.
                   */}
-                  {career.breakdown.weakest.value >= 86
+                  {softest.value >= 86
                     ? '. That is a soft spot rather than a hole.'
-                    : career.breakdown.weakest.value >= 75
+                    : softest.value >= 75
                       ? '. That is soft enough to hurt him.'
                       : '. That is a hole.'}
                 </>

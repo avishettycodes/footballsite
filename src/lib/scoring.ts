@@ -151,6 +151,33 @@ export function computeOverall(position: Position, build: Build): OverallBreakdo
   };
 }
 
+/**
+ * THE LOWEST NUMBER ACTUALLY ON THE CARD, which is not the same thing as `weakest`.
+ *
+ * `weakest` is the lowest WEIGHT-ADJUSTED value, and that is the right answer for the
+ * gates: a 92 clutch is a smaller hole in a quarterback than a 92 accuracy, and every
+ * trophy here is supposed to know that. It is the wrong answer for a sentence that says
+ * what his softest number is, because the reader is looking at the raw numbers.
+ *
+ * The two disagree constantly. A build reading arm 96, accuracy 95, deep 99, pocket 99,
+ * mobility 97, reads 98, clutch 92 has `weakest` of accuracy 95, and the weak link box
+ * told that player nothing on him dropped below 95 with the 92 printed three rows above
+ * it. That is the page contradicting itself in one screenful, which is the exact
+ * complaint that got the All-Pro floor wired into this box in the first place.
+ *
+ * Reading the true minimum here also keeps that earlier fix intact rather than undoing
+ * it, because the true minimum is never above `weakest`: if the softest number on the
+ * card clears the All-Pro floor then the gate's own floor is clear too, so the box can
+ * still never say there is no hole in a player All-Pro turned down over one.
+ */
+export function softestSlot(position: Position, build: Build): { attribute: AttributeKey; value: number } {
+  const keys = ATTRIBUTE_SETS[position];
+  return keys.reduce(
+    (low, key) => ((build[key] ?? 0) < low.value ? { attribute: key, value: build[key] ?? 0 } : low),
+    { attribute: keys[0], value: build[keys[0]] ?? 0 },
+  );
+}
+
 export type AccoladeId =
   | 'allPro' | 'opoy' | 'mvp' | 'record' | 'superBowl' | 'hof';
 

@@ -345,6 +345,33 @@ export function missedBecause(
       // player really does get better odds here. See superBowlOdds in scoring.ts.
       return 'Better players get better odds at this one and his did not come in.';
     case 'hof':
-      return 'He did not win enough to get in.';
+      return hallMissLine(career.hofPoints);
+  }
+}
+
+/**
+ * WHY THE HALL SAID NO, WHICH IS NOT THE SAME AS SAYING HE NEVER WON ANYTHING.
+ *
+ * The old line was "He did not win enough to get in", and it was printed under the
+ * trophy case of a player who had just made first team All-Pro and been named the best
+ * offensive player in the league. Read against those two trophies sitting an inch above
+ * it, it does not say he fell short. It says the case is empty, which the case itself
+ * plainly contradicts, and a reader takes a screen arguing with itself as a bug.
+ *
+ * So it counts. The Hall wants four of the five and he has however many he has, and the
+ * line names that number before it says it was not enough. A man told "two is not
+ * enough" has been told what he won, what the standard is and what is missing, in the
+ * same breath, and none of it reads as an insult.
+ */
+export function hallMissLine(hofPoints: number): string {
+  switch (Math.max(0, Math.min(GATES.hofPoints - 1, hofPoints))) {
+    case 0:
+      return 'He had nothing on the shelf to make the case with.';
+    case 1:
+      return 'One trophy. They are looking for a career of them.';
+    case 2:
+      return 'Two is not enough. They want more than that.';
+    default:
+      return 'Three of them, and they wanted one more.';
   }
 }

@@ -550,6 +550,36 @@ function arc(index: number, seasons: number): number {
 }
 
 /**
+ * The most a quarterback has ever run for, which is Michael Vick, and the edge the
+ * scrambling model is tuned against. Named rather than inlined because the check in
+ * `verify:career` has to ask about the same number the model was built around.
+ */
+export const QB_RUSHING_RECORD = 6109;
+
+/**
+ * THE LEGS, WHICH GO FIRST AND GO EARLY, and this is what stops a running quarterback
+ * from rushing for eleven thousand yards.
+ *
+ * The arc above is the right shape for an arm and the wrong shape for a pair of legs.
+ * It is symmetric enough that year fifteen is still worth 45% of the peak, and it is
+ * keyed on the FRACTION of a career rather than on the season number, so a twenty year
+ * quarterback got twenty years of scrambling and the total ran away from anything that
+ * has happened. Measured, a build that stole a 99 mobility was retiring with a median
+ * 8,253 rushing yards, two thousand past the record.
+ *
+ * Both of those are wrong about football rather than merely about the number. A passer
+ * can throw at 40 and several have. Nobody runs at 40. Vick's last four seasons gave
+ * back 306 yards a year against the 1,039 of his best one, Cunningham was done running
+ * by his early thirties, and Wilson's legs left him years before his arm did. So this is
+ * keyed on the ABSOLUTE season, not on where he happens to be in his career: the decline
+ * arrives at the same age whether he retires at twelve years or plays for twenty, which
+ * is the whole reason a long career stops compounding.
+ */
+function legs(index: number): number {
+  return clamp(1 - Math.pow(index / 12, 1.4), 0.15, 1);
+}
+
+/**
  * What a prime season looks like at this rating, before the arc and before the dice.
  *
  * Anchored on real prime seasons rather than on what felt generous. An elite passer year
@@ -598,9 +628,22 @@ function primeSeason(
      * ran for 87 yards in seventeen seasons and Lamar Jackson has cleared a thousand in
      * one, so a linear slope from an 18 mobility to a 99 would flatter the statue and rob
      * the runner. The exponent is what makes the pick worth spending a spin on.
+     *
+     * AND IT HAS A CEILING NOW, WHICH IS THE RULE EVERY OTHER NUMBER ON THIS SCREEN WAS
+     * ALREADY FOLLOWING. Passing efficiency stops at Otto Graham. Yards a carry stops at
+     * Jim Brown. Rushing stopped at nothing at all, so the one stat a maximum build could
+     * run past the edge of history with was this one, and it did, every time.
+     *
+     * The divisor is 59 rather than 55 so that a 99 mobility lands on exactly 1.0 and
+     * nothing lands above it. That is the cap: the best runner the pools can hand you is
+     * Vick's 99, and the top of this scale is what Vick's career was worth. 820 a season
+     * against the decline above puts the median maximum build a little under
+     * QB_RUSHING_RECORD and lets the top of the spread just reach it, which is the same
+     * deal the passing record gets. The old 1.1 clamp was never reachable, so it read
+     * like a ceiling and did nothing.
      */
-    const scramble = clamp(((build.mobility ?? 55) - 40) / 55, 0, 1.1);
-    const rushing = (30 + 620 * Math.pow(scramble, 1.6)) * snaps;
+    const scramble = clamp(((build.mobility ?? 55) - 40) / 59, 0, 1);
+    const rushing = (30 + 820 * Math.pow(scramble, 1.6)) * snaps;
     return {
       yards: attempts * perAttempt, touchdowns, volume: attempts,
       secondary: Math.max(1, picks), secondaryYards: rushing,
@@ -673,7 +716,10 @@ export function careerStats(
       volume: Math.round(prime.volume * share),
       // A passer throws MORE picks when he is worse, so the swing runs the other way.
       secondary: Math.round(prime.secondary * (position === 'QB' ? 2 - share : share)),
-      secondaryYards: Math.round(prime.secondaryYards * share),
+      // A quarterback's legs are on their own clock. See legs() above. A back's second
+      // number is receiving, which does not leave him ahead of everything else, so it
+      // rides the ordinary arc.
+      secondaryYards: Math.round(prime.secondaryYards * (position === 'QB' ? share * legs(i) : share)),
     });
   }
 

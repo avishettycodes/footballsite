@@ -27,9 +27,9 @@ import { ATTRIBUTE_SETS, TEAMS, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import {
   CAREER_SHAPE, LAST_PICK, MAX_SEASONS, PICKS_PER_ROUND, ROUNDS,
-  careerLength, careerPath, careerStats, draftSlot, positionalNeed,
+  QB_RUSHING_RECORD, careerLength, careerPath, careerStats, draftSlot, positionalNeed,
 } from '../src/lib/career';
-import { RECORD_YARDS, computeOverall, superBowlOdds } from '../src/lib/scoring';
+import { GATES, RECORD_YARDS, computeOverall, superBowlOdds } from '../src/lib/scoring';
 import { emptyCaseLine, missedBecause, recordMissLine, ringMissLine } from '../src/lib/narrative';
 
 const SEEDS = Number(process.env.SEEDS ?? 4000);
@@ -496,6 +496,65 @@ for (const position of positions) {
       rate > 0.9,
       `${(rate * 100).toFixed(0)}% of careers put the picks in the bad years`,
     );
+
+    /**
+     * THE ONE STAT THAT USED TO RUN PAST THE EDGE OF HISTORY.
+     *
+     * Every other number on the report is checked against a real career somewhere.
+     * Passing efficiency stops at Otto Graham, yards a carry stops at Jim Brown, the
+     * record totals are real men's careers. Rushing had no such anchor and nothing was
+     * pointed at it, so a build that stole Vick's 99 mobility retired with a median 8,253
+     * and a long career could clear ten thousand. Michael Vick has the most of anybody at
+     * 6,109. The maximum build has to land AT that edge rather than past it.
+     *
+     * Asserted from both ends, like the tails. If the median clears the record then every
+     * runner is the best there has ever been, and if the very top of the spread cannot
+     * reach it then a 99 mobility is not worth what it costs.
+     */
+    const runner = { ...buildFor('QB', 99), mobility: 99 };
+    const rushed = Array.from({ length: SEEDS }, (_, i) => {
+      const seasons = careerLength('QB', 99, seed(i)).seasons;
+      return careerStats('QB', runner, 99, seasons, seed(i)).secondaryYards;
+    });
+    const typical = median(rushed);
+    const top = Math.max(...rushed);
+    console.log(
+      `  QB  a maximum mobility build runs for   median ${typical.toLocaleString()}  ` +
+      `best ${top.toLocaleString()}   (record ${QB_RUSHING_RECORD.toLocaleString()})`,
+    );
+    check(
+      'the best runner ever built does not beat the best runner there was',
+      typical < QB_RUSHING_RECORD && top < QB_RUSHING_RECORD * 1.1,
+      `median ${typical.toLocaleString()}, best of ${SEEDS} ${top.toLocaleString()}, ` +
+      `record ${QB_RUSHING_RECORD.toLocaleString()}`,
+    );
+    check(
+      'and he still gets close enough for the pick to be worth a spin',
+      typical > QB_RUSHING_RECORD * 0.8,
+      `median ${typical.toLocaleString()} against ${QB_RUSHING_RECORD.toLocaleString()}`,
+    );
+
+    /**
+     * The legs have to go EARLIER than the arm, which is the mechanism the ceiling above
+     * rests on. Without it the cap is a scale factor and a twenty year career walks
+     * straight through it again, so this asks the thing that actually holds: late in a
+     * long career he is still passing and he is no longer running.
+     */
+    const long = Array.from({ length: SEEDS }, (_, i) => {
+      const seasons = careerLength('QB', 99, seed(i)).seasons;
+      return careerStats('QB', runner, 99, seasons, seed(i));
+    }).filter((st) => st.seasons.length >= 14);
+    const fadedFaster = long.filter((st) => {
+      const last = st.seasons[st.seasons.length - 1];
+      const peak = st.seasons.reduce((a, b) => (b.secondaryYards > a.secondaryYards ? b : a), st.seasons[0]);
+      // What is left of his running at the end, against what is left of his throwing.
+      return last.secondaryYards / peak.secondaryYards < last.yards / st.best.yards;
+    }).length / (long.length || 1);
+    check(
+      'his legs go before his arm does',
+      long.length > 50 && fadedFaster > 0.95,
+      `${(fadedFaster * 100).toFixed(0)}% of ${long.length} careers of 14+ seasons`,
+    );
   }
 }
 
@@ -742,8 +801,16 @@ console.log('\nno two awards give the same excuse');
 for (const position of positions) {
   let repeats = 0;
   let worst = '';
+  const hallLines = new Set<string>();
   for (let overall = 60; overall <= 99; overall++) {
     for (const weakest of [40, 70, 88, 91, 94, 99] as const) {
+      /*
+        THE HALL'S LINE COUNTS HIS TROPHIES NOW, and this sweep pinned hofPoints at 0
+        forever, so it drove exactly one of the four things that line can say and would
+        have called the other three tested. Same failure as the one this whole block was
+        written for. It walks every count a miss can happen at instead.
+      */
+      const hofPoints = (overall + weakest) % GATES.hofPoints;
       const career = {
         overall,
         breakdown: {
@@ -756,13 +823,14 @@ for (const position of positions) {
         },
         accolades: { allPro: false, opoy: false, mvp: false, record: false, superBowl: false, hof: false },
         superBowl: { odds: 0.3, roll: 0.9, won: false },
-        hofPoints: 0,
+        hofPoints,
         seasons: 10,
         careerYards: Math.round(RECORD_YARDS[position] * 0.6),
       };
       const run = { seasons: 10, expected: 12, cutShort: false };
       const lines = (['allPro', 'opoy', 'mvp', 'record', 'superBowl', 'hof'] as const)
         .map((id) => missedBecause(id, position, career, run));
+      hallLines.add(missedBecause('hof', position, career, run));
       const seen = new Set(lines);
       if (seen.size !== lines.length) {
         repeats++;
@@ -775,6 +843,14 @@ for (const position of positions) {
     `${position} never gives two awards the same reason`,
     repeats === 0,
     repeats === 0 ? '240 builds swept, every reason distinct' : `${repeats} builds repeat themselves, e.g. ${worst}`,
+  );
+
+  // And the Hall's line really does change with what he won, rather than being one
+  // sentence with a number pasted into it that nobody ever varied.
+  check(
+    `${position} the Hall says something different for every trophy count`,
+    hallLines.size === GATES.hofPoints,
+    `${hallLines.size} of ${GATES.hofPoints} counts have their own words`,
   );
 }
 

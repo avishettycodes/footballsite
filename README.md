@@ -133,6 +133,18 @@ what anybody has done: 7.65 yards an attempt at 99 becomes 8.6 once you have sto
 best deep ball and the best arm in the league, and 8.6 is Otto Graham. A back at 4.6
 becomes 5.2 with the best vision and the best burst, and 5.2 is Jim Brown.
 
+A quarterback's rushing was the one number that had no such anchor, and it went exactly
+where you would expect a number with no ceiling to go. A build that stole a 99 mobility
+retired with a median 8,253 rushing yards against Michael Vick's record 6,109, and a long
+career could clear ten thousand. Two things were wrong. The scale had no top, so the
+constant was not describing anybody, and the career arc that governs an arm was governing
+a pair of legs, which is not how legs work: a passer can throw at 40 and several have, and
+nobody runs at 40. Rushing now decays on the absolute season number rather than on the
+fraction of a career, so the decline arrives at the same age whether he plays twelve years
+or twenty and a long career stops compounding. A 99 mobility sits at exactly the top of
+the scale and a maximum build lands a shade under Vick, the same deal the passing record
+gets.
+
 THE SEASONS WERE NEVER ANCHORED, ONLY THE CAREERS, and that is the second thing that went
 wrong here. Career totals were checked against real ones and passed, so the model looked
 finished. Nobody checked a single season. The game reached those believable totals by

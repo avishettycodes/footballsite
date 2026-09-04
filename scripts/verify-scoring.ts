@@ -59,7 +59,7 @@ import { REROLLS_NORMAL, useGame } from '../src/store/gameStore';
 import { ATTRIBUTE_SETS, TEAMS, getPool, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import { hashSeed, nextRandom } from '../src/lib/rng';
-import { GATES, RECORD_YARDS, WEAK_LINK_SHARE, WEIGHTS, allProFloor, computeOverall, isGrandSlam, simulateCareer } from '../src/lib/scoring';
+import { GATES, RECORD_YARDS, WEAK_LINK_SHARE, WEIGHTS, allProFloor, computeOverall, isGrandSlam, simulateCareer, softestSlot } from '../src/lib/scoring';
 import type { AccoladeId } from '../src/lib/scoring';
 
 type Policy = 'random' | 'fan' | 'human' | 'sharp' | 'blind';
@@ -457,6 +457,66 @@ function floorsFitTheirPools(): boolean {
   return ok;
 }
 
+/**
+ * THE WEAK LINK BOX MAY NOT CONTRADICT THE CARD IT IS SITTING UNDER.
+ *
+ * "Nothing on him drops below 95" is printed an inch beneath the seven numbers it is
+ * describing, so it is checkable against them and it was wrong. It ran off
+ * breakdown.weakest, which is the lowest number after the position weights have had
+ * their say, and a quarterback with a 92 clutch and nothing else under 95 got told there
+ * was no hole in him with the 92 on screen. It reads softestSlot now.
+ *
+ * Three things have to hold, and the third is the one that makes this a check rather
+ * than a restatement of the fix.
+ */
+function theBoxAgreesWithTheCard(): boolean {
+  let ok = true;
+  for (const position of positions) {
+    const keys = ATTRIBUTE_SETS[position];
+    const weights = WEIGHTS[position];
+    const cheapest = [...keys].sort((a, b) => (weights[a] ?? 1) - (weights[b] ?? 1))[0];
+    const dearest = [...keys].sort((a, b) => (weights[b] ?? 1) - (weights[a] ?? 1))[0];
+
+    let overstated = 0;
+    let contradictsAllPro = 0;
+    let disagreed = 0;
+    // A sweep rather than one build, so this walks the whole range the box renders over.
+    for (let base = 60; base <= 99; base++) {
+      for (const dent of [0, 3, 7, 14, 25] as const) {
+        for (const where of [cheapest, dearest]) {
+          const build: Partial<Record<AttributeKey, number>> = {};
+          for (const k of keys) build[k] = base;
+          build[where] = Math.max(1, base - dent);
+          const soft = softestSlot(position, build);
+          const { weakest } = computeOverall(position, build);
+          // 1. The box never claims a higher floor than the card actually has.
+          if (soft.value > weakest.value) overstated++;
+          // 2. And "no hole to find" is never said about a player All-Pro turned down
+          //    over the hole, which is the fix this box already had once.
+          if (soft.value >= allProFloor(position)
+            && !simulateCareer(position, { ...build }, 'BOXCHECK').accolades.allPro
+            && computeOverall(position, build).overall >= GATES.allPro) contradictsAllPro++;
+          // 3. The two really do differ somewhere. Without this the whole check passes on
+          //    an implementation that just returned breakdown.weakest again.
+          if (soft.value !== weakest.value) disagreed++;
+        }
+      }
+    }
+    if (overstated || contradictsAllPro || !disagreed) {
+      ok = false;
+      console.log(
+        `  x ${position}: ${overstated} builds where the box claimed a floor the card does not have, ` +
+        `${contradictsAllPro} told there was no hole by a screen that lost All-Pro to one, ` +
+        `${disagreed} where the raw softest and the weighted weakest differ at all`,
+      );
+    }
+  }
+  console.log(ok
+    ? '  the weak link box agrees with the card: PASS, it reads the numbers on screen rather than the weighted ones'
+    : '  the weak link box agrees with the card: FAIL');
+  return ok;
+}
+
 console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}`);
 /**
  * Printed rather than left in a comment, because the person who needs it is reading the
@@ -471,6 +531,7 @@ console.log(
 
 let failed = !floorsBite();
 failed = !floorsFitTheirPools() || failed;
+failed = !theBoxAgreesWithTheCard() || failed;
 console.log();
 
 for (const position of positions) {
