@@ -69,6 +69,13 @@ longest, and there is a flameout chance that never quite reaches zero, so a grea
 occasionally gets four years and a knee. That is the whole reason durability is not an
 attribute any more. See `src/lib/career.ts`.
 
+The curve is centred on 94 and it used to be 91, which was the same mistake in a smaller
+size. A sensible run finishes at 95, so a centre of 91 put the entire population above the
+middle of the curve and handed a typical build fourteen seasons. Nobody's typical anything
+gets fourteen seasons, and the report was quietly using that length to reach believable
+career totals out of unremarkable years. A median quarterback lasts eleven now, a back
+nine, and the totals barely moved because the seasons underneath them grew.
+
 **What he put up** is simulated season by season, with a rookie ramp, a peak about a
 third of the way in and a decline. The bar chart is coloured by whichever uniform he was
 in that year, and his best season is called out, because that is the line people
@@ -76,12 +83,35 @@ actually quote at each other. The positional record is now the yardage total rat
 a rating threshold, so a player who owns it is holding a number you can see him owning
 it with.
 
+Playing time saturates rather than scaling all the way up, and that is what makes the best
+season read like a real one. An elite quarterback and a merely good starting quarterback
+throw roughly the same number of passes, because there are only so many plays in a season
+and both of them are on the field for all of them. What collapses is the bottom, where
+backups and rotational pieces get a fraction of the snaps or none. So the volume lines are
+anchored on a full season's work for somebody who never comes off the field, a player
+reaches that at 95 overall and everything below him loses snaps steeply, and the
+difference between a 95 and a 99 shows up in efficiency, touchdowns and years rather than
+in six hundred attempts.
+
 **Whose uniforms he wore** is one to four franchises rather than every one you spun,
-drawn from the ones you raided and weighted by which of them actually needed the
-position. Need is read off their own history: a franchise whose best ever at the spot is
-a journeyman is desperate, one with an all-time great on the wall is not. At the very
-top that stops mattering, because nobody passes on the best player in the class over a
-depth chart.
+weighted by which of them actually needed the position. Need is read off their own
+history: a franchise whose best ever at the spot is a journeyman is desperate, one with an
+all-time great on the wall is not. At the very top that stops mattering, because nobody
+passes on the best player in the class over a depth chart.
+
+The team that drafted him always comes out of your run, and the stops after it do not.
+Every stop used to, and a tester worked that out inside one session and asked whether it
+was a coincidence. It was not, and it was not really a career either: you raid a median of
+seven franchises out of 32, so a rule saying every uniform comes from those seven is a
+rule somebody solves immediately, and once they have solved it the uniforms section is
+their spin history read back to them. Emmitt Smith finished in Arizona and Joe Montana in
+Kansas City, and nobody drafted either of them there. About a quarter of careers now
+include a franchise you never touched.
+
+The star rule moved with it. "A player good enough gets extended, so he moves less" was
+written at 92, and nine sensible runs in ten finish above 92, so it fired on virtually
+everybody and the answer to how many uniforms he wore was one, over and over. It reads 96
+now, which is an outlier again.
 
 ## The numbers have to be believable
 
@@ -103,20 +133,42 @@ what anybody has done: 7.65 yards an attempt at 99 becomes 8.6 once you have sto
 best deep ball and the best arm in the league, and 8.6 is Otto Graham. A back at 4.6
 becomes 5.2 with the best vision and the best burst, and 5.2 is Jim Brown.
 
-Where it lands, by rating, as a median career:
+THE SEASONS WERE NEVER ANCHORED, ONLY THE CAREERS, and that is the second thing that went
+wrong here. Career totals were checked against real ones and passed, so the model looked
+finished. Nobody checked a single season. The game reached those believable totals by
+handing everybody thirteen to sixteen years of unremarkable football, and the report ended
+up printing two different scales on one page: a trophy case saying all-time great and a
+stat line saying dependable starter.
+
+Measured, a receiver who won MVP peaked at 85 catches for 1,360. A receiver who passed
+Terrell Owens for the all-time record peaked at 88 for 1,408 and got there on sixteen
+seasons averaging 1,031. A tight end who made first-team All-Pro caught 60 balls for 840.
+Those are good seasons. None of them is the season the trophy beside it is describing.
+
+The fix is the same size in both directions. Careers are about a fifth shorter and prime
+seasons about a quarter bigger, so every career total stays where it was and the line on
+the screen starts matching the player. Where it lands now, by rating:
 
 ```
-        overall 90      overall 94       overall 96        overall 99
-   QB   18,399 yds      33,792           44,162            60,212
-   RB    5,379          10,206           13,160            18,271
-   WR    4,974           9,745           12,992            18,869
-   TE    3,861           7,755           10,374            15,698
+                overall 90      overall 94       overall 96        overall 99
+   QB career    16,319 yds      32,916           42,835            55,146
+      best       3,146/23        4,318/33         4,765/38          5,066/43
+   RB career     4,377           9,333           11,972            15,737
+      best       1,131/11        1,575/16         1,773/19          1,940/23
+   WR career     5,155          10,646           14,177            18,204
+      best       1,014/7         1,445/11         1,623/13          1,770/15
+   TE career     3,246           7,324            9,833            12,859
+      best         711/5         1,066/8          1,205/9           1,328/10
 ```
 
-A 94 is Jim Kelly or Corey Dillon or Hines Ward. A 96 is Philip Rivers or Eric Dickerson
-or Torry Holt. A 99 is at the top of the all-time list, and that is the ONE place this
-model is allowed to be unrealistic, because you had to build a perfect player to get
-there. The single season records are set where real people set them, so 5,477 passing
+The second row of each pair is his best season and the touchdowns in it. A 94 receiver
+peaks at 95 catches for 1,445 and eleven scores, which is a first-team All-Pro year, and he
+does it in a ten season career rather than a thirteen season one.
+
+A 94 is Jim Kelly or Clinton Portis or Michael Irvin. A 96 is Joe Montana or Edgerrin
+James or Torry Holt. A 99 lands in the top ten passers and the top five at every other
+position, and that is the ONE place this model is allowed to be unrealistic, because you
+had to build a perfect player to get there. The single season records are set where real people set them, so 5,477 passing
 yards, 2,105 rushing, 1,964 receiving and 1,416 for a tight end are reachable at 99 and
 nowhere else.
 
@@ -182,15 +234,22 @@ MVP wants both at once, with a harder floor. The record wants a career rather th
 rating, since it is a yardage total and yardage takes years. The Super Bowl is a weighted
 coin you cannot build for. The Hall of Fame is any four of those five.
 
-What a sensible player actually walks away with, measured over 3,000 runs a position:
+What a sensible player actually walks away with, measured over 1,500 runs a position:
 
 ```
            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-    QB        87%     40%    12%    2.6%    65%     9%    1.8%      6.2%
-    RB        86%     57%    21%    6.4%    68%    17%    3.7%      5.3%
-    WR        89%     73%    23%    5.1%    68%    18%    3.8%      4.1%
-    TE        67%      8%     1%    3.1%    56%     2%    0.4%      17.5%
+    QB        88%     41%    13%    1.6%    64%    10%    1.2%      6.1%
+    RB        86%     57%    21%    4.5%    69%    16%    2.6%      4.9%
+    WR        88%     74%    24%    8.4%    68%    19%    5.7%      3.9%
+    TE        68%      8%     1%    1.7%    55%     2%    0.3%     18.2%
 ```
+
+Only the record column moved when the seasons were rebalanced, and every other number in
+that table came back byte identical, which is the evidence that the change reached the
+career model and nothing else. The record is a career total, careers got shorter, so
+passing Warren Moon or Shannon Sharpe got harder and passing Terrell Owens got easier,
+since the receiver slope had to widen to keep that trophy telling a 95 and a 97 apart at
+all. The thresholds themselves were not touched. They are still four real careers.
 
 All-Pro sitting near 90% is not a broken gate. You built a player out of the best trait on
 seven different rosters, so of course he is good. What should be rare is being the best

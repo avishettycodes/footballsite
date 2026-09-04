@@ -79,6 +79,60 @@ function production(overall: number): number {
   return Math.pow(clamp((overall - 58) / 41, 0, 1), PRODUCTION_CURVE);
 }
 
+/**
+ * The production grade at which a player holds the job outright and stops losing snaps.
+ *
+ * 0.80 is an overall of 95, which is not a coincidence and is not tuned to flatter
+ * anybody: 95 is the median sensible run at three of the four positions. So the player
+ * this game typically builds is exactly the player who never comes off the field, every
+ * build above him is already there, and everything below him loses snaps at a rate that
+ * bites hard. Setting it lower was measured and it was wrong in an obvious way, because
+ * an 88 overall came out throwing 448 passes for 3,363 yards, which is a season a real
+ * starter would be pleased with handed to a build the game considers a bad run.
+ */
+const STARTER_GRADE = 0.80;
+
+/**
+ * PLAYING TIME SATURATES, AND THAT IS THE WHOLE FIX FOR THE STAT LINE READING LIKE
+ * SOMEBODY ELSE'S CAREER.
+ *
+ * The old version of this was `0.42 + 0.58 * p`, a straight line, and it existed for a
+ * good reason: the first model scaled only the rate stats, so a 71 overall quarterback
+ * threw for 3,887 yards in the single season he lasted, because nothing in the model knew
+ * what a backup was. Volume is still what separates a bad career from a good one.
+ *
+ * What the straight line got wrong is the top. It kept taking snaps away from players who
+ * would never lose one. A 95 came out at 88% of a full workload and a 92 at 85%, so every
+ * build the game actually deals was quietly a part time player, and the report made up the
+ * difference by handing everybody a fourteen year career. The trophy case said all-time
+ * great and the stat line said dependable starter, which is two different scales printed
+ * on the same page.
+ *
+ * Real football does not work that way. An elite quarterback and a merely good starting
+ * one throw roughly the same number of passes, because there are only so many plays in a
+ * season and both of them are on the field for all of them. Rodgers threw 531 in an MVP
+ * year and Cousins threw 561 the same season. What actually collapses is the bottom:
+ * backups, spot starters and rotational pieces get a fraction of the snaps or none.
+ *
+ * So playing time climbs steeply and then stops. By the time a player is good enough to
+ * hold the job outright he is getting the whole job, and everything above that shows up as
+ * efficiency and touchdowns rather than as six hundred attempts.
+ */
+function playingTime(p: number): number {
+  return Math.pow(clamp(p / STARTER_GRADE, 0, 1), 0.8);
+}
+
+/**
+ * A FULL SEASON'S WORK AT THE POSITION, for somebody who never comes off the field.
+ *
+ * These are the numbers the volume lines are anchored on, and they are real full time
+ * workloads rather than a curve's midpoint: around 500 to 550 throws, 270 to 310 carries,
+ * 70 to 82 catches for a first receiver and 52 to 64 for a tight end. The small slope
+ * added to each below is the difference between holding the job and being the reason the
+ * offence exists, and it is small on purpose, because the plays in a season are finite.
+ */
+const STARTER_LOAD = { QB: 490, RB: 270, WR: 74, TE: 52 } as const;
+
 /** How far a single trait leans from an ordinary one, as roughly -1 to 1. */
 function lean(build: Partial<Record<AttributeKey, number>>, key: AttributeKey): number {
   return clamp(((build[key] ?? 76) - 76) / 20, -1.2, 1.2);
@@ -115,7 +169,7 @@ export const CAREER_SHAPE: Record<Position, { floor: number; ceiling: number; fl
 export const MAX_SEASONS = 23;
 
 /**
- * THE CURVE IS CENTRED ON 91, WHICH IS NOT WHERE YOU WOULD PUT IT FROM FIRST PRINCIPLES.
+ * THE CURVE IS CENTRED ON 94, WHICH IS NOT WHERE YOU WOULD PUT IT FROM FIRST PRINCIPLES.
  *
  * The obvious version spreads career length evenly from a replacement player to a
  * perfect one, and it was measured doing exactly the wrong thing: a median build came out
@@ -124,13 +178,19 @@ export const MAX_SEASONS = 23;
  * 32 franchises, so a sensible run lands between 90 and 96 almost always, and a curve
  * built for the full 40 to 99 range hands that whole cluster the top of its ceiling.
  *
- * So the S bends where the players actually are. Half the span is spent between 88 and
- * 95, which is the only stretch this game produces in quantity, and the difference
- * between a 91 and a 95 is four more years rather than a rounding error. Below 85 it
- * falls away fast, which is the honest answer: a replacement player gets two or three
- * years and a phone call.
+ * So the S bends where the players actually are. Below 85 it falls away fast, which is
+ * the honest answer: a replacement player gets two or three years and a phone call.
+ *
+ * IT WAS CENTRED ON 91 FIRST AND THAT WAS THE SAME MISTAKE, JUST SMALLER. The median
+ * sensible run rates 95, so a centre of 91 still put the entire population above the
+ * midpoint of the curve and handed it 71% of the way to an all-time great's career. A
+ * typical quarterback build was getting fourteen years. Nobody's typical anything gets
+ * fourteen years, and the report was quietly using that length to reach believable career
+ * totals out of unremarkable seasons, which is the bug the production model below was
+ * really carrying. The centre belongs at the median of what the game deals, and that is
+ * 95 at three positions and 92 at tight end. 94 splits them.
  */
-const CENTRE = 91;
+const CENTRE = 94;
 const STEEPNESS = 4.5;
 
 export type CareerLength = {
@@ -333,7 +393,14 @@ export type CareerPath = {
  */
 function stintCount(overall: number, seasons: number, available: number, r: number): number {
   let cap = seasons <= 4 ? 1 : seasons <= 8 ? 2 : seasons <= 13 ? 3 : 4;
-  if (overall >= 92) cap -= 1;
+  /*
+    THE STAR THRESHOLD USED TO BE 92 AND IT HAD STOPPED SAYING ANYTHING, which is the same
+    shape of bug as an award gate sitting under the supply. Nine sensible runs in ten
+    finish at 92 or better, so "a star gets extended" fired on virtually every player the
+    game builds and the answer to how many uniforms he wore was one, over and over. At 96
+    it is an outlier again, and the rule distinguishes the people it was written about.
+  */
+  if (overall >= 96) cap -= 1;
   if (overall < 78) cap += 1;
   // `seasons` is the ceiling that matters and it used to be missing. A one season career
   // with the journeyman bonus applied came back as two stints of one season each, which
@@ -344,9 +411,32 @@ function stintCount(overall: number, seasons: number, available: number, r: numb
 }
 
 /**
- * The franchises he was built out of are the franchises he can play for. That tie back
- * to the run is the point of the whole game, so it survives: what changed is that they
- * are no longer ALL of them, and the order is no longer the order you happened to spin.
+ * How often a stop after the first is a franchise he was never built from.
+ *
+ * Set so that a bit under a third of careers contain one. Much lower and it is a rounding
+ * error nobody ever sees, much higher and the raid stops feeling like it decided
+ * anything. It only ever applies from the second stint on, and most careers do not have a
+ * second stint, which is why the number itself is larger than the share it produces.
+ */
+const WANDER = 0.45;
+
+/**
+ * THE FRANCHISE THAT DRAFTED HIM IS ALWAYS ONE YOU RAIDED. Everything after that is not.
+ *
+ * The tie back to the run is the point of the whole game, so the first uniform is not
+ * negotiable: he comes into the league belonging to a team you actually stole from, and
+ * for most players that is the only team there is.
+ *
+ * It used to be the rule for every stop, and a tester noticed inside one session and
+ * asked whether it was a coincidence. It was not a coincidence and it was not really a
+ * career either. You raid a median of seven franchises out of 32, so a rule that says
+ * every stop comes from those seven is a rule somebody works out immediately, and once
+ * they have worked it out the uniforms section is just your spin history read back.
+ *
+ * Real players get signed by teams that were never in the conversation. Emmitt Smith
+ * finished in Arizona, Joe Montana in Kansas City, and nobody drafted either of them
+ * there. So the stops after the first can come from anywhere in the league, which costs
+ * nothing structurally and turns the tie back into a pattern rather than a law.
  */
 export function careerPath(
   position: Position,
@@ -362,18 +452,24 @@ export function careerPath(
   const blend = needBlend(overall);
 
   const remaining = [...pool];
+  const elsewhere = TEAMS.filter((t) => !raidedTeamIds.includes(t.id));
   const chosen: Team[] = [];
-  const count = stintCount(overall, seasons, pool.length, roll());
+  const count = stintCount(overall, seasons, TEAMS.length, roll());
 
-  for (let i = 0; i < count && remaining.length; i++) {
-    const weights = remaining.map((t) => {
+  for (let i = 0; i < count; i++) {
+    // The first stop is the one that has to come out of the run. After that the rest of
+    // the league can sign him, and it does so on the same read of who needs the position.
+    const wander = i > 0 && elsewhere.length > 0 && roll() < WANDER;
+    const from = wander ? elsewhere : remaining;
+    if (!from.length) break;
+    const weights = from.map((t) => {
       const need = positionalNeed(position, t.id);
       // 0.15 keeps a settled franchise in play rather than ruling it out. Teams do sign
       // a second one, they just do not pay a premium for him.
       const byNeed = 0.15 + need * need * 2;
       return byNeed * (1 - blend) + blend;
     });
-    chosen.push(...remaining.splice(weightedIndex(weights, roll()), 1));
+    chosen.push(...from.splice(weightedIndex(weights, roll()), 1));
   }
 
   // Seasons per stop. The first one gets the most, because that is where the rookie deal
@@ -478,23 +574,10 @@ function primeSeason(
   overall: number,
 ): { yards: number; touchdowns: number; volume: number; secondary: number; secondaryYards: number } {
   const p = production(overall);
-
-  /**
-   * SNAPS, WHICH IS THE THING THIS MODEL WAS MISSING ENTIRELY.
-   *
-   * The first version scaled only the rate stats, so a 71 overall quarterback threw for
-   * 3,887 yards in the single season he lasted. He was bad and he still played every
-   * snap of every game, because nothing in the model knew what a backup was.
-   *
-   * The biggest difference between a bad career and a good one is not yards per attempt,
-   * it is attempts. Bad players are backups, spot starters and rotational pieces, and
-   * they get benched. So volume carries most of the range and efficiency carries the
-   * rest, which is also why the low end drops away much faster than the high end climbs.
-   */
-  const workload = 0.42 + 0.58 * p;
+  const snaps = playingTime(p);
 
   if (position === 'QB') {
-    const attempts = (330 + 210 * p) * workload;
+    const attempts = (STARTER_LOAD.QB + 60 * p) * snaps;
     /*
       THE CEILING HERE IS A REAL CAREER AVERAGE, and it has to be checked WITH the traits
       rather than without them. The base is 7.65 yards an attempt at 99, which is about
@@ -517,7 +600,7 @@ function primeSeason(
      * the runner. The exponent is what makes the pick worth spending a spin on.
      */
     const scramble = clamp(((build.mobility ?? 55) - 40) / 55, 0, 1.1);
-    const rushing = (30 + 620 * Math.pow(scramble, 1.6)) * workload;
+    const rushing = (30 + 620 * Math.pow(scramble, 1.6)) * snaps;
     return {
       yards: attempts * perAttempt, touchdowns, volume: attempts,
       secondary: Math.max(1, picks), secondaryYards: rushing,
@@ -525,7 +608,7 @@ function primeSeason(
   }
 
   if (position === 'RB') {
-    const carries = (185 + 120 * p) * workload * (1 + 0.08 * lean(build, 'power') + 0.06 * lean(build, 'size'));
+    const carries = (STARTER_LOAD.RB + 40 * p) * snaps * (1 + 0.08 * lean(build, 'power') + 0.06 * lean(build, 'size'));
     // Same check as the passer above, done with the traits included. 4.6 at 99 becomes 5.2
     // once you have stolen the best vision and the best burst in the league, and 5.2 is
     // Jim Brown, who has the highest career average anybody has ever managed.
@@ -538,7 +621,7 @@ function primeSeason(
      * came out with 40 catches a year, which is not what a man nobody throws to looks
      * like. Third down work is the most all-or-nothing thing a running back does.
      */
-    const catches = (20 + 42 * p) * workload * (1 + 0.40 * lean(build, 'hands'));
+    const catches = (20 + 42 * p) * snaps * (1 + 0.40 * lean(build, 'hands'));
     const perCatch = (7.0 + 2.5 * p) * (1 + 0.08 * lean(build, 'hands'));
     return {
       yards: carries * perCarry, touchdowns, volume: carries,
@@ -547,7 +630,11 @@ function primeSeason(
   }
 
   if (position === 'WR') {
-    const catches = (35 + 48 * p) * workload * (1 + 0.07 * lean(build, 'hands') + 0.05 * lean(build, 'routeRunning'));
+    // The receiver slope is the widest of the four, and it had to be. Receiving is the
+    // most longevity driven record in the game, so shortening careers bit hardest here:
+    // at the first pass a 97 cleared Terrell Owens 11% of the time against 0% for a 95,
+    // which is not enough daylight for the trophy to be telling those two apart.
+    const catches = (STARTER_LOAD.WR + 16 * p) * snaps * (1 + 0.07 * lean(build, 'hands') + 0.05 * lean(build, 'routeRunning'));
     // Yards per catch used to run off deep threat. Speed took that job when deep threat
     // left the card, which is most of what deep threat was measuring anyway.
     const perCatch = (11 + 4.0 * p) * (1 + 0.06 * lean(build, 'speed') + 0.03 * lean(build, 'yac'));
@@ -557,7 +644,7 @@ function primeSeason(
 
   // Toughness is volume at tight end. It is the trait that keeps him on the field for
   // the third down and the goal line rather than coming off for a blocker.
-  const catches = (26 + 43 * p) * workload * (1 + 0.16 * lean(build, 'hands') + 0.06 * lean(build, 'toughness'));
+  const catches = (STARTER_LOAD.TE + 12 * p) * snaps * (1 + 0.16 * lean(build, 'hands') + 0.06 * lean(build, 'toughness'));
   const perCatch = (9.5 + 3.8 * p) * (1 + 0.10 * lean(build, 'speed') + 0.07 * lean(build, 'yac'));
   const touchdowns = catches * (0.050 + 0.045 * p) * (1 + 0.14 * lean(build, 'hands') + 0.12 * lean(build, 'size'));
   return { yards: catches * perCatch, touchdowns, volume: catches, secondary: 0, secondaryYards: 0 };
