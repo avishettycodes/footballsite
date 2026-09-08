@@ -2,7 +2,8 @@
  * Data integrity check. Run with `npm run verify:data`.
  * Fails the process on errors so a bad hand-edit can't reach the wheel.
  */
-import { ATTRIBUTE_SETS, DATA_STATS, TEAMS, getPool, positionsWithData, validateData } from '../src/data';
+import { ATTRIBUTE_SETS, DATA_STATS, ERAS, ERA_LABELS, ROSTERS, TEAMS, getPool, positionsWithData, validateData } from '../src/data';
+import type { Era } from '../src/data';
 
 const issues = validateData();
 const errors = issues.filter((i) => i.level === 'error');
@@ -11,18 +12,23 @@ const warnings = issues.filter((i) => i.level === 'warn');
 console.log('GridironLab — data check\n');
 console.log(`teams:   ${DATA_STATS.teams}`);
 console.log(`players: ${DATA_STATS.players}`);
-for (const [pos, count] of Object.entries(DATA_STATS.byPosition)) {
-  console.log(`  ${pos}: ${count}`);
+for (const era of ERAS) {
+  console.log(`  ${ERA_LABELS[era]}: ${ROSTERS[era].length}`);
+  for (const [pos, count] of Object.entries(DATA_STATS.byEra[era])) {
+    console.log(`    ${pos}: ${count}`);
+  }
 }
 
-for (const position of positionsWithData()) {
-  const sizes = TEAMS.map((t) => getPool(position, t.id).length);
-  const min = Math.min(...sizes);
-  const max = Math.max(...sizes);
-  console.log(`\n${position} pools across 32 franchises: min ${min}, max ${max}`);
-  console.log(
-    TEAMS.map((t, i) => `${t.abbr}:${sizes[i]}`).join('  '),
-  );
+for (const era of ERAS) {
+  for (const position of positionsWithData(era)) {
+    const sizes = TEAMS.map((t) => getPool(position, t.id, era).length);
+    const min = Math.min(...sizes);
+    const max = Math.max(...sizes);
+    console.log(`\n${ERA_LABELS[era]} ${position} pools across 32 franchises: min ${min}, max ${max}`);
+    console.log(
+      TEAMS.map((t, i) => `${t.abbr}:${sizes[i]}`).join('  '),
+    );
+  }
 }
 
 /**
@@ -69,9 +75,19 @@ function expectationFor(position: string, a: string, b: string) {
   );
 }
 
+/**
+ * BOTH ERAS GO THROUGH THIS, and the second one is the more likely to fail it.
+ *
+ * A pool written in one sitting about players everybody has just watched is exactly where
+ * two traits quietly collapse into one, because the same handful of adjectives get reached
+ * for all afternoon. The all-time pools were written over months about players from six
+ * decades, which spread them out for free.
+ */
 console.log('\nattribute independence');
-for (const position of positionsWithData()) {
-  const players = TEAMS.flatMap((t) => getPool(position, t.id));
+for (const { era, position } of ERAS.flatMap((era: Era) =>
+  positionsWithData(era).map((position) => ({ era, position })),
+)) {
+  const players = TEAMS.flatMap((t) => getPool(position, t.id, era));
   const keys = ATTRIBUTE_SETS[position];
   const pairs: { a: string; b: string; r: number }[] = [];
 
@@ -93,7 +109,7 @@ for (const position of positionsWithData()) {
   }
 
   pairs.sort((x, y) => y.r - x.r);
-  console.log(`  ${position}`);
+  console.log(`  ${ERA_LABELS[era]} ${position}`);
   for (const p of pairs.slice(0, 3)) {
     const expected = expectationFor(position, p.a, p.b);
     const note = expected
@@ -111,13 +127,13 @@ for (const position of positionsWithData()) {
       if (p.r > expected.ceiling) {
         warnings.push({
           level: 'warn',
-          message: `${position} ${p.a}/${p.b} at ${p.r.toFixed(2)} is past its ${expected.ceiling} ceiling`,
+          message: `${era} ${position} ${p.a}/${p.b} at ${p.r.toFixed(2)} is past its ${expected.ceiling} ceiling`,
         });
       }
     } else if (p.r >= 0.85) {
       warnings.push({
         level: 'warn',
-        message: `${position} ${p.a} and ${p.b} correlate at ${p.r.toFixed(2)}, so they are effectively one pick`,
+        message: `${era} ${position} ${p.a} and ${p.b} correlate at ${p.r.toFixed(2)}, so they are effectively one pick`,
       });
     }
   }

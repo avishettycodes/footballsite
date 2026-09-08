@@ -16,7 +16,7 @@ export function PlayerCard({ player }: { player: Player }) {
             {player.name}
           </h3>
           <p className="font-mono text-[11px] tracking-wide text-white/40">
-            {team.abbr} · {player.era}
+            {team.abbr} · {player.years}
           </p>
         </div>
         <div

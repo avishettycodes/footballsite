@@ -13,15 +13,15 @@
  * thinnest pools, which is the shortest path to draining a roster.
  */
 import { useGame } from '../src/store/gameStore';
-import { ATTRIBUTE_SETS, PLAYERS, TEAMS, getPool, positionsWithData } from '../src/data';
-import type { AttributeKey, Position } from '../src/data';
+import { ATTRIBUTE_SETS, ERAS, ROSTERS, TEAMS, getPool, positionsWithData } from '../src/data';
+import type { AttributeKey, Era, Position } from '../src/data';
 
 type Result = { picks: string[]; teams: string[]; ok: boolean; notes: string[]; freeRespins: number };
 
-function playRun(seed: string, hardMode: boolean, position: Position = 'RB'): Result {
+function playRun(seed: string, hardMode: boolean, position: Position = 'RB', era: Era = 'alltime'): Result {
   const s = useGame.getState();
   s.abandonRun();
-  s.startRun({ position, hardMode, seed });
+  s.startRun({ position, hardMode, era, seed });
 
   const notes: string[] = [];
   const picks: string[] = [];
@@ -40,7 +40,7 @@ function playRun(seed: string, hardMode: boolean, position: Position = 'RB'): Re
     if (g.phase === 'picking') {
       const state = useGame.getState();
       teams.push(state.currentTeamId!);
-      const pool = getPool(state.position, state.currentTeamId!).filter(
+      const pool = getPool(state.position, state.currentTeamId!, state.era).filter(
         (p) => !state.usedPlayerIds.includes(p.id),
       );
       if (pool.length === 0) { notes.push('LANDED ON AN EXHAUSTED POOL — deadlock rule failed'); break; }
@@ -93,36 +93,44 @@ const deterministic = a.teams.join() === b.teams.join() && a.picks.join() === b.
 
 // Every position, both modes, 1500 seeds each. The deadlock rule must never strand a
 // run now that a franchise can come up as many times as the wheel feels like.
+/*
+  BOTH LEAGUES GET FUZZED, and the current one is where a strand is actually plausible.
+  Its pools are six deep against seven to nine, so a run of seven picks can drain a
+  roster in seven landings rather than needing eight, and the free respin is the only
+  thing between that and a dead run.
+*/
 const FUZZ = 1500;
 let stranded = 0;
 let freeRespins = 0;
 let repeatedRuns = 0;
 let fuzzed = 0;
 const perPosition: string[] = [];
-for (const position of positionsWithData()) {
-  let positionStranded = 0;
-  let positionRespins = 0;
-  let positionRepeats = 0;
-  for (let i = 0; i < FUZZ; i++) {
-    const hard = i % 2 === 0;
-    const r = playRun(`FUZZ-${position}-${i}`, hard, position);
-    fuzzed++;
-    positionRespins += r.freeRespins;
-    if (new Set(r.teams).size !== r.teams.length) positionRepeats++;
-    if (!r.ok) {
-      positionStranded++;
-      if (stranded + positionStranded < 4) {
-        console.log(`  FAIL ${position} ${hard ? 'hard' : 'normal'} seed ${i}: ${r.notes.join('; ')}`);
+for (const era of ERAS) {
+  for (const position of positionsWithData(era)) {
+    let positionStranded = 0;
+    let positionRespins = 0;
+    let positionRepeats = 0;
+    for (let i = 0; i < FUZZ; i++) {
+      const hard = i % 2 === 0;
+      const r = playRun(`FUZZ-${era}-${position}-${i}`, hard, position, era);
+      fuzzed++;
+      positionRespins += r.freeRespins;
+      if (new Set(r.teams).size !== r.teams.length) positionRepeats++;
+      if (!r.ok) {
+        positionStranded++;
+        if (stranded + positionStranded < 4) {
+          console.log(`  FAIL ${era} ${position} ${hard ? 'hard' : 'normal'} seed ${i}: ${r.notes.join('; ')}`);
+        }
       }
     }
+    stranded += positionStranded;
+    freeRespins += positionRespins;
+    repeatedRuns += positionRepeats;
+    perPosition.push(
+      `  ${era} ${position}: ${positionRepeats}/${FUZZ} runs hit the same franchise twice, ` +
+      `${positionRespins} free respins, ${positionStranded} stranded`,
+    );
   }
-  stranded += positionStranded;
-  freeRespins += positionRespins;
-  repeatedRuns += positionRepeats;
-  perPosition.push(
-    `  ${position}: ${positionRepeats}/${FUZZ} runs hit the same franchise twice, ` +
-    `${positionRespins} free respins, ${positionStranded} stranded`,
-  );
 }
 
 // --- the deadlock rule, forced ---------------------------------------------------
@@ -137,14 +145,14 @@ for (const position of positionsWithData()) {
  * drained roster and the free respin is the only reason the game can carry on. Every
  * landing must have somebody left on it, and none of them may cost a reroll.
  */
-function forcedDeadlock(position: Position) {
+function forcedDeadlock(position: Position, era: Era) {
   const survivor = TEAMS[0].id;
-  const drained = PLAYERS
+  const drained = ROSTERS[era]
     .filter((p) => p.position === position && p.teamId !== survivor)
     .map((p) => p.id);
 
   useGame.getState().abandonRun();
-  useGame.getState().startRun({ position, hardMode: true, seed: `DEADLOCK-${position}` });
+  useGame.getState().startRun({ position, hardMode: true, era, seed: `DEADLOCK-${era}-${position}` });
   useGame.setState({ usedPlayerIds: drained });
 
   let frees = 0;
@@ -158,7 +166,7 @@ function forcedDeadlock(position: Position) {
     if (st.phase === 'stuck') { gotStuck++; break; }
     if (st.lastEventMessage) frees++;
     if (st.rerollsLeft !== 0) rerollsSpent++;
-    const left = getPool(position, st.currentTeamId!).filter(
+    const left = getPool(position, st.currentTeamId!, era).filter(
       (p) => !st.usedPlayerIds.includes(p.id),
     );
     if (left.length === 0) landedEmpty++;
@@ -166,7 +174,9 @@ function forcedDeadlock(position: Position) {
   return { frees, landedEmpty, gotStuck, rerollsSpent, survivor };
 }
 
-const forced = positionsWithData().map((pos) => ({ pos, r: forcedDeadlock(pos) }));
+const forced = ERAS.flatMap((era) =>
+  positionsWithData(era).map((pos) => ({ pos: `${era} ${pos}`, r: forcedDeadlock(pos, era) })),
+);
 const deadlockHolds = forced.every(
   ({ r }) => r.landedEmpty === 0 && r.gotStuck === 0 && r.frees > 0,
 );
@@ -177,8 +187,8 @@ const deadlockHolds = forced.every(
  * supposed to be unreachable in a real run, which is exactly why it gets asserted.
  */
 useGame.getState().abandonRun();
-useGame.getState().startRun({ position: 'RB', hardMode: true, seed: 'NOBODY-LEFT' });
-useGame.setState({ usedPlayerIds: PLAYERS.filter((p) => p.position === 'RB').map((p) => p.id) });
+useGame.getState().startRun({ position: 'RB', hardMode: true, era: 'alltime', seed: 'NOBODY-LEFT' });
+useGame.setState({ usedPlayerIds: ROSTERS.alltime.filter((p) => p.position === 'RB').map((p) => p.id) });
 useGame.getState().spin();
 const everythingGone = useGame.getState();
 const failsLoudly = everythingGone.phase === 'stuck' && Boolean(everythingGone.lastEventMessage);
@@ -199,14 +209,14 @@ const idempotent = firstRoll.roll === afterRepeat.roll && firstRoll.won === afte
 //    the same shared seed face the identical coin — only build quality decides it.
 function rollFor(seed: string, mode: 'greedy' | 'worst') {
   useGame.getState().abandonRun();
-  useGame.getState().startRun({ position: 'RB', hardMode: false, seed });
+  useGame.getState().startRun({ position: 'RB', hardMode: false, era: 'alltime', seed });
   let guard = 0;
   while (useGame.getState().phase !== 'complete' && guard++ < 100) {
     const g = useGame.getState();
     if (g.phase === 'ready') { g.spin(); continue; }
     if (g.phase === 'spinning') { g.landSpin(); continue; }
     if (g.phase !== 'picking') break;
-    const pool = getPool(g.position, g.currentTeamId!).filter((p) => !g.usedPlayerIds.includes(p.id));
+    const pool = getPool(g.position, g.currentTeamId!, g.era).filter((p) => !g.usedPlayerIds.includes(p.id));
     const open = ATTRIBUTE_SETS[g.position].filter((k) => !g.slots[k]) as AttributeKey[];
     let pid = pool[0].id;
     let attr = open[0];

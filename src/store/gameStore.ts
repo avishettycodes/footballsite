@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { ATTRIBUTE_SETS, TEAMS, getPool } from '../data';
-import type { AttributeKey, Player, Position } from '../data';
+import type { AttributeKey, Era, Player, Position } from '../data';
 import { hashSeed, makeSeed, nextPick } from '../lib/rng';
 import { simulateCareer } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
@@ -57,6 +57,15 @@ export type RunState = {
   rngState: number;
   position: Position;
   hardMode: boolean;
+  /**
+   * Which league this run is digging through, fixed at the first spin and never moved.
+   *
+   * It is on the RUN rather than being a global preference on purpose. A career is scored
+   * against the supply of the pools it was built from, so a saved player whose era could
+   * drift would have his All-Pro floor re-read against the wrong league the next time
+   * anybody opened him.
+   */
+  era: Era;
   slots: Partial<Record<AttributeKey, FilledSlot>>;
   /** Pick order, for the results card narrative. */
   pickOrder: AttributeKey[];
@@ -95,7 +104,7 @@ type GameStore = RunState & {
   resumeRun: () => void;
   deleteSaved: (id: string) => void;
 
-  startRun: (opts: { position: Position; hardMode: boolean; seed?: string }) => void;
+  startRun: (opts: { position: Position; hardMode: boolean; era: Era; seed?: string }) => void;
   spin: () => void;
   landSpin: () => void;
   reroll: () => void;
@@ -118,6 +127,7 @@ const emptyRun = (): RunState => ({
   rngState: 0,
   position: 'RB',
   hardMode: false,
+  era: 'alltime',
   slots: {},
   pickOrder: [],
   usedPlayerIds: [],
@@ -165,10 +175,10 @@ const emptyRun = (): RunState => ({
  * asserts it never happens.
  */
 function drawTeam(state: RunState): { teamId: string | null; rngState: number; freeRespin: boolean } {
-  const { position, usedPlayerIds } = state;
+  const { position, usedPlayerIds, era } = state;
 
   const hasUnused = (teamId: string) =>
-    getPool(position, teamId).some((p) => !usedPlayerIds.includes(p.id));
+    getPool(position, teamId, era).some((p) => !usedPlayerIds.includes(p.id));
 
   // Every franchise is always in the wheel. Hard mode takes away your reroll and hides
   // the pool's ratings, and it has never crossed teams off, so a repeat is a legal and
@@ -207,7 +217,7 @@ export const useGame = create<GameStore>()(
        * RANDOM. The start screen reads the URL for you and shows what it found, so an
        * empty field here means exactly what it looks like.
        */
-      startRun: ({ position, hardMode, seed }) => {
+      startRun: ({ position, hardMode, era, seed }) => {
         const finalSeed = seed || makeSeed();
         set({
           ...emptyRun(),
@@ -216,6 +226,7 @@ export const useGame = create<GameStore>()(
           rngState: hashSeed(finalSeed),
           position,
           hardMode,
+          era,
           rerollsLeft: hardMode ? REROLLS_HARD : REROLLS_NORMAL,
           phase: 'ready',
           startedAt: Date.now(),
@@ -280,7 +291,7 @@ export const useGame = create<GameStore>()(
         if (state.usedPlayerIds.includes(playerId)) return;
         if (state.slots[attribute]) return;
 
-        const player = getPool(state.position, state.currentTeamId ?? '').find((p) => p.id === playerId);
+        const player = getPool(state.position, state.currentTeamId ?? '', state.era).find((p) => p.id === playerId);
         if (!player) return;
         const value = player.attributes[attribute];
         if (typeof value !== 'number') return;
@@ -325,7 +336,7 @@ export const useGame = create<GameStore>()(
           build[key] = state.slots[key]?.value ?? 0;
         }
 
-        set({ career: simulateCareer(state.position, build, state.seed), phase: 'results' });
+        set({ career: simulateCareer(state.position, build, state.seed, state.era), phase: 'results' });
       },
 
       /**
@@ -355,6 +366,7 @@ export const useGame = create<GameStore>()(
                 name: trimmed,
                 position: state.position,
                 hardMode: state.hardMode,
+                era: state.era,
                 seed: state.seed,
                 savedAt: Date.now(),
                 pickOrder: state.pickOrder,
@@ -375,7 +387,7 @@ export const useGame = create<GameStore>()(
       isPlayerUsed: (playerId) => get().usedPlayerIds.includes(playerId),
       currentPool: () => {
         const s = get();
-        return s.currentTeamId ? getPool(s.position, s.currentTeamId) : [];
+        return s.currentTeamId ? getPool(s.position, s.currentTeamId, s.era) : [];
       },
       hasSavedRun: () => {
         const s = get();
@@ -396,7 +408,7 @@ export const useGame = create<GameStore>()(
       // Autosave the run itself; UI-only flags stay out except the sound preference.
       partialize: (s) => ({
         runId: s.runId, seed: s.seed, rngState: s.rngState, position: s.position,
-        hardMode: s.hardMode, slots: s.slots, pickOrder: s.pickOrder,
+        hardMode: s.hardMode, era: s.era, slots: s.slots, pickOrder: s.pickOrder,
         usedPlayerIds: s.usedPlayerIds, visitedTeamIds: s.visitedTeamIds,
         rerollsLeft: s.rerollsLeft, phase: s.phase, currentTeamId: s.currentTeamId,
         repeatVisit: s.repeatVisit,
@@ -406,6 +418,11 @@ export const useGame = create<GameStore>()(
       onRehydrateStorage: () => (state) => {
         // A reload mid-spin would otherwise resume into a reel that never lands.
         if (state && state.phase === 'spinning') state.phase = 'picking';
+        // An autosave written before the second dataset existed has no era on it, and
+        // every one of those runs was played against the all-time pools. Without this a
+        // half finished player comes back with `undefined` where his league should be,
+        // every pool lookup returns nothing, and the wheel spins onto empty rosters.
+        if (state && !state.era) state.era = 'alltime';
       },
     },
   ),

@@ -1,14 +1,37 @@
 import { useState } from 'react';
 import { DATA_STATS } from '../data';
-import type { Position } from '../data';
+import type { Era, Position } from '../data';
 import type { SavedPlayer } from '../lib/hall';
 import { makeSeed, parseSeedInput, seedFromUrl } from '../lib/rng';
 import { HallOfBuilds } from './HallOfBuilds';
 
 const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
+/**
+ * WHICH POSITION IS THE HARD ONE DEPENDS ON THE LEAGUE, and it stopped being one answer
+ * the moment the second dataset landed.
+ *
+ * All-time, tight end is the hard one on its own and always has been. Its history holds by
+ * far the fewest great players, so a typical roster offers less in every slot and the top
+ * awards sit further away. Measured, a sensible run there ends with an empty trophy case
+ * about one time in five against one in twenty at receiver.
+ *
+ * In the current league the reason changes and so does the answer. Quarterback and tight
+ * end are the two positions where a real roster carries three men, so those rooms reach
+ * down to the third stringer to fill six cards while receiver rooms are six deep in
+ * players who actually play. Both come back at roughly a third of runs winning nothing,
+ * against one in twenty at receiver, so both are labelled and the label says why.
+ *
+ * Leaving THE HARD ONE under tight end alone would have been a sentence the game's own
+ * numbers contradict, which is the bug this project keeps finding on the results screen.
+ */
+const HARD_ONES: Record<Era, Partial<Record<Position, string>>> = {
+  alltime: { TE: 'THE HARD ONE' },
+  current: { QB: 'THIN ROOM', TE: 'THIN ROOM' },
+};
+
 type Props = {
-  onStart: (opts: { position: Position; hardMode: boolean; seed?: string }) => void;
+  onStart: (opts: { position: Position; hardMode: boolean; era: Era; seed?: string }) => void;
   canResume: boolean;
   onResume: () => void;
   hall: SavedPlayer[];
@@ -21,6 +44,7 @@ export function StartScreen({
 }: Props) {
   const [position, setPosition] = useState<Position>('RB');
   const [hardMode, setHardMode] = useState(false);
+  const [era, setEra] = useState<Era>('alltime');
   const [linkSeed, setLinkSeed] = useState(() => seedFromUrl());
   const [seed, setSeed] = useState(linkSeed ?? '');
   /** What the last thing typed or pasted in the seed box turned out to be. */
@@ -59,7 +83,7 @@ export function StartScreen({
       window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
       setLinkSeed(null);
     }
-    onStart({ position, hardMode, seed: seed || undefined });
+    onStart({ position, hardMode, era, seed: seed || undefined });
   }
 
   return (
@@ -76,10 +100,63 @@ export function StartScreen({
         </button>
       )}
 
-      <h2 className="font-display text-2xl tracking-tight uppercase">1 · Pick your position</h2>
+      {/*
+        THE LEAGUE COMES FIRST because it decides what everything after it means. Picking
+        a position before knowing whether the pool is a franchise's whole history or the
+        men on its roster this morning is picking blind.
+
+        Same switch as the mode below it, on purpose. Two settings that work identically
+        should look identical, and the box always names the league it is currently set to
+        rather than describing the one you would get by tapping it.
+      */}
+      <h2 className="font-display text-2xl tracking-tight uppercase">1 · Pick your league</h2>
+      <button
+        onClick={() => {
+          const next = era === 'alltime' ? 'current' : 'alltime';
+          setEra(next);
+          // A position with no pool in the league you just switched to cannot stay
+          // selected, or START would deal off an empty wheel.
+          if (DATA_STATS.byEra[next][position] === 0) {
+            const first = POSITIONS.find((p) => DATA_STATS.byEra[next][p] > 0);
+            if (first) setPosition(first);
+          }
+        }}
+        aria-pressed={era === 'current'}
+        aria-label={era === 'current' ? 'Current players, switch to all time' : 'All time, switch to current players'}
+        className={`mt-3 flex w-full items-center justify-between gap-3 rounded-lg border-2 px-4 py-3 text-left transition-colors ${
+          era === 'current' ? 'border-sky-400 bg-sky-400/12' : 'border-white/12 bg-turf-800'
+        }`}
+      >
+        <div className="min-w-0">
+          <div
+            className={`font-display text-lg tracking-tight uppercase ${era === 'current' ? 'text-sky-300' : ''}`}
+          >
+            {era === 'current' ? 'Current players' : 'All-time'}
+          </div>
+          <div className="font-mono text-[11px] text-white/50">
+            {era === 'current'
+              ? 'Only the men on a roster now. Every rating is judged against the rest of the league today, so the best one playing gets the 99.'
+              : 'Everybody a franchise has ever had. Every rating is judged against everybody who has played the position, so the great ones set the top.'}
+          </div>
+        </div>
+        <div className="shrink-0 text-center">
+          <div
+            className={`h-6 w-11 rounded-full p-0.5 transition-colors ${era === 'current' ? 'bg-sky-400' : 'bg-white/20'}`}
+          >
+            <div
+              className={`h-5 w-5 rounded-full bg-white transition-transform ${era === 'current' ? 'translate-x-5' : ''}`}
+            />
+          </div>
+          <div className="mt-1 font-mono text-[9px] tracking-wider whitespace-nowrap text-white/35">
+            {era === 'current' ? 'GO ALL-TIME' : 'GO CURRENT'}
+          </div>
+        </div>
+      </button>
+
+      <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">2 · Pick your position</h2>
       <div className="mt-3 grid grid-cols-4 gap-2">
         {POSITIONS.map((pos) => {
-          const live = DATA_STATS.byPosition[pos] > 0;
+          const live = DATA_STATS.byEra[era][pos] > 0;
           return (
             <button
               key={pos}
@@ -95,18 +172,9 @@ export function StartScreen({
             >
               {pos}
               {!live && <div className="font-mono text-[9px] opacity-60">SOON</div>}
-              {/*
-                Tight end really is harder, and saying so turns a broken promise into
-                the point. It plays seven slots like everybody else now, and it is still
-                the hard one for the reason that has nothing to do with slot count: its
-                history has by far the fewest elite players in it, so a typical roster
-                offers less at every position on the card and the top awards sit further
-                away. Measured, a sensible tight end run ends with an empty trophy case
-                more than a quarter of the time against one run in twenty at receiver.
-              */}
-              {pos === 'TE' && live && (
+              {live && HARD_ONES[era][pos] && (
                 <div className="font-mono text-[8px] tracking-wider text-red-400">
-                  THE HARD ONE
+                  {HARD_ONES[era][pos]}
                 </div>
               )}
             </button>
@@ -114,7 +182,7 @@ export function StartScreen({
         })}
       </div>
 
-      <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">2 · Set the rules</h2>
+      <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">3 · Set the rules</h2>
       {/*
         THE PANEL NAMES THE MODE YOU ARE IN, and nothing here says ON or OFF any more.
 
@@ -174,7 +242,7 @@ export function StartScreen({
         </div>
       </button>
 
-      <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">3 · Seed (optional)</h2>
+      <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">4 · Seed (optional)</h2>
       <p className="font-mono text-[11px] text-white/45">
         The same seed always gives you the same spins. Send one to somebody and you both
         face the identical wheel. Pasting a whole link in here works too.

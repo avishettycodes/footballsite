@@ -12,7 +12,7 @@ import type { Player } from './types';
  *    curl route. Russell has a 97 arm attached to nothing whatsoever.
  *
  * Row format:
- *   [id, name, era, blurb, ARM, ACC, DEEP, PKT, MOB, PRO, CLT]
+ *   [id, name, years, blurb, ARM, ACC, DEEP, PKT, MOB, PRO, CLT]
  */
 type Row = [string, string, string, string, number, number, number, number, number, number, number];
 
@@ -341,12 +341,12 @@ const POOLS: Record<string, Row[]> = {
 };
 
 export const QB_PLAYERS: Player[] = Object.entries(POOLS).flatMap(([teamId, rows]) =>
-  rows.map(([id, name, era, blurb, armStrength, accuracy, deepBall, pocketPresence, mobility, processing, clutch]) => ({
+  rows.map(([id, name, years, blurb, armStrength, accuracy, deepBall, pocketPresence, mobility, processing, clutch]) => ({
     id,
     name,
     teamId,
     position: 'QB' as const,
-    era,
+    years,
     blurb,
     attributes: { armStrength, accuracy, deepBall, pocketPresence, mobility, processing, clutch },
   })),

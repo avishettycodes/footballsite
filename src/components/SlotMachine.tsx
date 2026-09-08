@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { animate } from 'framer-motion';
 import { TEAMS, TEAMS_BY_ID, getPool } from '../data';
 import { CONTRAST_LARGE_TEXT, inkOn } from '../lib/contrast';
-import type { Position, Team } from '../data';
+import type { Era, Position, Team } from '../data';
 import { tick, thunk } from '../lib/audio';
 
 const ITEM_H = 84;
@@ -32,6 +32,7 @@ function bezierY(t: number, [, p1y, , p3y]: [number, number, number, number]) {
 
 type Props = {
   position: Position;
+  era: Era;
   targetTeamId: string;
   spinNonce: number;
   visitedTeamIds: string[];
@@ -41,7 +42,7 @@ type Props = {
 };
 
 export function SlotMachine({
-  position, targetTeamId, spinNonce, visitedTeamIds, usedPlayerIds, soundOn, onLanded,
+  position, era, targetTeamId, spinNonce, visitedTeamIds, usedPlayerIds, soundOn, onLanded,
 }: Props) {
   const reelRef = useRef<HTMLDivElement>(null);
   const [reel, setReel] = useState<Team[]>([]);
@@ -136,7 +137,7 @@ export function SlotMachine({
             // raided still comes around, which is the point, so it is marked rather than
             // greyed out. Only a genuinely empty roster is dimmed.
             const raided = visitedTeamIds.includes(team.id) && i < REEL_LEN - 1;
-            const empty = getPool(position, team.id).every((p) => usedPlayerIds.includes(p.id));
+            const empty = getPool(position, team.id, era).every((p) => usedPlayerIds.includes(p.id));
             /*
               The reel is the single largest block of team colour in the game and you
               stare at it for the length of every spin, so it is the worst place to have
@@ -175,7 +176,7 @@ export function SlotMachine({
                     className="font-mono text-[10px] tracking-[0.2em]"
                     style={{ color: ink, opacity: 0.6 }}
                   >
-                    {empty ? 'NOBODY LEFT' : raided ? 'BEEN HERE ALREADY' : `${getPool(position, team.id).length} ${position}`}
+                    {empty ? 'NOBODY LEFT' : raided ? 'BEEN HERE ALREADY' : `${getPool(position, team.id, era).length} ${position}`}
                   </div>
                 </div>
                 <div

@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react';
 import {
   ATTRIBUTE_SETS,
   DATA_STATS,
-  PLAYERS,
+  ERAS,
+  ERA_LABELS,
+  ROSTERS,
   TEAMS,
   getPool,
   getTeam,
   validateData,
 } from './data';
-import type { Position } from './data';
+import type { Era, Position } from './data';
 import { inkOn } from './lib/contrast';
 import { PlayerCard } from './components/PlayerCard';
 import { ratingColor } from './components/AttributeBar';
@@ -23,22 +25,23 @@ const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 export default function DataInspector() {
   const [position, setPosition] = useState<Position>('RB');
   const [teamId, setTeamId] = useState<string>('bal');
+  const [era, setEra] = useState<Era>('alltime');
 
   const issues = useMemo(() => validateData(), []);
-  const pool = getPool(position, teamId);
+  const pool = getPool(position, teamId, era);
   const team = getTeam(teamId);
 
   // League leaderboard per attribute — proves a perfect build is reachable.
   const leaders = useMemo(
     () =>
       ATTRIBUTE_SETS[position].map((key) => {
-        const best = PLAYERS.filter((p) => p.position === position).reduce(
+        const best = ROSTERS[era].filter((p) => p.position === position).reduce(
           (a, b) => ((b.attributes[key] ?? 0) > (a?.attributes[key] ?? -1) ? b : a),
-          undefined as (typeof PLAYERS)[number] | undefined,
+          undefined as (typeof ROSTERS)[Era][number] | undefined,
         );
         return { key, best, value: best?.attributes[key] ?? 0 };
       }),
-    [position],
+    [position, era],
   );
 
   return (
@@ -81,8 +84,25 @@ export default function DataInspector() {
         </p>
 
         <div className="mb-4 flex gap-2">
+          {ERAS.map((e) => (
+            <button
+              key={e}
+              onClick={() => setEra(e)}
+              className={`rounded px-4 py-2 font-display text-lg tracking-wide uppercase transition-colors ${
+                era === e ? 'bg-sky-400 text-turf-950' : 'bg-turf-700 text-white/80 hover:bg-turf-600'
+              }`}
+            >
+              {ERA_LABELS[e]}
+              <span className="ml-2 font-mono text-[10px] opacity-60">
+                {ROSTERS[e].length}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-4 flex gap-2">
           {POSITIONS.map((pos) => {
-            const count = DATA_STATS.byPosition[pos];
+            const count = DATA_STATS.byEra[era][pos];
             const live = count > 0;
             return (
               <button
@@ -108,7 +128,7 @@ export default function DataInspector() {
 
         <div className="mb-6 grid grid-cols-4 gap-1 sm:grid-cols-8">
           {TEAMS.map((t) => {
-            const size = getPool(position, t.id).length;
+            const size = getPool(position, t.id, era).length;
             const active = t.id === teamId;
             return (
               <button

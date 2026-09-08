@@ -8,6 +8,35 @@
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
+/**
+ * WHICH LEAGUE YOU ARE DIGGING THROUGH.
+ *
+ * Two complete datasets, not one dataset with a filter on it, and that is the whole
+ * design. All-time is every player in a franchise's history rated against everybody who
+ * has ever played the position, so Jerry Rice sets the top of the receiver scale and a
+ * good player today sits below him. Current is only the men on a roster right now, rated
+ * against each other, so the best receiver playing this season gets the 99.
+ *
+ * The same man therefore has two different cards, and both are correct. Lamar Jackson's
+ * arm against Elway and Marino is not his arm against the quarterbacks he lines up
+ * opposite on Sunday. A single set of numbers cannot answer both questions, which is why
+ * `src/data/current/` is written by hand rather than derived by scaling the all-time
+ * rows. A scale factor would keep every ranking exactly as it was and just move the
+ * decimal, and the rankings are the part that actually changes.
+ *
+ * Player ids are unique ACROSS both sets, since a run stores the ids it has used and a
+ * saved player keeps them forever. Current rows carry a `now-` prefix for that reason.
+ */
+export type Era = 'alltime' | 'current';
+
+export const ERAS: Era[] = ['alltime', 'current'];
+
+/** What the switch on the start screen calls each one. */
+export const ERA_LABELS: Record<Era, string> = {
+  alltime: 'All-time',
+  current: 'Current',
+};
+
 /** Offensive line positions get their own simplified set (Full Eleven mode, later). */
 export type OLPosition = 'OL';
 
@@ -40,8 +69,14 @@ export type Player = {
   name: string;
   teamId: string;
   position: Position;
-  /** Years catalogued under this franchise, e.g. "1998–2009". */
-  era: string;
+  /**
+   * Years catalogued under this franchise, e.g. "1998–2009".
+   *
+   * This used to be called `era` and had to give the name up. The dataset a player
+   * belongs to is an era now, so a field meaning "the years he played here" could not go
+   * on holding the word. Three components read it and they all read `years` instead.
+   */
+  years: string;
   /** One punchy line of sports-bar trash talk. */
   blurb: string;
   /** Only the keys in this position's ATTRIBUTE_SETS entry are present. */

@@ -3,6 +3,7 @@ import { ATTRIBUTE_SETS, getTeam } from './data';
 import type { AttributeKey } from './data';
 import { useGame } from './store/gameStore';
 import { audioState, lock, primeAudio, setSoundEnabled, subscribeAudio } from './lib/audio';
+import { savedEra } from './lib/hall';
 import type { SavedPlayer } from './lib/hall';
 import { Chevron, SoundOff, SoundOn } from './components/Icons';
 import { SlotMachine } from './components/SlotMachine';
@@ -139,6 +140,7 @@ export default function App() {
         <main className="mx-auto max-w-7xl px-4 py-5">
           <ResultsScreen
             position={viewing.position}
+            era={savedEra(viewing)}
             slots={viewing.slots}
             pickOrder={viewing.pickOrder}
             career={viewing.career}
@@ -189,6 +191,7 @@ export default function App() {
                 {g.phase === 'spinning' && g.currentTeamId ? (
                   <SlotMachine
                     position={g.position}
+                    era={g.era}
                     targetTeamId={g.currentTeamId}
                     spinNonce={g.spinNonce}
                     visitedTeamIds={g.visitedTeamIds}
@@ -266,6 +269,7 @@ export default function App() {
             {g.phase === 'results' && g.career && (
               <ResultsScreen
                 position={g.position}
+                era={g.era}
                 slots={g.slots}
                 pickOrder={g.pickOrder}
                 career={g.career}
@@ -294,6 +298,7 @@ export default function App() {
             <div className="sticky top-20">
               <BuildSheet
                 position={g.position}
+                era={g.era}
                 slots={g.slots}
                 highlight={hover}
                 usedPlayerIds={g.usedPlayerIds}
@@ -314,6 +319,7 @@ export default function App() {
               <div className="mt-2">
                 <BuildSheet
                   position={g.position}
+                  era={g.era}
                   slots={g.slots}
                   highlight={hover}
                   usedPlayerIds={g.usedPlayerIds}

@@ -1,5 +1,5 @@
 import { ATTRIBUTE_SETS, TEAMS, getPool } from '../data';
-import type { AttributeKey, Position } from '../data';
+import type { AttributeKey, Era, Position } from '../data';
 import { careerLength, careerStats } from './career';
 import { hashSeed, nextRandom } from './rng';
 
@@ -357,16 +357,23 @@ export const GATES = {
  * of the best number that roster offers for that attribute. It is the same statistic
  * `npm run verify:scoring` prints as "what a typical franchise pool offers".
  */
-function typicalSupply(position: Position, key: AttributeKey): number {
+function typicalSupply(position: Position, key: AttributeKey, era: Era): number {
   const bests = TEAMS
-    .map((team) => getPool(position, team.id))
+    .map((team) => getPool(position, team.id, era))
     .filter((pool) => pool.length > 0)
     .map((pool) => Math.max(...pool.map((p) => p.attributes[key] ?? 0)))
     .sort((a, b) => a - b);
   return bests[Math.floor(bests.length / 2)];
 }
 
-const FLOORS = new Map<Position, number>();
+/**
+ * Cached per ERA AND position, which is the whole of what the second dataset changed
+ * here. A cache keyed on position alone would have answered the first question it was
+ * ever asked and then given that answer to the other era forever, and since both eras
+ * return plausible numbers in the high eighties nothing on screen would have looked
+ * wrong. It would simply have been the wrong award.
+ */
+const FLOORS = new Map<string, number>();
 
 /**
  * THE ONE GATE IN THIS FILE THAT KNOWS WHAT POSITION IT IS LOOKING AT, and the reason it
@@ -404,14 +411,15 @@ const FLOORS = new Map<Position, number>();
  * because it produces 0.04 traits at 97 or better per player against 0.27 at receiver,
  * and that is the position genuinely being harder rather than a bar it cannot reach.
  */
-export function allProFloor(position: Position): number {
-  const cached = FLOORS.get(position);
+export function allProFloor(position: Position, era: Era): number {
+  const cacheKey = `${era}:${position}`;
+  const cached = FLOORS.get(cacheKey);
   if (cached !== undefined) return cached;
   const thinnest = Math.min(
-    ...ATTRIBUTE_SETS[position].map((key) => typicalSupply(position, key)),
+    ...ATTRIBUTE_SETS[position].map((key) => typicalSupply(position, key, era)),
   );
   const floor = Math.min(GATES.allProFloor, thinnest);
-  FLOORS.set(position, floor);
+  FLOORS.set(cacheKey, floor);
   return floor;
 }
 
@@ -502,6 +510,7 @@ export function simulateCareer(
   position: Position,
   build: Build,
   seed: string,
+  era: Era,
 ): CareerResult {
   const breakdown = computeOverall(position, build);
   const { overall, spikeCount } = breakdown;
@@ -514,7 +523,7 @@ export function simulateCareer(
 
   // Each award asks a different question on purpose. All-Pro wants a complete player,
   // OPOY wants peaks, MVP wants both at the top end, the record wants a career.
-  const allPro = overall >= GATES.allPro && floor >= allProFloor(position);
+  const allPro = overall >= GATES.allPro && floor >= allProFloor(position, era);
   const opoy = overall >= GATES.opoy && spikeCount >= spikeTraitsRequired(position);
   const mvp = overall >= GATES.mvp && floor >= GATES.mvpFloor;
   const record = stats.yards >= RECORD_YARDS[position];
@@ -545,9 +554,9 @@ export function isGrandSlam(accolades: Record<AccoladeId, boolean>): boolean {
   return accolades.mvp && accolades.opoy && accolades.record && accolades.superBowl;
 }
 
-export function accoladeDefs(position: Position): AccoladeDef[] {
+export function accoladeDefs(position: Position, era: Era): AccoladeDef[] {
   return [
-    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+ with nothing under ${allProFloor(position)}` },
+    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+ with nothing under ${allProFloor(position, era)}` },
     { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy}+ with ${spikeTraitsRequired(position)} traits at ${SPIKE_AT} or better` },
     { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp}+ with nothing under ${GATES.mvpFloor}` },
     { id: 'record', label: recordLabel(position), trophy: 'stopwatch', requirement: `${RECORD_YARDS[position].toLocaleString()} career yards, which takes both a long career and a good one` },

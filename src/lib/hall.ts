@@ -1,4 +1,4 @@
-import type { AttributeKey, Position } from '../data';
+import type { AttributeKey, Era, Position } from '../data';
 import type { CareerResult } from './scoring';
 import { readJSON, writeJSON } from './storage';
 
@@ -34,6 +34,13 @@ export type SavedPlayer = {
   name: string;
   position: Position;
   hardMode: boolean;
+  /**
+   * Which league he was built out of. OPTIONAL, because players saved before the second
+   * dataset existed do not carry it and every one of them was an all-time build. Read it
+   * through `savedEra` below rather than directly, so an old entry cannot re-open with an
+   * undefined league and score itself against pools that do not exist.
+   */
+  era?: Era;
   seed: string;
   savedAt: number;
   /** Pick order, which is the only thing that knows which franchise drafted him. */
@@ -47,6 +54,11 @@ export type SavedPlayer = {
    */
   career: CareerResult;
 };
+
+/** An entry from before the current pools landed was an all-time build by definition. */
+export function savedEra(player: SavedPlayer): Era {
+  return player.era ?? 'alltime';
+}
 
 export const HALL_KEY = 'megatron.hall.v1';
 

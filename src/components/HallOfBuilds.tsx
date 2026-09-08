@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { savedEra } from '../lib/hall';
 import type { SavedPlayer } from '../lib/hall';
 import { accoladeDefs } from '../lib/scoring';
 import { ratingColor } from './AttributeBar';
@@ -35,7 +36,9 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
 
       <ul className="mt-3 space-y-2">
         {hall.map((player) => {
-          const trophies = accoladeDefs(player.position).filter((d) => player.career.accolades[d.id]);
+          const trophies = accoladeDefs(player.position, savedEra(player)).filter(
+            (d) => player.career.accolades[d.id],
+          );
           return (
             <li
               key={player.id}

@@ -13,7 +13,7 @@ import type { Player } from './types';
  *    the ball in the air anyway. See the collinearity check.
  *
  * Row format:
- *   [id, name, era, blurb, SPD, HND, RTE, RLS, CTC, YAC, SZE]
+ *   [id, name, years, blurb, SPD, HND, RTE, RLS, CTC, YAC, SZE]
  */
 type Row = [string, string, string, string, number, number, number, number, number, number, number];
 
@@ -337,12 +337,12 @@ const POOLS: Record<string, Row[]> = {
 };
 
 export const WR_PLAYERS: Player[] = Object.entries(POOLS).flatMap(([teamId, rows]) =>
-  rows.map(([id, name, era, blurb, speed, hands, routeRunning, release, contestedCatch, yac, size]) => ({
+  rows.map(([id, name, years, blurb, speed, hands, routeRunning, release, contestedCatch, yac, size]) => ({
     id,
     name,
     teamId,
     position: 'WR' as const,
-    era,
+    years,
     blurb,
     attributes: { speed, hands, routeRunning, release, contestedCatch, yac, size },
   })),

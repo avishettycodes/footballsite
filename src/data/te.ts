@@ -27,7 +27,7 @@ import type { Player } from './types';
  *    journeymen rather than inflating a marginal player into a star.
  *
  * Row format:
- *   [id, name, era, blurb, HND, BLK, SPD, RTE, YAC, TGH, SZE]
+ *   [id, name, years, blurb, HND, BLK, SPD, RTE, YAC, TGH, SZE]
  */
 type Row = [string, string, string, string, number, number, number, number, number, number, number];
 
@@ -333,12 +333,12 @@ const POOLS: Record<string, Row[]> = {
 };
 
 export const TE_PLAYERS: Player[] = Object.entries(POOLS).flatMap(([teamId, rows]) =>
-  rows.map(([id, name, era, blurb, hands, blocking, speed, routeRunning, yac, toughness, size]) => ({
+  rows.map(([id, name, years, blurb, hands, blocking, speed, routeRunning, yac, toughness, size]) => ({
     id,
     name,
     teamId,
     position: 'TE' as const,
-    era,
+    years,
     blurb,
     attributes: { hands, blocking, speed, routeRunning, yac, toughness, size },
   })),

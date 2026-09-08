@@ -1,5 +1,5 @@
-import { ATTRIBUTE_SETS, TEAMS, TEAMS_BY_ID, getPool } from '../data';
-import type { AttributeKey, Position, Team } from '../data';
+import { ATTRIBUTE_SETS, ERAS, TEAMS, TEAMS_BY_ID, getPool } from '../data';
+import type { AttributeKey, Era, Position, Team } from '../data';
 import { hashSeed, nextRandom } from './rng';
 
 /**
@@ -314,8 +314,8 @@ export function draftSlot(position: Position, overall: number, seed: string): Dr
  * turned into "how needy is this franchise compared to the other 31", which is what the
  * word need actually means and which recalibrates itself when the data changes.
  */
-function poolStrength(position: Position, teamId: string): number {
-  const pool = getPool(position, teamId);
+function poolStrength(position: Position, teamId: string, era: Era): number {
+  const pool = getPool(position, teamId, era);
   if (!pool.length) return 0;
   const keys = ATTRIBUTE_SETS[position];
   const means = pool
@@ -324,25 +324,34 @@ function poolStrength(position: Position, teamId: string): number {
   return means.length === 1 ? means[0] : (means[0] + means[1]) / 2;
 }
 
-const NEED: Record<Position, Record<string, number>> = (() => {
-  const out = {} as Record<Position, Record<string, number>>;
-  for (const position of Object.keys(ATTRIBUTE_SETS) as Position[]) {
-    const ranked = TEAMS
-      .map((t) => ({ id: t.id, strength: poolStrength(position, t.id) }))
-      .filter((row) => row.strength > 0)
-      .sort((a, b) => b.strength - a.strength);
-    const table: Record<string, number> = {};
-    ranked.forEach((row, i) => {
-      table[row.id] = ranked.length > 1 ? i / (ranked.length - 1) : 0.5;
-    });
-    out[position] = table;
+/**
+ * Need is read per era, because the two datasets disagree about who is desperate and both
+ * are right. Cleveland has a rich quarterback history and a current room nobody wants, so
+ * the franchise that has least need of one in the all-time league has the most need of one
+ * in this season's.
+ */
+const NEED: Record<Era, Record<Position, Record<string, number>>> = (() => {
+  const out = {} as Record<Era, Record<Position, Record<string, number>>>;
+  for (const era of ERAS) {
+    out[era] = {} as Record<Position, Record<string, number>>;
+    for (const position of Object.keys(ATTRIBUTE_SETS) as Position[]) {
+      const ranked = TEAMS
+        .map((t) => ({ id: t.id, strength: poolStrength(position, t.id, era) }))
+        .filter((row) => row.strength > 0)
+        .sort((a, b) => b.strength - a.strength);
+      const table: Record<string, number> = {};
+      ranked.forEach((row, i) => {
+        table[row.id] = ranked.length > 1 ? i / (ranked.length - 1) : 0.5;
+      });
+      out[era][position] = table;
+    }
   }
   return out;
 })();
 
 /** 0 for the franchise with the deepest history here, 1 for the one with nothing. */
-export function positionalNeed(position: Position, teamId: string): number {
-  return NEED[position]?.[teamId] ?? 0.5;
+export function positionalNeed(position: Position, teamId: string, era: Era): number {
+  return NEED[era]?.[position]?.[teamId] ?? 0.5;
 }
 
 /**
@@ -444,6 +453,7 @@ export function careerPath(
   seasons: number,
   raidedTeamIds: string[],
   seed: string,
+  era: Era,
 ): CareerPath {
   const pool = raidedTeamIds.map((id) => TEAMS_BY_ID[id]).filter(Boolean);
   if (!pool.length) return { drafted: null, stints: [] };
@@ -463,7 +473,7 @@ export function careerPath(
     const from = wander ? elsewhere : remaining;
     if (!from.length) break;
     const weights = from.map((t) => {
-      const need = positionalNeed(position, t.id);
+      const need = positionalNeed(position, t.id, era);
       // 0.15 keeps a settled franchise in play rather than ruling it out. Teams do sign
       // a second one, they just do not pay a premium for him.
       const byNeed = 0.15 + need * need * 2;

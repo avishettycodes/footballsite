@@ -56,8 +56,8 @@
  * the assertion at the bottom of each position is that it does.
  */
 import { REROLLS_NORMAL, useGame } from '../src/store/gameStore';
-import { ATTRIBUTE_SETS, TEAMS, getPool, positionsWithData } from '../src/data';
-import type { AttributeKey, Position } from '../src/data';
+import { ATTRIBUTE_SETS, ERAS, ERA_LABELS, TEAMS, getPool, positionsWithData } from '../src/data';
+import type { AttributeKey, Era, Position } from '../src/data';
 import { hashSeed, nextRandom } from '../src/lib/rng';
 import { GATES, RECORD_YARDS, WEAK_LINK_SHARE, WEIGHTS, allProFloor, computeOverall, isGrandSlam, simulateCareer, softestSlot } from '../src/lib/scoring';
 import type { AccoladeId } from '../src/lib/scoring';
@@ -154,6 +154,37 @@ const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
   RB: { human: [1.5, 6], sharp: [0.8, 5] },
   WR: { human: [2, 7], sharp: [1.5, 7] },
   TE: { human: [0, 2], sharp: [0, 2] },
+
+  /**
+   * THE CURRENT LEAGUE IS A HARDER LEAGUE, AND THESE BANDS SAY SO OUT LOUD.
+   *
+   * Measured at 1,500 runs a policy against gates that are identical in both eras, which
+   * was the deliberate choice: the same trophy has to mean the same thing whichever pools
+   * you played. What differs is the supply, and the difference is structural rather than
+   * a rating anybody can fix.
+   *
+   * An all-time franchise pool is the seven or eight most memorable players in seventy
+   * years of that position. A current pool is the six men in the room this season, and
+   * four of those are backups. Receiver survives that almost untouched, because the
+   * position is genuinely deep right now. Quarterback and tight end do not, because three
+   * quarterbacks and three tight ends per roster is all there is.
+   *
+   *                All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
+   *     QB now       35%     0.6%   0.1%      0%    50%   0.1%      0%      35%
+   *     RB now       67%     5.7%   1.2%    0.1%    56%   0.8%      0%      17%
+   *     WR now       88%    39%     6.3%    1.5%    67%   5.3%    0.8%       5%
+   *     TE now       36%     0.3%     0%    0.1%    53%   0.1%      0%      33%
+   *
+   * A LOWER BOUND OF ZERO CANNOT FAIL, and that is the point rather than an oversight.
+   * The current league does not produce grand slams at three positions, so a band that
+   * demanded one would be a check asserting something untrue. The upper bound is what
+   * bites: if a future pass on these pools starts handing out slams, the number moves and
+   * this fails, which is exactly when somebody should look.
+   */
+  'current QB': { human: [0, 2], sharp: [0, 2] },
+  'current RB': { human: [0, 3], sharp: [0, 3] },
+  'current WR': { human: [0, 5], sharp: [0, 5] },
+  'current TE': { human: [0, 2], sharp: [0, 2] },
 };
 
 /**
@@ -192,11 +223,11 @@ function rnd(): number {
  */
 const FORECAST = Number(process.env.FORECAST ?? 0.5);
 
-function expectedFill(position: Position): Record<string, number> {
+function expectedFill(position: Position, era: Era): Record<string, number> {
   const out: Record<string, number> = {};
   for (const key of ATTRIBUTE_SETS[position]) {
     const bests = TEAMS
-      .map((t) => getPool(position, t.id))
+      .map((t) => getPool(position, t.id, era))
       .filter((pool) => pool.length > 0)
       .map((pool) => Math.max(...pool.map((p) => p.attributes[key] ?? 0)));
     bests.sort((a, b) => a - b);
@@ -209,9 +240,9 @@ function expectedFill(position: Position): Record<string, number> {
  * What the best player in a typical franchise pool peaks at. The fan's yardstick for
  * whether he recognises anybody on this roster, and nothing else uses it.
  */
-function typicalStar(position: Position): number {
+function typicalStar(position: Position, era: Era): number {
   const peaks = TEAMS
-    .map((t) => getPool(position, t.id))
+    .map((t) => getPool(position, t.id, era))
     .filter((pool) => pool.length > 0)
     .map((pool) => Math.max(...pool.map((p) => Math.max(...ATTRIBUTE_SETS[position].map((k) => p.attributes[k] ?? 0)))));
   peaks.sort((a, b) => a - b);
@@ -252,11 +283,12 @@ function playRun(
   policy: Policy,
   premium: Record<string, number>,
   starFloor: number,
+  era: Era,
 ) {
   const s = useGame.getState();
   s.abandonRun();
   // The only policy that plays hard mode is the one that cannot see the numbers.
-  s.startRun({ position, hardMode: policy === 'blind', seed });
+  s.startRun({ position, hardMode: policy === 'blind', era, seed });
 
   let guard = 0;
   while (useGame.getState().phase !== 'complete' && guard++ < 200) {
@@ -265,7 +297,7 @@ function playRun(
     if (g.phase === 'spinning') { g.landSpin(); continue; }
     if (g.phase !== 'picking') break;
 
-    const pool = getPool(g.position, g.currentTeamId!).filter((p) => !g.usedPlayerIds.includes(p.id));
+    const pool = getPool(g.position, g.currentTeamId!, g.era).filter((p) => !g.usedPlayerIds.includes(p.id));
     const open = ATTRIBUTE_SETS[g.position].filter((k) => !g.slots[k]) as AttributeKey[];
     if (!pool.length || !open.length) break;
 
@@ -364,13 +396,25 @@ function playRun(
   const g = useGame.getState();
   const build: Partial<Record<AttributeKey, number>> = {};
   for (const k of ATTRIBUTE_SETS[g.position]) build[k] = g.slots[k]?.value ?? 0;
-  return simulateCareer(g.position, build, seed);
+  return simulateCareer(g.position, build, seed, era);
 }
 
 const pct = (n: number, d: number) => ((100 * n) / d).toFixed(1).padStart(5) + '%';
 const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
 
-const positions = positionsWithData();
+/**
+ * EVERY BLOCK BELOW RUNS ONCE PER LEAGUE, and that is not a formality.
+ *
+ * The gates are identical in both eras on purpose, so the only thing that can move a rate
+ * is what the pools supply. That makes this harness the instrument that says whether the
+ * current-era ratings were written on the same scale as the all-time ones. If All-Pro
+ * fires far more often in one league than the other, the answer is in the data rather
+ * than in the gate.
+ */
+const eraPositions = ERAS.flatMap((era) =>
+  positionsWithData(era).map((position) => ({ era, position })),
+);
+const positions = eraPositions;
 
 /**
  * THE FLOORS BITE. A deterministic check before any of the statistical work.
@@ -387,24 +431,24 @@ const positions = positionsWithData();
  */
 function floorsBite(): boolean {
   let ok = true;
-  for (const position of positions) {
+  for (const { era, position } of eraPositions) {
     const keys = ATTRIBUTE_SETS[position];
     const weights = WEIGHTS[position];
     const softest = [...keys].sort((a, b) => (weights[a] ?? 1) - (weights[b] ?? 1))[0];
 
-    for (const [award, floor] of [['allPro', allProFloor(position)], ['mvp', GATES.mvpFloor]] as const) {
+    for (const [award, floor] of [['allPro', allProFloor(position, era)], ['mvp', GATES.mvpFloor]] as const) {
       // Everything at 99 except the one trait, which sits on the floor and then under it.
       const clean: Partial<Record<AttributeKey, number>> = {};
       for (const k of keys) clean[k] = 99;
       clean[softest] = floor;
       const holed = { ...clean, [softest]: floor - 1 };
 
-      const a = simulateCareer(position, clean, 'FLOORCHECK').accolades[award];
-      const b = simulateCareer(position, holed, 'FLOORCHECK').accolades[award];
+      const a = simulateCareer(position, clean, 'FLOORCHECK', era).accolades[award];
+      const b = simulateCareer(position, holed, 'FLOORCHECK', era).accolades[award];
       if (a && !b) continue;
       ok = false;
       console.log(
-        `  x ${position} ${award}: floor ${floor} on ${softest} did not bite ` +
+        `  x ${era} ${position} ${award}: floor ${floor} on ${softest} did not bite ` +
         `(at the floor ${a ? 'won' : 'lost'}, one under ${b ? 'won' : 'lost'})`,
       );
     }
@@ -430,13 +474,13 @@ function floorsBite(): boolean {
  */
 function floorsFitTheirPools(): boolean {
   let ok = true;
-  for (const position of positions) {
+  for (const { era, position } of eraPositions) {
     // The same statistic allProFloor uses: the median, over the 32 rosters, of the best
     // number each roster offers for that slot. Recomputed here rather than imported, so
     // the check would survive the implementation being rewritten.
     const supply = ATTRIBUTE_SETS[position].map((key) => {
       const bests = TEAMS
-        .map((t) => getPool(position, t.id))
+        .map((t) => getPool(position, t.id, era))
         .filter((pool) => pool.length > 0)
         .map((pool) => Math.max(...pool.map((p) => p.attributes[key] ?? 0)))
         .sort((a, b) => a - b);
@@ -444,10 +488,10 @@ function floorsFitTheirPools(): boolean {
     }).sort((a, b) => a.at - b.at)[0];
 
     const want = Math.min(GATES.allProFloor, supply.at);
-    const got = allProFloor(position);
+    const got = allProFloor(position, era);
     if (got !== want) ok = false;
     console.log(
-      `    ${position} floor ${got}  thinnest slot ${supply.key} supplies ${supply.at}` +
+      `    ${era} ${position} floor ${got}  thinnest slot ${supply.key} supplies ${supply.at}` +
       `  ${got === want ? '' : `x should be ${want}`}`,
     );
   }
@@ -471,7 +515,7 @@ function floorsFitTheirPools(): boolean {
  */
 function theBoxAgreesWithTheCard(): boolean {
   let ok = true;
-  for (const position of positions) {
+  for (const { era, position } of eraPositions) {
     const keys = ATTRIBUTE_SETS[position];
     const weights = WEIGHTS[position];
     const cheapest = [...keys].sort((a, b) => (weights[a] ?? 1) - (weights[b] ?? 1))[0];
@@ -493,8 +537,8 @@ function theBoxAgreesWithTheCard(): boolean {
           if (soft.value > weakest.value) overstated++;
           // 2. And "no hole to find" is never said about a player All-Pro turned down
           //    over the hole, which is the fix this box already had once.
-          if (soft.value >= allProFloor(position)
-            && !simulateCareer(position, { ...build }, 'BOXCHECK').accolades.allPro
+          if (soft.value >= allProFloor(position, era)
+            && !simulateCareer(position, { ...build }, 'BOXCHECK', era).accolades.allPro
             && computeOverall(position, build).overall >= GATES.allPro) contradictsAllPro++;
           // 3. The two really do differ somewhere. Without this the whole check passes on
           //    an implementation that just returned breakdown.weakest again.
@@ -505,7 +549,7 @@ function theBoxAgreesWithTheCard(): boolean {
     if (overstated || contradictsAllPro || !disagreed) {
       ok = false;
       console.log(
-        `  x ${position}: ${overstated} builds where the box claimed a floor the card does not have, ` +
+        `  x ${era} ${position}: ${overstated} builds where the box claimed a floor the card does not have, ` +
         `${contradictsAllPro} told there was no hole by a screen that lost All-Pro to one, ` +
         `${disagreed} where the raw softest and the weighted weakest differ at all`,
       );
@@ -517,7 +561,10 @@ function theBoxAgreesWithTheCard(): boolean {
   return ok;
 }
 
-console.log(`GridironLab scoring calibration. ${RUNS} runs per policy, positions: ${positions.join(', ')}`);
+console.log(
+  `GridironLab scoring calibration. ${RUNS} runs per policy, ` +
+  `leagues: ${eraPositions.map((p) => `${p.era} ${p.position}`).join(', ')}`,
+);
 /**
  * Printed rather than left in a comment, because the person who needs it is reading the
  * table and not this file.
@@ -534,12 +581,12 @@ failed = !floorsFitTheirPools() || failed;
 failed = !theBoxAgreesWithTheCard() || failed;
 console.log();
 
-for (const position of positions) {
-  const premium = expectedFill(position);
-  const starFloor = typicalStar(position);
+for (const { era, position } of eraPositions) {
+  const premium = expectedFill(position, era);
+  const starFloor = typicalStar(position, era);
   const thin = Object.entries(premium).sort((a, b) => a[1] - b[1]);
 
-  console.log(`${'='.repeat(72)}\n${position}`);
+  console.log(`${'='.repeat(72)}\n${ERA_LABELS[era].toUpperCase()} ${position}`);
   console.log(`  what a typical franchise pool offers: ${thin.map(([k, v]) => `${k} ${v}`).join(', ')}\n`);
 
   const rates: Record<string, number[]> = {};
@@ -566,7 +613,18 @@ for (const position of positions) {
     let emptyCase = 0;
 
     for (let i = 0; i < RUNS; i++) {
-      const r = playRun(position, `CAL-${position}-${policy}-${i}`, policy, premium, starFloor);
+      /*
+        THE ALL-TIME STREAM IS LEFT EXACTLY AS IT WAS, and only the current league gets a
+        new seed prefix. Every rate this file documents was measured on `CAL-<pos>-...`,
+        and a seed is the whole run: different spins, different careers, different Super
+        Bowl coin. Putting an era into the all-time seeds resampled all of it, which moved
+        the quarterback grand slam from 1.8% to 0.6% and looked exactly like a regression
+        caused by this change. It was not. It was a different 1,500 games.
+      */
+      const runSeed = era === 'alltime'
+        ? `CAL-${position}-${policy}-${i}`
+        : `CAL-${era}-${position}-${policy}-${i}`;
+      const r = playRun(position, runSeed, policy, premium, starFloor, era);
       if (policy !== 'blind' && useGame.getState().rerollsLeft < REROLLS_NORMAL) rerolled++;
       overalls.push(r.overall);
       weakest.push(r.breakdown.weakest.value);
@@ -654,7 +712,7 @@ for (const position of positions) {
     }
   }
 
-  const target = SLAM_TARGETS[position] ?? DEFAULT_SLAM;
+  const target = SLAM_TARGETS[`${era} ${position}`] ?? SLAM_TARGETS[position] ?? DEFAULT_SLAM;
   const slamIdx = COLUMNS.indexOf('grandSlam');
   const slamHuman = rates.human[slamIdx];
   const slamSharp = rates.sharp[slamIdx];

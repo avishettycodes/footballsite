@@ -1,0 +1,291 @@
+import type { Player } from '../types';
+
+/**
+ * RUNNING BACK ROOMS AS THEY STAND NOW. Same rules as ./qb.ts, and read the note there
+ * about what "current" means before adding anybody.
+ *
+ * THE SCALE IS THE CURRENT LEAGUE AND NOTHING ELSE. Derrick Henry is a 99 for power here
+ * because nobody playing hits like that, and he is a 99 in the all-time file for the same
+ * reason. Josh Jacobs is a 94 here and an 88 there, because the company changed. Where the
+ * two files disagree, they are answering two different questions and both answers stand.
+ *
+ * A back is in the pool for ONE number. The spikes are spread across the room on purpose,
+ * so a franchise can answer some slots and not others: Cincinnati cannot hand you power,
+ * Detroit cannot hand you size, and landing there with those slots still open is meant to
+ * hurt.
+ *
+ * Row format:
+ *   [id, name, years, blurb, SPD, BRS, JKE, PWR, VIS, HND, SZE]
+ */
+type Row = [string, string, string, string, number, number, number, number, number, number, number];
+
+const POOLS: Record<string, Row[]> = {
+  ari: [
+    ['now-ari-conner', 'James Conner', '2021–', 'Beat cancer at 20 and has been running through people ever since.', 84, 86, 78, 94, 90, 86, 92],
+    ['now-ari-benson', 'Trey Benson', '2024–', 'Third round speed who has spent two seasons waiting his turn.', 94, 92, 84, 78, 80, 74, 84],
+    ['now-ari-demercado', 'Emari Demercado', '2023–', 'Went undrafted out of TCU and returned a kick 90 yards on debut.', 90, 88, 82, 70, 76, 84, 72],
+    ['now-ari-mcarter', 'Michael Carter', '2024–', 'Two hundred pounds of quick feet who keeps landing on new rosters.', 88, 84, 90, 62, 82, 88, 62],
+    ['now-ari-knight', 'Bam Knight', '2022–', 'Undrafted out of NC State and has started games nobody remembers.', 86, 84, 78, 80, 78, 68, 76],
+    ['now-ari-dallas', 'DeeJay Dallas', '2024–', 'Returns kicks for a living and plays running back on the side.', 88, 86, 76, 74, 70, 78, 78],
+  ],
+  atl: [
+    ['now-atl-bijan', 'Bijan Robinson', '2023–', 'Runs like a man who has never once been tackled by the first defender.', 94, 94, 96, 88, 94, 92, 86],
+    ['now-atl-allgeier', 'Tyler Allgeier', '2022–', 'Fifth round bruiser who ran for 1,035 yards as a rookie behind him.', 80, 84, 70, 92, 86, 68, 80],
+    ['now-atl-mcclellan', 'Jase McClellan', '2024–', 'Won a national title at Alabama and is a special teams body here.', 86, 84, 76, 74, 74, 70, 84],
+    ['now-atl-patterson', 'Cordarrelle Patterson', '2021–2022', 'Was a receiver, then a returner, then suddenly a 1,100 yard back at 30.', 92, 90, 84, 82, 74, 92, 90],
+    ['now-atl-cwashington', 'Carlos Washington', '2024–', 'Undrafted from Southeast Missouri State and runs harder than his size says.', 88, 86, 78, 80, 72, 72, 70],
+    ['now-atl-avwilliams', 'Avery Williams', '2021–', 'A cornerback they turned into a returner and then into a running back.', 90, 88, 84, 58, 68, 78, 56],
+  ],
+  bal: [
+    ['now-bal-henry', 'Derrick Henry', '2024–', 'Six foot three and 247 pounds, and he is still pulling away at 31.', 94, 88, 66, 99, 92, 60, 99],
+    ['now-bal-jhill', 'Justice Hill', '2019–', 'Third down back who blocks better than most tight ends do.', 90, 88, 80, 70, 78, 88, 66],
+    ['now-bal-kmitchell', 'Keaton Mitchell', '2023–', 'Averaged 8.4 yards a carry as a rookie before his knee let go.', 97, 94, 88, 58, 74, 74, 54],
+    ['now-bal-rali', 'Rasheen Ali', '2024–', 'Scored 23 touchdowns in a season at Marshall and is fifth on this depth chart.', 88, 86, 80, 72, 74, 76, 72],
+    ['now-bal-gedwards', 'Gus Edwards', '2018–2023', 'The Gus Bus never caught a pass and never went backwards either.', 78, 80, 62, 92, 84, 38, 94],
+    ['now-bal-dobbins', 'J.K. Dobbins', '2020–2023', 'Averaged 6 yards a carry here and lost two whole seasons to his knees.', 92, 92, 88, 80, 88, 78, 78],
+  ],
+  buf: [
+    ['now-buf-cook', 'James Cook', '2022–', 'Led the league in rushing touchdowns and asked to be paid like it.', 95, 92, 88, 74, 88, 86, 70],
+    ['now-buf-rdavis', 'Ray Davis', '2024–', 'Went to four colleges, then ran for 97 yards on a Sunday night as a rookie.', 84, 86, 78, 90, 82, 82, 78],
+    ['now-buf-tyjohnson', 'Ty Johnson', '2022–', 'Special teams captain who turns up with a 40 yard run twice a year.', 92, 88, 80, 66, 74, 84, 66],
+    ['now-buf-goreJr', 'Frank Gore Jr.', '2024–', 'His father ran for 16,000 yards, and the name is the easy part.', 88, 88, 82, 82, 80, 74, 68],
+    ['now-buf-devans', 'Darrynton Evans', '2023–', 'Third round pick five years ago who has been cut by four teams since.', 92, 90, 82, 62, 70, 76, 60],
+    ['now-buf-lmurray', 'Latavius Murray', '2023–', 'Thirty five years old and still the man they call on the goal line.', 76, 76, 62, 90, 80, 70, 92],
+  ],
+  car: [
+    ['now-car-hubbard', 'Chuba Hubbard', '2021–', 'Signed an extension nobody outside the building believed he would get.', 86, 84, 80, 84, 88, 70, 76],
+    ['now-car-dowdle', 'Rico Dowdle', '2025–', 'Went undrafted, waited five years, and ran for 1,000 yards in his sixth.', 88, 88, 86, 80, 88, 80, 80],
+    ['now-car-tetienne', 'Trevor Etienne', '2025–', 'His brother went in the first round and he went in the fourth.', 92, 92, 88, 70, 76, 78, 66],
+    ['now-car-brooks', 'Jonathon Brooks', '2024–', 'First back taken in his draft and both knees have gone since.', 90, 90, 86, 78, 84, 80, 78],
+    ['now-car-sanders', 'Miles Sanders', '2023–2024', 'Ran for 1,269 yards the year before he signed here and vanished after.', 90, 88, 84, 74, 78, 72, 76],
+    ['now-car-blackshear', 'Raheem Blackshear', '2022–', 'Weighs 180 pounds soaking wet and has 30 career carries.', 90, 88, 84, 56, 70, 80, 54],
+  ],
+  chi: [
+    ['now-chi-swift', 'D\'Andre Swift', '2024–', 'Every team that trades for him decides within a year that they were wrong.', 92, 92, 90, 70, 78, 88, 70],
+    ['now-chi-roschon', 'Roschon Johnson', '2023–', 'Blocks like a fullback and got buried behind better runners at Texas too.', 82, 82, 70, 90, 78, 78, 88],
+    ['now-chi-monangai', 'Kyle Monangai', '2025–', 'Seventh round pick who led the Big Ten in rushing and nobody noticed.', 84, 88, 80, 86, 86, 72, 76],
+    ['now-chi-homer', 'Travis Homer', '2023–', 'Has made a career entirely out of covering kicks.', 90, 86, 74, 66, 68, 78, 66],
+    ['now-chi-herbert', 'Khalil Herbert', '2021–2024', 'Averaged 5.7 yards a carry one season and never got 100 touches.', 92, 90, 84, 72, 80, 70, 70],
+    ['now-chi-wheeler', 'Ian Wheeler', '2024–', 'Undrafted out of Howard and spends every August fighting for a spot.', 90, 88, 80, 62, 70, 74, 62],
+  ],
+  cin: [
+    ['now-cin-cbrown', 'Chase Brown', '2023–', 'Went in the fifth round and outran a 1,000 yard veteran for the job.', 94, 92, 84, 76, 86, 88, 74],
+    ['now-cin-perine', 'Samaje Perine', '2023–', 'Ran for 427 yards in one college game and blocks blitzers for a living.', 78, 80, 68, 88, 80, 90, 88],
+    ['now-cin-tbrooks', 'Tahj Brooks', '2025–', 'Carried the ball 900 times at Texas Tech and went in the sixth round.', 82, 86, 76, 88, 84, 70, 78],
+    ['now-cin-moss', 'Zack Moss', '2024–', 'Falls forward on every carry and has never broken a truly long one.', 82, 84, 74, 88, 78, 74, 82],
+    ['now-cin-mixon', 'Joe Mixon', '2017–2023', 'Ran for 1,205 yards here and caught 54 passes in the same season.', 86, 86, 84, 88, 90, 88, 86],
+    ['now-cin-trayveon', 'Trayveon Williams', '2019–', 'Six seasons on one roster with fewer than 100 career carries.', 88, 86, 80, 70, 74, 80, 66],
+  ],
+  cle: [
+    ['now-cle-judkins', 'Quinshon Judkins', '2025–', 'Ran for 1,000 yards at two different blue blood programs.', 90, 90, 78, 92, 88, 76, 82],
+    ['now-cle-ford', 'Jerome Ford', '2022–', 'Filled in for a franchise back and put up 1,000 all purpose yards.', 92, 90, 82, 72, 80, 84, 74],
+    ['now-cle-sampson', 'Dylan Sampson', '2025–', 'Scored 22 touchdowns at Tennessee and catches everything they throw him.', 92, 92, 88, 68, 80, 90, 72],
+    ['now-cle-strong', 'Pierre Strong', '2023–', 'Fourth round pick from South Dakota State on his third franchise already.', 92, 88, 80, 70, 72, 78, 68],
+    ['now-cle-chubb', 'Nick Chubb', '2018–2024', 'The most balanced runner of his generation until his knee came apart.', 92, 94, 90, 94, 96, 62, 84],
+    ['now-cle-hunt', 'Kareem Hunt', '2019–2023', 'Led the league in rushing as a rookie elsewhere and came home to share.', 84, 86, 82, 86, 86, 88, 82],
+  ],
+  dal: [
+    ['now-dal-javonte', 'Javonte Williams', '2025–', 'Broke 20 tackles on one drive as a rookie, then rebuilt an entire knee.', 84, 86, 84, 92, 88, 80, 84],
+    ['now-dal-blue', 'Jaydon Blue', '2025–', 'Ran a 4.38 at Texas and drops the ball more than anybody would like.', 96, 94, 86, 62, 74, 62, 62],
+    ['now-dal-mafah', 'Phil Mafah', '2025–', 'Two hundred and thirty pounds out of Clemson, taken in the seventh.', 78, 80, 66, 90, 78, 66, 92],
+    ['now-dal-pollard', 'Tony Pollard', '2019–2023', 'Split carries with a famous name for four years and outran him every week.', 94, 92, 88, 66, 82, 86, 76],
+    ['now-dal-zeke', 'Ezekiel Elliott', '2016–2023', 'Led the league twice and then aged about five years in one offseason.', 80, 84, 76, 92, 92, 80, 90],
+    ['now-dal-dowdle', 'Rico Dowdle', '2020–2024', 'Went undrafted and spent four seasons on special teams before anyone looked.', 86, 86, 84, 78, 90, 76, 80],
+  ],
+  den: [
+    ['now-den-dobbins', 'J.K. Dobbins', '2025–', 'Finally got a full season and ran for over a thousand in it.', 92, 92, 88, 80, 88, 78, 78],
+    ['now-den-harvey', 'RJ Harvey', '2025–', 'Was a quarterback in high school and ran a 4.4 at the combine.', 94, 94, 90, 80, 80, 82, 66],
+    ['now-den-mclaughlin', 'Jaleel McLaughlin', '2023–', 'Five foot seven and undrafted, and no college back has ever run for more.', 92, 92, 90, 66, 78, 82, 52],
+    ['now-den-estime', 'Audric Estime', '2024–', 'Two hundred and twenty pounds from Notre Dame with a 4.71 forty.', 72, 80, 64, 86, 82, 66, 90],
+    ['now-den-javonte', 'Javonte Williams', '2021–2024', 'Was the most violent runner in the league before the knee went.', 82, 86, 84, 92, 86, 80, 84],
+    ['now-den-badie', 'Tyler Badie', '2023–', 'Ran for 1,600 yards at Missouri at 190 pounds and nobody drafted him high.', 90, 90, 86, 58, 76, 84, 56],
+  ],
+  det: [
+    ['now-det-gibbs', 'Jahmyr Gibbs', '2023–', 'They took a running back twelfth overall and he made it look obvious.', 97, 97, 94, 74, 90, 92, 70],
+    ['now-det-montgomery', 'David Montgomery', '2023–', 'Falls forward every single time and scored 40 touchdowns in three seasons.', 78, 82, 74, 94, 88, 78, 90],
+    ['now-det-reynolds', 'Craig Reynolds', '2021–', 'Was working at a bank when Detroit called, and he has never been cut since.', 86, 84, 76, 88, 78, 76, 80],
+    ['now-det-vaki', 'Sione Vaki', '2024–', 'Lined up at safety on Saturday and at running back the same afternoon.', 88, 88, 78, 82, 72, 78, 76],
+    ['now-det-jefferson', 'Jermar Jefferson', '2021–2023', 'Seventh round pick who scored on his first NFL carry and then vanished.', 86, 88, 80, 74, 74, 66, 74],
+    ['now-det-jamaal', 'Jamaal Williams', '2021–2022', 'Scored 17 touchdowns in a season here and celebrated every one of them.', 80, 82, 72, 88, 84, 76, 84],
+  ],
+  gb: [
+    ['now-gb-jacobs', 'Josh Jacobs', '2024–', 'Led the league in rushing once and has never gone down on first contact.', 84, 88, 84, 96, 92, 84, 88],
+    ['now-gb-ewilson', 'Emanuel Wilson', '2023–', 'Undrafted out of Fort Valley State and keeps making the roster anyway.', 86, 88, 78, 84, 78, 74, 80],
+    ['now-gb-lloyd', 'MarShawn Lloyd', '2024–', 'Six carries in two seasons for a man they spent a third rounder on.', 94, 92, 86, 70, 74, 78, 70],
+    ['now-gb-cbrooks', 'Chris Brooks', '2024–', 'Six foot one and 225 pounds, and he went undrafted out of BYU.', 80, 82, 70, 80, 76, 78, 90],
+    ['now-gb-ajones', 'Aaron Jones', '2017–2023', 'A fifth round pick who averaged five yards a carry for seven seasons.', 92, 92, 90, 76, 92, 90, 68],
+    ['now-gb-dillon', 'AJ Dillon', '2020–2024', 'Quadriceps the size of most people waists, and defenders knew it.', 78, 82, 66, 96, 80, 70, 96],
+  ],
+  hou: [
+    ['now-hou-mixon', 'Joe Mixon', '2024–', 'Arrived in a trade for a seventh rounder and ran for 1,000 yards.', 84, 86, 82, 88, 90, 88, 86],
+    ['now-hou-chubb', 'Nick Chubb', '2025–', 'Came back from two knee surgeries to be somebody starting running back again.', 84, 86, 82, 90, 92, 62, 84],
+    ['now-hou-marks', 'Woody Marks', '2025–', 'Caught 261 passes in college, which is a receiver number.', 88, 88, 84, 72, 80, 94, 70],
+    ['now-hou-pierce', 'Dameon Pierce', '2022–', 'Ran for 939 yards as a rookie and has been fourth in line since.', 84, 86, 78, 88, 80, 72, 78],
+    ['now-hou-ogunbowale', 'Dare Ogunbowale', '2022–', 'His sister plays professional basketball and he blocks on third down.', 84, 82, 74, 62, 72, 88, 66],
+    ['now-hou-bbrooks', 'British Brooks', '2024–', 'North Carolina walk on who has lived on practice squads for two years.', 86, 84, 76, 76, 70, 72, 76],
+  ],
+  ind: [
+    ['now-ind-jtaylor', 'Jonathan Taylor', '2020–', 'Ran for 1,811 yards in a season and does it again whenever he is healthy.', 97, 94, 86, 92, 94, 76, 88],
+    ['now-ind-giddens', 'DJ Giddens', '2025–', 'Second best back in the state of Kansas and they took him anyway.', 90, 90, 84, 76, 82, 80, 84],
+    ['now-ind-herbert', 'Khalil Herbert', '2025–', 'Nobody has given him 150 carries in a season and he keeps producing on 80.', 92, 90, 84, 72, 80, 70, 70],
+    ['now-ind-goodson', 'Tyler Goodson', '2023–', 'Dropped a fourth down pass that ended a season and stayed on the roster.', 90, 88, 82, 64, 76, 72, 62],
+    ['now-ind-sermon', 'Trey Sermon', '2024–', 'Went in the third round in 2021 and has been a spare part ever since.', 86, 86, 78, 82, 76, 62, 80],
+    ['now-ind-hull', 'Evan Hull', '2023–', 'Northwestern back who has been hurt in every training camp he has attended.', 88, 86, 80, 70, 74, 84, 70],
+  ],
+  jax: [
+    ['now-jax-etienne', 'Travis Etienne', '2021–', 'Ran for 1,000 yards in his first real season and has been quiet since.', 94, 92, 86, 70, 82, 84, 74],
+    ['now-jax-bigsby', 'Tank Bigsby', '2023–', 'Fumbled his way onto the bench and ran his way back off it.', 86, 88, 78, 90, 80, 62, 78],
+    ['now-jax-tuten', 'Bhayshul Tuten', '2025–', 'Ran a 4.32 at 206 pounds, which is not supposed to be possible.', 97, 94, 78, 80, 74, 72, 76],
+    ['now-jax-lallen', 'LeQuint Allen', '2025–', 'Caught 64 passes at Syracuse and blocks like he means it.', 86, 86, 82, 76, 78, 90, 76],
+    ['now-jax-dejohnson', 'D\'Ernest Johnson', '2023–', 'Was working a fishing boat when a team finally called him.', 88, 86, 78, 78, 78, 80, 76],
+    ['now-jax-hasty', 'JaMycal Hasty', '2021–', 'Undrafted from Baylor and has spent five seasons on the edge of a roster.', 88, 86, 80, 68, 72, 78, 64],
+  ],
+  kc: [
+    ['now-kc-pacheco', 'Isiah Pacheco', '2022–', 'Runs every carry like the man in front of him owes him money.', 92, 96, 72, 88, 82, 74, 80],
+    ['now-kc-hunt', 'Kareem Hunt', '2024–', 'Came back to the team that drafted him and scored on the goal line all year.', 82, 84, 80, 88, 86, 86, 84],
+    ['now-kc-bsmith', 'Brashard Smith', '2025–', 'Was a receiver at Miami and a running back at SMU, and got drafted as one.', 95, 92, 86, 62, 74, 92, 60],
+    ['now-kc-emitchell', 'Elijah Mitchell', '2025–', 'Signed to be the change of pace, and the hamstrings have other ideas.', 92, 90, 82, 74, 82, 70, 76],
+    ['now-kc-ceh', 'Clyde Edwards-Helaire', '2020–2023', 'Taken in the first round ahead of every back in a stacked class.', 88, 90, 86, 72, 80, 88, 68],
+    ['now-kc-steele', 'Carson Steele', '2024–', 'Undrafted 225 pound battering ram who plays fullback when they ask.', 76, 80, 64, 90, 76, 68, 94],
+  ],
+  lv: [
+    ['now-lv-jeanty', 'Ashton Jeanty', '2025–', 'Ran for 2,601 yards in one college season and went sixth overall.', 92, 94, 97, 92, 96, 82, 84],
+    ['now-lv-mostert', 'Raheem Mostert', '2025–', 'Six franchises let him go before he led the whole league in scoring at 31.', 97, 94, 76, 70, 78, 78, 70],
+    ['now-lv-zwhite', 'Zamir White', '2022–', 'Two torn ACLs in high school and he still ran a 4.4 at Georgia.', 92, 90, 78, 86, 78, 66, 78],
+    ['now-lv-laube', 'Dylan Laube', '2024–', 'Caught 68 passes at New Hampshire and covers kicks here.', 86, 86, 82, 66, 72, 90, 64],
+    ['now-lv-mccormick', 'Sincere McCormick', '2024–', 'Undrafted and five foot nine, and he has broken off long runs anyway.', 90, 90, 88, 78, 82, 74, 60],
+    ['now-lv-jacobs', 'Josh Jacobs', '2019–2023', 'Led the league in rushing here on a bad team and they let him leave.', 84, 88, 84, 92, 90, 82, 88],
+  ],
+  lac: [
+    ['now-lac-hampton', 'Omarion Hampton', '2025–', 'Two hundred and twenty pounds with a 4.46, taken 22nd overall.', 92, 92, 84, 96, 88, 80, 90],
+    ['now-lac-najee', 'Najee Harris', '2025–', 'A thousand yards every year at four a carry, which nobody celebrates.', 80, 82, 72, 86, 84, 82, 88],
+    ['now-lac-vidal', 'Kimani Vidal', '2024–', 'Ran for 1,661 yards at Troy and went in the sixth round for being short.', 88, 90, 84, 82, 84, 78, 68],
+    ['now-lac-haskins', 'Hassan Haskins', '2024–', 'Played linebacker for a season and came back to running back.', 78, 80, 66, 90, 74, 66, 88],
+    ['now-lac-ekeler', 'Austin Ekeler', '2017–2022', 'Went undrafted out of Western Colorado and led the league in touchdowns.', 90, 92, 88, 70, 84, 97, 66],
+    ['now-lac-gedwards', 'Gus Edwards', '2024', 'Turned up at 29 to run into piles on the goal line, and did exactly that.', 76, 78, 60, 90, 80, 40, 94],
+  ],
+  lar: [
+    ['now-lar-kyren', 'Kyren Williams', '2022–', 'Went in the fifth round and has led the league in carries since.', 88, 90, 84, 82, 96, 82, 72],
+    ['now-lar-corum', 'Blake Corum', '2024–', 'Won a national title at Michigan and waits his turn without complaining.', 88, 90, 86, 86, 86, 78, 70],
+    ['now-lar-jhunter', 'Jarquez Hunter', '2025–', 'Ran for 1,200 yards at Auburn and went in the fourth round.', 92, 92, 78, 82, 80, 74, 76],
+    ['now-lar-rivers', 'Ronnie Rivers', '2022–', 'His father played here too, and neither of them ever got many carries.', 88, 86, 82, 64, 74, 82, 62],
+    ['now-lar-akers', 'Cam Akers', '2020–2023', 'Tore an Achilles in July and played in a playoff game that January.', 92, 90, 84, 84, 78, 70, 80],
+    ['now-lar-dhenderson', 'Darrell Henderson', '2019–2023', 'Was unstoppable at Memphis and merely ordinary once he got here.', 92, 90, 84, 70, 78, 78, 66],
+  ],
+  mia: [
+    ['now-mia-achane', 'De\'Von Achane', '2023–', 'The fastest man in the sport, and he is listed at 188 pounds.', 99, 97, 92, 56, 84, 92, 54],
+    ['now-mia-jwright', 'Jaylen Wright', '2024–', 'Ran a 4.38 at Tennessee and has 100 career carries to show for it.', 95, 92, 78, 76, 76, 72, 72],
+    ['now-mia-gordon', 'Ollie Gordon', '2025–', 'Won the Doak Walker as a sophomore and slid to the sixth round.', 82, 84, 74, 82, 82, 76, 90],
+    ['now-mia-mattison', 'Alexander Mattison', '2025–', 'Has spent his entire career being the man who comes in when somebody breaks.', 82, 84, 74, 88, 82, 76, 84],
+    ['now-mia-mostert', 'Raheem Mostert', '2022–2024', 'Scored 21 touchdowns at 31 after a career nobody wanted any part of.', 96, 94, 82, 70, 80, 80, 70],
+    ['now-mia-jwilson', 'Jeff Wilson', '2022–2024', 'Undrafted, and he has a 1,000 yard season buried in his career somewhere.', 84, 84, 76, 86, 80, 70, 82],
+  ],
+  min: [
+    ['now-min-ajones', 'Aaron Jones', '2024–', 'Signed for one year at 29 and ran for a thousand out of nowhere.', 90, 90, 88, 76, 92, 90, 68],
+    ['now-min-jmason', 'Jordan Mason', '2025–', 'Went undrafted out of Georgia Tech and runs like he is still annoyed about it.', 84, 88, 76, 92, 86, 70, 78],
+    ['now-min-chandler', 'Ty Chandler', '2022–', 'Ran a 4.38 and has been the third back on the depth chart for four years.', 94, 90, 82, 66, 76, 78, 70],
+    ['now-min-xscott', 'Zavier Scott', '2024–', 'Played quarterback at Maine and now picks up blitzers on third down.', 84, 82, 74, 74, 70, 88, 74],
+    ['now-min-mattison', 'Alexander Mattison', '2019–2023', 'Backed up a superstar for four seasons and never once complained.', 80, 84, 74, 88, 84, 76, 84],
+    ['now-min-akers', 'Cam Akers', '2023–2024', 'Arrived twice in two seasons, and tore the other Achilles the second time.', 90, 88, 82, 84, 78, 72, 80],
+  ],
+  ne: [
+    ['now-ne-rhamondre', 'Rhamondre Stevenson', '2021–', 'Four hundred pound squat, and the ball keeps coming out at the worst moment.', 82, 86, 84, 92, 86, 88, 88],
+    ['now-ne-henderson', 'TreVeyon Henderson', '2025–', 'Ran a 4.43 at 202 pounds and returned a kick 100 yards in his first month.', 97, 95, 80, 74, 82, 84, 70],
+    ['now-ne-gibson', 'Antonio Gibson', '2024–', 'Was a receiver at Memphis and has never fully stopped being one.', 92, 90, 82, 80, 76, 88, 82],
+    ['now-ne-jennings', 'Terrell Jennings', '2024–', 'Florida A&M back who has spent two seasons on and off the practice squad.', 84, 84, 74, 88, 72, 70, 80],
+    ['now-ne-dharris', 'Damien Harris', '2019–2022', 'Led the league in yards per carry one season and nobody remembers.', 84, 86, 76, 88, 84, 62, 84],
+    ['now-ne-zeke', 'Ezekiel Elliott', '2023', 'Spent one strange season here catching swing passes on third down.', 78, 80, 72, 80, 88, 82, 90],
+  ],
+  no: [
+    ['now-no-kamara', 'Alvin Kamara', '2017–', 'Scored six touchdowns in one afternoon and has never dropped anything since.', 88, 92, 94, 80, 90, 97, 78],
+    ['now-no-kmiller', 'Kendre Miller', '2023–', 'Has torn something in his leg in all three of his seasons here.', 90, 90, 84, 84, 80, 74, 76],
+    ['now-no-neal', 'Devin Neal', '2025–', 'Kansas all time leading rusher, drafted in the sixth by his neighbours.', 88, 88, 84, 80, 84, 82, 78],
+    ['now-no-jamaal', 'Jamaal Williams', '2023–2024', 'Signed a big deal, scored once, and remained the happiest man in the building.', 78, 80, 70, 86, 82, 74, 84],
+    ['now-no-tjones', 'Tony Jones Jr.', '2020–2022', 'Undrafted from Notre Dame who started a playoff game nobody expected him to.', 84, 84, 76, 82, 84, 66, 80],
+    ['now-no-thill', 'Taysom Hill', '2017–', 'A quarterback who runs it 60 times a year and gets tackled by three men.', 88, 88, 74, 92, 74, 84, 90],
+  ],
+  nyg: [
+    ['now-nyg-skattebo', 'Cam Skattebo', '2025–', 'Broke 100 tackles in a college season and dares people to hit him.', 82, 88, 82, 96, 88, 84, 86],
+    ['now-nyg-tracy', 'Tyrone Tracy', '2024–', 'Played receiver at Iowa, moved to running back at Purdue, and it worked.', 92, 90, 86, 72, 82, 90, 72],
+    ['now-nyg-singletary', 'Devin Singletary', '2024–', 'Motor. That is the whole scouting report and it has lasted seven years.', 84, 86, 82, 78, 84, 78, 70],
+    ['now-nyg-egray', 'Eric Gray', '2023–', 'Fifth round pick who muffed punts as a rookie and never lived it down.', 88, 86, 82, 72, 76, 76, 72],
+    ['now-nyg-saquon', 'Saquon Barkley', '2018–2023', 'Six seasons of doing everything alone behind lines that never blocked.', 94, 96, 96, 88, 92, 88, 84],
+    ['now-nyg-breida', 'Matt Breida', '2021–2022', 'Led the league in yards per carry once and has been a backup since.', 94, 92, 82, 66, 74, 78, 64],
+  ],
+  nyj: [
+    ['now-nyj-hall', 'Breece Hall', '2022–', 'Blew out a knee in October and ran a 4.39 the following August.', 94, 92, 90, 82, 86, 90, 80],
+    ['now-nyj-ballen', 'Braelon Allen', '2024–', 'Started college at 17 and is now 235 pounds of very young man.', 84, 84, 72, 88, 76, 76, 97],
+    ['now-nyj-idavis', 'Isaiah Davis', '2024–', 'South Dakota State bruiser who went in the fifth and blocks well.', 84, 86, 76, 90, 78, 78, 84],
+    ['now-nyj-nwangwu', 'Kene Nwangwu', '2024–', 'Has returned four kickoffs for touchdowns and carried the ball eleven times.', 97, 94, 70, 68, 66, 70, 70],
+    ['now-nyj-mcarter', 'Michael Carter', '2021–2023', 'Fourth round pick who looked like the answer for about half a season.', 88, 90, 88, 62, 80, 86, 62],
+    ['now-nyj-zknight', 'Zonovan Knight', '2022–2023', 'Came off the practice squad and ran for 200 yards in two games.', 88, 88, 82, 76, 78, 78, 76],
+  ],
+  phi: [
+    ['now-phi-saquon', 'Saquon Barkley', '2024–', 'Ran backwards over a defender on television and then ran for 2,000 yards.', 95, 97, 97, 88, 96, 88, 84],
+    ['now-phi-shipley', 'Will Shipley', '2024–', 'Clemson back who returns kicks and waits behind the best in the league.', 90, 90, 86, 74, 78, 84, 72],
+    ['now-phi-dillon', 'AJ Dillon', '2025–', 'Missed a whole season, came back, and still has those enormous legs.', 76, 80, 64, 96, 78, 70, 97],
+    ['now-phi-bigsby', 'Tank Bigsby', '2025–', 'Traded for a pair of picks to be the thunder nobody else wanted.', 86, 88, 76, 90, 78, 60, 84],
+    ['now-phi-gainwell', 'Kenneth Gainwell', '2021–2024', 'Third down back who kept turning up in January and doing the job.', 88, 88, 84, 68, 78, 88, 66],
+    ['now-phi-sanders', 'Miles Sanders', '2019–2022', 'Ran for 1,269 yards in a Super Bowl season and left for the money.', 92, 90, 86, 74, 80, 70, 76],
+  ],
+  pit: [
+    ['now-pit-warren', 'Jaylen Warren', '2022–', 'Went undrafted, and he blocks 260 pound linebackers at 5 foot 8.', 90, 92, 88, 84, 84, 88, 62],
+    ['now-pit-kjohnson', 'Kaleb Johnson', '2025–', 'Ran for 1,537 yards at Iowa behind a line that told everyone where he was going.', 88, 90, 80, 88, 86, 72, 86],
+    ['now-pit-gainwell', 'Kenneth Gainwell', '2025–', 'Signed for one year to catch passes and pick up blitzes.', 88, 88, 84, 68, 78, 88, 66],
+    ['now-pit-najee', 'Najee Harris', '2021–2024', 'Never missed a game here and never broke a long one either.', 78, 82, 72, 86, 82, 82, 88],
+    ['now-pit-patterson', 'Cordarrelle Patterson', '2024', 'Returned kicks at 33 and got twelve carries all season.', 90, 88, 82, 82, 72, 88, 90],
+    ['now-pit-sermon', 'Trey Sermon', '2023', 'Started a December game here and ran for 60 yards nobody remembers.', 84, 84, 76, 82, 76, 62, 80],
+  ],
+  sf: [
+    ['now-sf-cmc', 'Christian McCaffrey', '2022–', 'The best receiver on the team is the running back, and it is not close.', 92, 94, 92, 80, 94, 99, 78],
+    ['now-sf-guerendo', 'Isaac Guerendo', '2024–', 'Ran a 4.33 at 220 pounds, which is the fastest big man in the league.', 97, 94, 74, 80, 76, 78, 86],
+    ['now-sf-brobinson', 'Brian Robinson Jr.', '2025–', 'Was shot twice in a robbery and played a football game five weeks later.', 82, 84, 74, 86, 82, 74, 90],
+    ['now-sf-ptaylor', 'Patrick Taylor', '2024–', 'Six seasons of special teams and nine career carries.', 84, 82, 66, 82, 70, 72, 86],
+    ['now-sf-jmason', 'Jordan Mason', '2022–2024', 'Ran for 100 yards in his first two starts when the star went down.', 84, 88, 76, 90, 86, 70, 88],
+    ['now-sf-emitchell', 'Elijah Mitchell', '2021–2024', 'Ran for 963 yards as a rookie and has missed more games than he has played.', 92, 90, 82, 80, 84, 70, 76],
+  ],
+  sea: [
+    ['now-sea-kwalker', 'Kenneth Walker III', '2022–', 'Makes one cut that nobody in the stadium sees coming, twice a game.', 94, 94, 96, 82, 84, 76, 78],
+    ['now-sea-charbonnet', 'Zach Charbonnet', '2023–', 'Runs over people when he gets the ball and sits when the starter is up.', 86, 88, 78, 90, 86, 84, 86],
+    ['now-sea-holani', 'George Holani', '2024–', 'Boise State all time great who went undrafted and made the roster anyway.', 86, 86, 78, 82, 84, 68, 78],
+    ['now-sea-mcintosh', 'Kenny McIntosh', '2023–', 'Seventh round pick out of Georgia who has been hurt since the day he arrived.', 88, 86, 80, 72, 74, 84, 74],
+    ['now-sea-penny', 'Rashaad Penny', '2018–2022', 'Averaged 6.3 yards a carry over half a season and never played a full one.', 94, 92, 82, 88, 80, 66, 86],
+    ['now-sea-dmartinez', 'Damien Martinez', '2025–', 'Ran for a thousand at two different schools and still went in the seventh.', 82, 84, 72, 84, 80, 70, 92],
+  ],
+  tb: [
+    ['now-tb-irving', 'Bucky Irving', '2024–', 'Fourth round pick who broke more tackles than backs twice his size.', 90, 92, 96, 84, 92, 88, 66],
+    ['now-tb-rwhite', 'Rachaad White', '2022–', 'Caught 64 passes in a season and got benched for a rookie the next.', 86, 86, 84, 78, 80, 90, 80],
+    ['now-tb-stucker', 'Sean Tucker', '2023–', 'A heart condition scared everybody off him and he went undrafted.', 92, 92, 86, 76, 80, 80, 74],
+    ['now-tb-jwilliams', 'Josh Williams', '2024–', 'Undrafted from Lawrence Tech, which is not a place scouts visit.', 86, 84, 70, 78, 72, 76, 76],
+    ['now-tb-fournette', 'Leonard Fournette', '2020–2022', 'Playoff Lenny turned up every January and slept through October.', 84, 84, 74, 84, 82, 86, 90],
+    ['now-tb-vaughn', 'Ke\'Shawn Vaughn', '2020–2023', 'Ninety carries in four years on an offense that scored plenty.', 86, 84, 68, 80, 74, 72, 80],
+  ],
+  ten: [
+    ['now-ten-pollard', 'Tony Pollard', '2024–', 'Got the every down job at last and ran for a thousand quietly.', 94, 92, 86, 70, 84, 84, 76],
+    ['now-ten-spears', 'Tyjae Spears', '2023–', 'Plays without an ACL in one knee and jukes people out of the stadium.', 92, 86, 96, 76, 82, 84, 66],
+    ['now-ten-mullings', 'Kalel Mullings', '2025–', 'Played linebacker at Michigan until they needed a 226 pound back.', 80, 82, 68, 92, 78, 66, 94],
+    ['now-ten-chestnut', 'Julius Chestnut', '2022–', 'Undrafted out of Sacred Heart and blocks his way onto the roster yearly.', 82, 82, 72, 90, 74, 72, 84],
+    ['now-ten-henry', 'Derrick Henry', '2016–2023', 'Ran for 2,027 yards in a season here and got faster after leaving.', 92, 88, 66, 99, 92, 58, 99],
+    ['now-ten-djohnson', 'Dillon Johnson', '2025–', 'Ran Washington to a title game on a broken foot and went undrafted.', 84, 84, 74, 90, 80, 74, 82],
+  ],
+  was: [
+    ['now-was-croskey', 'Jacory Croskey-Merritt', '2025–', 'Played one college game in his final year and went in the seventh round.', 92, 92, 88, 82, 84, 76, 78],
+    ['now-was-brobinson', 'Brian Robinson Jr.', '2022–2024', 'Came back from a shooting to start on opening day the same year.', 82, 84, 74, 86, 82, 72, 90],
+    ['now-was-crodriguez', 'Chris Rodriguez', '2023–', 'Sixth round back from Kentucky who only plays when everyone else is hurt.', 80, 82, 70, 88, 76, 66, 86],
+    ['now-was-ekeler', 'Austin Ekeler', '2024–2025', 'Still catching everything at 30, and the legs finally started to go.', 88, 88, 84, 66, 82, 94, 64],
+    ['now-was-gibson', 'Antonio Gibson', '2020–2023', 'Converted receiver who ran for 1,037 yards in his second season.', 92, 90, 82, 82, 76, 86, 84],
+    ['now-was-mcnichols', 'Jeremy McNichols', '2021–2024', 'Has been signed by nine franchises and keeps turning up on Sundays.', 86, 84, 78, 70, 74, 84, 68],
+  ],
+};
+
+export const RB_CURRENT: Player[] = Object.entries(POOLS).flatMap(([teamId, rows]) =>
+  rows.map(([id, name, years, blurb, speed, burst, juke, power, vision, hands, size]) => ({
+    id,
+    name,
+    teamId,
+    position: 'RB' as const,
+    years,
+    blurb,
+    attributes: { speed, burst, juke, power, vision, hands, size },
+  })),
+);

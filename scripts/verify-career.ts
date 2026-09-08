@@ -23,7 +23,7 @@
  * those pass every directional check ever written, so the tails get asserted from BOTH
  * ends: they have to exist, and they have to stay rare.
  */
-import { ATTRIBUTE_SETS, TEAMS, positionsWithData } from '../src/data';
+import { ATTRIBUTE_SETS, ERAS, TEAMS, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import {
   CAREER_SHAPE, LAST_PICK, MAX_SEASONS, PICKS_PER_ROUND, ROUNDS,
@@ -77,7 +77,19 @@ function buildFor(position: Position, target: number): Partial<Record<AttributeK
   return make(base);
 }
 
-const positions = positionsWithData();
+/**
+ * Most of this file is POOL BLIND. How long a career runs, where a player is drafted and
+ * what he produces are all functions of his rating and the seed, so they do not care
+ * which league he came out of and they are swept once.
+ *
+ * The two sections that read the pools are the uniforms and who wanted him, since need is
+ * measured off what a franchise already has at the position. Those run per era, because
+ * the two leagues genuinely disagree about who is desperate.
+ */
+const positions = positionsWithData('alltime');
+const eraPositions = ERAS.flatMap((era) =>
+  positionsWithData(era).map((position) => ({ era, position, label: `${era} ${position}` })),
+);
 console.log(`GridironLab career model. ${SEEDS} seeds per position.\n`);
 
 // ---------------------------------------------------------------------------
@@ -251,7 +263,7 @@ if (positions.includes('QB') && positions.includes('RB')) {
 // ---------------------------------------------------------------------------
 console.log('\nwhose uniforms he wore');
 // ---------------------------------------------------------------------------
-for (const position of positions) {
+for (const { era, position, label } of eraPositions) {
   const raided = TEAMS.slice(0, 6).map((t) => t.id);
 
   let addsUp = true;
@@ -265,7 +277,7 @@ for (const position of positions) {
   for (let i = 0; i < SEEDS; i++) {
     const overall = 70 + (i % 30);
     const seasons = careerLength(position, overall, seed(i)).seasons;
-    const path = careerPath(position, overall, seasons, raided, seed(i));
+    const path = careerPath(position, overall, seasons, raided, seed(i), era);
 
     if (path.stints.reduce((sum, s) => sum + s.seasons, 0) !== seasons) addsUp = false;
     let cursor = 1;
@@ -284,11 +296,11 @@ for (const position of positions) {
     counts.push(path.stints.length);
   }
 
-  check(`${position} the stints add up to the career`, addsUp, 'every season is accounted for');
-  check(`${position} the timeline has no gaps`, contiguous, 'stints run 1 to the last season');
-  check(`${position} the team that drafted him came out of the run`, draftedFromTheRun,
+  check(`${label} the stints add up to the career`, addsUp, 'every season is accounted for');
+  check(`${label} the timeline has no gaps`, contiguous, 'stints run 1 to the last season');
+  check(`${label} the team that drafted him came out of the run`, draftedFromTheRun,
     `${raided.length} franchises were raided, and he starts at one of them every time`);
-  check(`${position} he never rejoins a team`, noRepeats, 'no franchise appears twice');
+  check(`${label} he never rejoins a team`, noRepeats, 'no franchise appears twice');
 
   /**
    * BOTH ENDS, like every other tail in this file. A tester asked whether it was a
@@ -310,12 +322,12 @@ for (const position of positions) {
   for (let i = 0; i < REAL_RUNS; i++) {
     const overall = 93 + (i % 5);
     const seasons = careerLength(position, overall, seed(i, 'REAL')).seasons;
-    const path = careerPath(position, overall, seasons, raided, seed(i, 'REAL'));
+    const path = careerPath(position, overall, seasons, raided, seed(i, 'REAL'), era);
     if (path.stints.some((st) => !raided.includes(st.team.id))) wanderedForReal++;
   }
   const wanderRate = wanderedForReal / REAL_RUNS;
   check(
-    `${position} some careers take him somewhere he was never built from`,
+    `${label} some careers take him somewhere he was never built from`,
     // 0.35 rather than something roomier, because the roomier version was decoration at
     // running back. Backs get the shortest careers and therefore the fewest second
     // stints, so even with the constant pinned at 1 the rate there tops out around 37%.
@@ -327,16 +339,16 @@ for (const position of positions) {
 
   const share = (n: number) => counts.filter((c) => c === n).length / counts.length;
   console.log(
-    `  ${position}  uniforms   ` +
+    `  ${label}  uniforms   ` +
     [1, 2, 3, 4].map((n) => `${n}:${(share(n) * 100).toFixed(0)}%`).join('  '),
   );
   check(
-    `${position} most careers are one or two teams`,
+    `${label} most careers are one or two teams`,
     share(1) + share(2) > 0.6,
     `${((share(1) + share(2)) * 100).toFixed(0)}% wore one or two`,
   );
   check(
-    `${position} nobody plays for five franchises`,
+    `${label} nobody plays for five franchises`,
     Math.max(...counts) <= 4,
     `the most anybody wore was ${Math.max(...counts)}`,
   );
@@ -345,31 +357,31 @@ for (const position of positions) {
 // ---------------------------------------------------------------------------
 console.log('\nwho wanted him');
 // ---------------------------------------------------------------------------
-for (const position of positions) {
-  const needs = TEAMS.map((t) => positionalNeed(position, t.id));
+for (const { era, position, label } of eraPositions) {
+  const needs = TEAMS.map((t) => positionalNeed(position, t.id, era));
   check(
-    `${position} need is a rank across the league`,
+    `${label} need is a rank across the league`,
     Math.min(...needs) === 0 && Math.max(...needs) === 1,
     `${TEAMS.length} franchises ranked from 0 to 1`,
   );
 
   // Six franchises spanning the whole need range, so there is something to prefer.
-  const spread = [...TEAMS].sort((a, b) => positionalNeed(position, a.id) - positionalNeed(position, b.id));
+  const spread = [...TEAMS].sort((a, b) => positionalNeed(position, a.id, era) - positionalNeed(position, b.id, era));
   const raided = [spread[0], spread[6], spread[12], spread[19], spread[25], spread[31]].map((t) => t.id);
 
   const drawnNeed = (overall: number) =>
     mean(Array.from({ length: SEEDS }, (_, i) => {
       const seasons = careerLength(position, overall, seed(i));
-      const path = careerPath(position, overall, seasons.seasons, raided, seed(i));
-      return path.drafted ? positionalNeed(position, path.drafted.id) : 0.5;
+      const path = careerPath(position, overall, seasons.seasons, raided, seed(i), era);
+      return path.drafted ? positionalNeed(position, path.drafted.id, era) : 0.5;
     }));
 
   const ordinary = drawnNeed(84);
   const superstar = drawnNeed(98);
-  console.log(`  ${position}  mean need of the drafting team   ordinary ${ordinary.toFixed(2)}, superstar ${superstar.toFixed(2)}`);
+  console.log(`  ${label}  mean need of the drafting team   ordinary ${ordinary.toFixed(2)}, superstar ${superstar.toFixed(2)}`);
 
   check(
-    `${position} a needy franchise is likelier to take him`,
+    `${label} a needy franchise is likelier to take him`,
     ordinary > 0.55,
     `mean need ${ordinary.toFixed(2)} against 0.50 for a coin`,
   );
@@ -380,7 +392,7 @@ for (const position of positions) {
    * what actually happens every April.
    */
   check(
-    `${position} nobody passes on a superstar over a depth chart`,
+    `${label} nobody passes on a superstar over a depth chart`,
     superstar < ordinary - 0.03,
     `need drops from ${ordinary.toFixed(2)} to ${superstar.toFixed(2)} at 98 overall`,
   );

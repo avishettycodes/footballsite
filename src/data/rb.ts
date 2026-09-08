@@ -9,7 +9,7 @@ import type { Player } from './types';
  *  - Some entries are deliberately bad. A cold spin should hurt.
  *
  * Row format keeps this readable while hand-editing:
- *   [id, name, era, blurb, SPD, BRS, JKE, PWR, VIS, HND, SZE]
+ *   [id, name, years, blurb, SPD, BRS, JKE, PWR, VIS, HND, SZE]
  */
 type Row = [string, string, string, string, number, number, number, number, number, number, number];
 
@@ -338,12 +338,12 @@ const POOLS: Record<string, Row[]> = {
 };
 
 export const RB_PLAYERS: Player[] = Object.entries(POOLS).flatMap(([teamId, rows]) =>
-  rows.map(([id, name, era, blurb, speed, burst, juke, power, vision, hands, size]) => ({
+  rows.map(([id, name, years, blurb, speed, burst, juke, power, vision, hands, size]) => ({
     id,
     name,
     teamId,
     position: 'RB' as const,
-    era,
+    years,
     blurb,
     attributes: { speed, burst, juke, power, vision, hands, size },
   })),

@@ -1,11 +1,12 @@
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS, TEAMS_BY_ID, getPool } from '../data';
-import type { AttributeKey, Position } from '../data';
+import type { AttributeKey, Era, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
 import { ratingColor } from './AttributeBar';
 import { inkOn } from '../lib/contrast';
 
 type Props = {
   position: Position;
+  era: Era;
   slots: Partial<Record<AttributeKey, FilledSlot>>;
   highlight?: AttributeKey | null;
   usedPlayerIds?: string[];
@@ -25,7 +26,7 @@ type Props = {
 /** A slot is "covered" by a franchise if it still has an unused player with a good one. */
 const GOOD_ENOUGH = 90;
 
-export function BuildSheet({ position, slots, highlight, usedPlayerIds = [], blind = false }: Props) {
+export function BuildSheet({ position, era, slots, highlight, usedPlayerIds = [], blind = false }: Props) {
   const keys = ATTRIBUTE_SETS[position];
   const filled = keys.filter((k) => slots[k]);
   const open = keys.filter((k) => !slots[k]);
@@ -41,7 +42,7 @@ export function BuildSheet({ position, slots, highlight, usedPlayerIds = [], bli
     .map((key) => ({
       key,
       teams: reachable.filter((t) =>
-        getPool(position, t.id).some(
+        getPool(position, t.id, era).some(
           (p) => !usedPlayerIds.includes(p.id) && (p.attributes[key] ?? 0) >= GOOD_ENOUGH,
         ),
       ).length,

@@ -73,7 +73,7 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
                 <h3 className="truncate font-display text-lg leading-tight tracking-tight uppercase">
                   {player.name}
                 </h3>
-                <span className="shrink-0 font-mono text-[10px] text-white/40">{player.era}</span>
+                <span className="shrink-0 font-mono text-[10px] text-white/40">{player.years}</span>
               </div>
               <p className="px-4 pt-1 text-[12px] leading-snug text-white/55 italic">
                 {spent ? 'You already took something off him. Move on.' : player.blurb}

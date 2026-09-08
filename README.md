@@ -19,9 +19,23 @@ Then open http://localhost:5173. There is a debug view of the raw data at `?debu
 
 ## What works right now
 
-Solo build mode is playable end to end. Pick a position, spin, steal attributes, and
-simulate a career. The wheel, the build sheet, the scoring engine, the accolades and the
-Super Bowl roll are all in.
+Solo build mode is playable end to end. Pick a league, pick a position, spin, steal
+attributes, and simulate a career. The wheel, the build sheet, the scoring engine, the
+accolades and the Super Bowl roll are all in.
+
+**Two leagues, and they are two separate datasets rather than one with a filter on it.**
+All-time gives you everybody a franchise has ever had, rated against everybody who has
+ever played the position. Current gives you the men on a roster now, rated against each
+other, so the best quarterback playing today gets the 99 that Marino has in the other
+file. The same man therefore has two different cards and both are correct: Josh Allen's
+accuracy is an 84 against Brees and Montana and a 90 against the people he lines up
+opposite on Sunday. The switch is the first thing on the start screen, above the position,
+because it decides what everything after it means.
+
+A run picks its league at the start and keeps it. That is stored on the run rather than as
+a preference, since a career is scored against the supply of the pools it came out of and
+a saved player whose league could drift would re-read his own All-Pro floor against the
+wrong one.
 
 Normal mode gives you two rerolls against seven spins, which is enough to walk away from
 the two worst landings of a run and not enough to shop. It was one for a while and one
@@ -315,8 +329,33 @@ since that is his name.
 ## The data
 
 Every rating is hand written and completely subjective. Nothing is scraped, no sports
-API is called, and no licensed dataset is involved. There are 1000 players across four
-positions, seven to nine per franchise per position.
+API is called, and no licensed dataset is involved. There are 1000 all-time players across
+four positions at seven to nine per franchise, and 768 current ones at six per franchise.
+
+**The current pools are a second hand-written dataset, not the first one scaled down.**
+A scale factor would keep every ranking exactly where it was and only move the decimal,
+and the rankings are the part that actually changes when the company changes. Everybody in
+`src/data/current/` is playing now or was on that roster during the 2020s and is still in
+the league. A real quarterback room holds three men and a six card pool needs six, so the
+back half of each room reaches down to whoever most recently held the clipboard. That is
+the point rather than a compromise: the fourth quarterback on a bad roster is exactly the
+card that should hurt to land on. A well travelled backup appears for two or three
+franchises with different years on each card, the same way the all-time pools carry Kerry
+Collins twice.
+
+**Writing that file taught the same lesson four times, and it is worth reading before
+adding to it.** Every pass rated today's players as if the all-time greats were standing
+in the room, which is the habit the second dataset exists to escape. A 90 in the pocket
+means a good starting quarterback, so Trevor Lawrence is a 90 and not the 82 he was first
+written at. The tell was the harness rather than any individual card: a typical current
+franchise was offering 82 where a typical all-time one offers 92, which is not a fact
+about football, it is the same hand being cautious 192 times. The top of the scale had it
+too. These pools carried half as many ratings at 97 or better per player, because the best
+passer of an era belongs at the top of his own era's scale and was being written at 94.
+
+Player ids are unique across BOTH datasets, since a run stores the ids it has spent and a
+saved player keeps them forever. Current rows carry a `now-` prefix for that reason, and
+where two men on one roster share a surname the id carries the first name too.
 
 Ratings are deliberately spiky. A player is in the pool because of one number, so Chris
 Johnson has 99 speed and 60 power, Jimmy Graham catches everything and blocks nobody,
@@ -450,7 +489,11 @@ That runs seven suites, and they check more than types.
   so the harness cannot report normal mode rates under a heading a hard mode player would
   read as his own. It also prints how often each policy finishes with NOTHING in the
   trophy case, which is the number a player feels and the one no per-award rate shows
-  you.
+  you. It runs every position in BOTH leagues, which makes it the instrument that says
+  whether the current ratings were written on the same scale as the all-time ones: the
+  gates are identical in both, so anything that moves a rate is the data rather than the
+  scoring. The all-time seeds are deliberately left exactly as they were, since a seed is
+  the whole run and putting a league into them resampled every number this file documents.
 - **career** drives the length, draft, uniform and stat models tens of thousands of times
   each, and since the near-miss sentences moved into `src/lib/narrative.ts` it drives
   those too. The trophy case printed the same excuse under two different awards, because

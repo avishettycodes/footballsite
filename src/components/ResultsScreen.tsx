@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
-import type { AttributeKey, Position } from '../data';
+import { ERA_LABELS } from '../data';
+import type { AttributeKey, Era, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
 import { RECORD_YARDS, SPIKE_AT, accoladeDefs, allProFloor, softestSlot } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
@@ -17,6 +18,8 @@ import { ratingColor } from './AttributeBar';
 
 type Props = {
   position: Position;
+  /** Which league he was built out of. Every gate on this page is read against it. */
+  era: Era;
   slots: Partial<Record<AttributeKey, FilledSlot>>;
   /** Which slot was filled first. The franchises behind these are the ones in play. */
   pickOrder: AttributeKey[];
@@ -70,13 +73,21 @@ function Section({ index, title, aside, children }: {
 }
 
 export function ResultsScreen({
-  position, slots, pickOrder, career, seed, hardMode, creationName,
+  position, era, slots, pickOrder, career, seed, hardMode, creationName,
   onName, onRestart, soundOn, replay = false,
 }: Props) {
   const [stage, setStage] = useState<Stage>(replay ? 'done' : 'overall');
   const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [counter, setCounter] = useState(0);
-  const defs = accoladeDefs(position);
+  const defs = accoladeDefs(position, era);
+  /**
+   * Positions whose pools are genuinely thin in THIS league, which is what the trophy case
+   * footnote is allowed to make an excuse about. Same list the start screen labels, and it
+   * has to stay the same list, or one screen calls a run hard and the other does not.
+   */
+  const thinPosition = era === 'current'
+    ? position === 'QB' || position === 'TE'
+    : position === 'TE';
   const keys = ATTRIBUTE_SETS[position];
 
   /**
@@ -98,7 +109,7 @@ export function ResultsScreen({
   const run: RunShape = { seasons, expected: length.expected, cutShort: length.cutShort };
 
   const draft = draftSlot(position, career.overall, seed);
-  const path = careerPath(position, career.overall, seasons, franchisesRaided(position, pickOrder, slots), seed);
+  const path = careerPath(position, career.overall, seasons, franchisesRaided(position, pickOrder, slots), seed, era);
   const stats = careerStats(position, build, career.overall, seasons, seed);
   const labels = STAT_LABELS[position];
   /** The lowest number he actually has, which the weak link box talks about. */
@@ -245,8 +256,15 @@ export function ResultsScreen({
                 }`}
               />
             )}
+            {/*
+              The league he was built out of sits here rather than in the seed stamp, and
+              it is always named, in both eras. Two reports off the same seed hold two
+              completely different players depending on which pools were open, so a report
+              that only marked one of the two would leave the reader working out which
+              this was from whether the names look familiar.
+            */}
             <div className="mt-1.5 font-mono text-[10px] tracking-[0.15em] text-white/40 sm:text-[11px] sm:tracking-[0.2em]">
-              {position} · {seasons} SEASON{seasons === 1 ? '' : 'S'} · {path.stints.length} TEAM{path.stints.length === 1 ? '' : 'S'}
+              {position} · {ERA_LABELS[era].toUpperCase()} · {seasons} SEASON{seasons === 1 ? '' : 'S'} · {path.stints.length} TEAM{path.stints.length === 1 ? '' : 'S'}
             </div>
             {/*
               Where he went in the draft, up top where a football card puts it. It used to
@@ -502,7 +520,7 @@ export function ResultsScreen({
               sitting three rows up the same screen. See softestSlot in scoring.ts.
             */}
             <p className="mt-1 text-[13px] leading-snug text-white/85">
-              {softest.value >= allProFloor(position) ? (
+              {softest.value >= allProFloor(position, era) ? (
                 <>
                   Nothing on him drops below{' '}
                   <b style={{ color: ratingColor(softest.value) }}>{softest.value}</b>
@@ -655,10 +673,20 @@ export function ResultsScreen({
                     {emptyCaseLine(career.overall, career.breakdown.spikeCount, run)}
                   </div>
                 )}
-                {earned.length > 0 && earned.length < 3 && position === 'TE' && (
+                {/*
+                  THE HARD POSITION DEPENDS ON THE LEAGUE, and this line used to name tight
+                  end in both of them. In the current pools quarterback measures exactly as
+                  hard, because a real roster carries three of each and the sixth card in
+                  those rooms is a man who has never started, so the sentence would have
+                  been the start screen and the report disagreeing about the same fact.
+                  The reason differs too: all-time it is a shortage of great players across
+                  seventy years, and now it is a shortage of players in the building.
+                */}
+                {earned.length > 0 && earned.length < 3 && thinPosition && (
                   <div className="w-full font-mono text-[11px] text-white/40">
-                    Tight end is the hard one. A typical roster has less on it at every
-                    slot, so getting this far with one is more than it looks like.
+                    {era === 'current'
+                      ? `A roster carries three of these and you were choosing from six, so most of what you saw was somebody's backup. Getting this far out of that is more than it looks like.`
+                      : 'Tight end is the hard one. A typical roster has less on it at every slot, so getting this far with one is more than it looks like.'}
                   </div>
                 )}
               </div>
