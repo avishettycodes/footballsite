@@ -164,16 +164,17 @@ const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
    * a rating anybody can fix.
    *
    * An all-time franchise pool is the seven or eight most memorable players in seventy
-   * years of that position. A current pool is the six men in the room this season, and
-   * four of those are backups. Receiver survives that almost untouched, because the
-   * position is genuinely deep right now. Quarterback and tight end do not, because three
-   * quarterbacks and three tight ends per roster is all there is.
+   * years of that position. A current pool is whoever is on the depth chart this morning,
+   * which is three or four men at most positions and two at some. Receiver holds up best
+   * because six receivers who play is a normal roster. Everything else is thin by
+   * construction: seven picks off seven landings, and a landing that offers three men can
+   * only answer so many of the slots still open.
    *
    *                All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-   *     QB now       36%     0.3%   0.1%      0%    50%     0%      0%      35%
-   *     RB now       74%     6.6%   1.1%    0.1%    57%   0.8%      0%      14%
-   *     WR now       88%    46%     9.0%    2.2%    67%   7.5%    1.3%       5%
-   *     TE now       40%     0.3%     0%    0.1%    54%   0.1%      0%      31%
+   *     QB now       18%     0.1%     0%      0%    45%     0%      0%      48%
+   *     RB now       41%     0.9%     0%      0%    51%     0%      0%      32%
+   *     WR now       72%    12%     0.9%    0.1%    62%   0.6%    0.1%      13%
+   *     TE now       17%     0.1%     0%      0%    48%     0%      0%      45%
    *
    * A LOWER BOUND OF ZERO CANNOT FAIL, and that is the point rather than an oversight.
    * The current league does not produce grand slams at three positions, so a band that

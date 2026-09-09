@@ -84,9 +84,18 @@ export type DataIssue = { level: 'error' | 'warn'; message: string };
  * Integrity pass over the seed data. Runs in dev so a bad hand-edit is loud
  * instead of a silent empty wheel at spin time.
  *
- * Both eras go through the identical rules, including the six-per-franchise floor. A
- * current pool has to reach down the depth chart to get there, which is the point: the
- * third quarterback on a bad roster is exactly the card that should hurt to land on.
+ * THE SIX PER FRANCHISE RULE APPLIES TO THE ALL-TIME POOLS ONLY, and that is a rule about
+ * the two datasets meaning different things rather than a relaxed standard.
+ *
+ * An all-time pool is a selection: seventy years of a franchise at one position, and if
+ * somebody can only find five worth writing down he has not looked hard enough. A current
+ * pool is not a selection at all, it is a roster. A team carries two quarterbacks and
+ * sometimes three, so a room of two IS the correct answer there and a check demanding six
+ * would be asking the data to lie about how football teams are built.
+ *
+ * So current pools are checked for being EMPTY, which would strand the wheel, and nothing
+ * else. What keeps them honest is not this function, it is a person reading them against a
+ * depth chart. See the refresh section in the README.
  */
 export function validateData(): DataIssue[] {
   const issues: DataIssue[] = [];
@@ -128,8 +137,8 @@ export function validateData(): DataIssue[] {
     }
   }
 
-  /** Six per franchise per position, in both eras. A thinner pool is not a choice. */
-  const THIN_POOL = 6;
+  /** Six per franchise per position, all-time only. See the note above. */
+  const THIN_POOL: Partial<Record<Era, number>> = { alltime: 6 };
 
   for (const era of ERAS) {
     for (const position of positionsWithData(era)) {
@@ -151,10 +160,10 @@ export function validateData(): DataIssue[] {
         const size = getPool(position, team.id, era).length;
         if (size === 0) {
           issues.push({ level: 'error', message: `${era}: ${team.abbr} has no ${position} pool` });
-        } else if (size < THIN_POOL) {
+        } else if (size < (THIN_POOL[era] ?? 0)) {
           issues.push({
             level: 'warn',
-            message: `${era}: ${team.abbr} ${position} pool is thin (${size}/${THIN_POOL})`,
+            message: `${era}: ${team.abbr} ${position} pool is thin (${size}/${THIN_POOL[era]})`,
           });
         }
       }

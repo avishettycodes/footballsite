@@ -24,6 +24,12 @@ export type Position = 'QB' | 'RB' | 'WR' | 'TE';
  * rows. A scale factor would keep every ranking exactly as it was and just move the
  * decimal, and the rankings are the part that actually changes.
  *
+ * CURRENT MEANS ON THE DEPTH CHART TODAY, with nobody kept for depth. So the rooms are
+ * whatever size the real thing is, two at quarterback for some teams and five at receiver,
+ * and a man appears once rather than once per stint. That is a harder game than the
+ * all-time pools deal and the README prices it out, but the alternative was a mode called
+ * current players that was quietly full of men who left.
+ *
  * Player ids are unique ACROSS both sets, since a run stores the ids it has used and a
  * saved player keeps them forever. Current rows carry a `now-` prefix for that reason.
  */

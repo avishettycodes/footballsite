@@ -330,18 +330,21 @@ since that is his name.
 
 Every rating is hand written and completely subjective. Nothing is scraped, no sports
 API is called, and no licensed dataset is involved. There are 1000 all-time players across
-four positions at seven to nine per franchise, and 768 current ones at six per franchise.
+four positions at seven to nine per franchise, and 496 current ones at two to five.
 
 **The current pools are a second hand-written dataset, not the first one scaled down.**
 A scale factor would keep every ranking exactly where it was and only move the decimal,
-and the rankings are the part that actually changes when the company changes. Everybody in
-`src/data/current/` is playing now or was on that roster during the 2020s and is still in
-the league. A real quarterback room holds three men and a six card pool needs six, so the
-back half of each room reaches down to whoever most recently held the clipboard. That is
-the point rather than a compromise: the fourth quarterback on a bad roster is exactly the
-card that should hurt to land on. A well travelled backup appears for two or three
-franchises with different years on each card, the same way the all-time pools carry Kerry
-Collins twice.
+and the rankings are the part that actually changes when the company changes.
+
+**Everybody in `src/data/current/` is on that team's depth chart today.** No recent alumni,
+no man who was here last season, nobody filed under a franchise he has left. That means the
+rooms are as deep as the real thing rather than a fixed size: Buffalo carries two
+quarterbacks, so Buffalo has two. It also means a man appears once, on the roster he is on,
+instead of once per stint the way the all-time pools carry Kerry Collins twice.
+
+The cost of that rule is real and it is priced in the section below. Seven picks out of
+rooms of three or four is a much harder game than seven picks out of rooms of eight, and
+quarterback and tight end feel it most because that is how many of them a team carries.
 
 **Writing that file taught the same lesson four times, and it is worth reading before
 adding to it.** Every pass rated today's players as if the all-time greats were standing
@@ -371,16 +374,16 @@ npm run rosters -- QB     # one position at a time reads best
 Three rules make the reconciliation almost mechanical:
 
 **A card is the man, not the slot.** When somebody signs elsewhere his ratings travel with
-him, so a transfer is a card moving between rooms rather than a rewrite. His old card stays
-where it was with the stint closed, because a franchise's recent alumni are exactly what
-the back half of a six card room is for.
+him, so a transfer is a card moving between rooms rather than a rewrite. There is no card
+left behind, because a pool that holds only current players has nowhere to put one.
 
-**Every room holds six.** So a man arriving means somebody leaving, and the one to drop is
-the least interesting alum rather than anybody currently playing.
+**A room is as deep as the depth chart says.** Nobody is kept for depth, so a man who signs
+elsewhere is deleted rather than demoted, and the room simply gets shorter until his
+replacement is written in.
 
-**The two cards need two lines.** A transferred player ends up with a card in each room and
-`npm run verify:copy` will fail if they say the same thing. The old one says what he did
-there and the new one says what he arrived to do.
+**A blurb travels with the card, so read it after a move.** The checks will catch two cards
+making the same joke and cannot catch a line about the wrong building, which is how Kirk
+Cousins arrived in Las Vegas still talking about Atlanta.
 
 What the checks cannot do is tell you a name is wrong. They proved these pools were spiky,
 uncorrelated and correctly scaled while three of the players in them did not exist, so the
@@ -441,27 +444,32 @@ of this and now derives it per league as well.
 
 What differs is the supply, and the difference is structural rather than a rating anybody
 can fix. An all-time franchise pool is the seven or eight most memorable players in seventy
-years at that position. A current pool is the six men in the room this season, and four of
-them are backups. Measured over 3,000 sensible runs a position:
+years at that position. A current pool is the men on the depth chart this morning, which is
+three or four at most positions. Measured over 3,000 sensible runs a position:
 
 ```
                  All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
     QB all-time     87%    40%     12%    1.5%    65%   8.8%   1.0%       6%
-    QB now          36%   0.3%    0.1%      0%    50%     0%     0%      35%
+    QB now          18%   0.1%      0%      0%    45%     0%     0%      48%
     RB all-time     86%    57%     21%    4.1%    68%    16%   2.2%       5%
-    RB now          74%   6.6%    1.1%    0.1%    57%   0.8%     0%      14%
+    RB now          41%   0.9%      0%      0%    51%     0%     0%      32%
     WR all-time     89%    73%     23%    7.8%    68%    19%   5.3%       4%
-    WR now          88%    46%     9.0%    2.2%    67%   7.5%   1.3%       5%
+    WR now          72%    12%     0.9%    0.1%    62%   0.6%   0.1%      13%
     TE all-time     67%   8.3%    1.3%    1.7%    56%   1.8%   0.3%      18%
-    TE now          40%   0.3%      0%    0.1%    54%   0.1%     0%      31%
+    TE now          17%   0.1%      0%      0%    48%     0%     0%      45%
 ```
 
-**Receiver comes through almost untouched**, because the position is genuinely deep right
-now: six receivers who actually play is a normal roster. Running back is a little thinner.
-Quarterback and tight end are the two positions where a roster carries three men, so those
-rooms reach to a third stringer to fill six cards, and it shows in every column. That is
-why the start screen labels those two THIN ROOM in current mode rather than carrying THE
-HARD ONE across from a league where tight end is hard on its own.
+**Receiver holds up best**, because six receivers who actually play is a normal roster.
+Everything else is thin by construction: a run makes seven picks off seven landings, and a
+landing that offers three men can only answer so many of the slots you have left. That is
+why the start screen labels quarterback and tight end THIN ROOM in current mode rather than
+carrying THE HARD ONE across from a league where tight end is hard on its own.
+
+**These numbers moved a long way when the pools went strictly current**, from 36% All-Pro
+at quarterback to 18%, because the recent alumni that used to pad each room to six are
+gone. That was the deliberate trade: the mode says the men on a roster now and it means it.
+If half a trophy case at quarterback ever feels wrong, the lever is that rule rather than
+any gate.
 
 So a current run is chasing All-Pro and a ring, and the top four trophies are close to
 unreachable at three positions. That is an honest consequence of the pools rather than a

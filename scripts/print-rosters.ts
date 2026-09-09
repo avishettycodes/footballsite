@@ -6,11 +6,10 @@
  * and reconcile. That job is only cheap if the file can be read in the same shape the
  * depth chart is in, which is what this prints.
  *
- * The rule the reconciliation follows is on the Era type in src/data/types.ts: the top of
- * a room is whoever actually plays there, and the rest may be men who were on that roster
- * during the 2020s and are still in the league. So a card that has gone stale usually
- * needs its years closed rather than deleting, and the man who replaced him needs a card
- * of his own wherever he went.
+ * The rule the reconciliation follows is on the Era type in src/data/types.ts: every card
+ * is a man on that team's depth chart today, and nobody is kept for depth. So a player who
+ * signs elsewhere moves rather than leaving a card behind, and a room simply gets shorter
+ * until somebody real fills it.
  *
  *   npm run rosters            every position
  *   npm run rosters -- QB TE   just those
@@ -36,4 +35,7 @@ const total = positions.reduce(
   (n, p) => n + TEAMS.reduce((m, t) => m + getPool(p, t.id, 'current').length, 0),
   0,
 );
-console.log(`\n${total} cards across ${positions.join(', ')}. Rooms hold six each.`);
+console.log(
+  `\n${total} cards across ${positions.join(', ')}. A room is as deep as the depth chart, ` +
+  'so two quarterbacks is a correct answer and six receivers is too.',
+);
