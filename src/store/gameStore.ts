@@ -26,6 +26,13 @@ import { safeStorage } from '../lib/storage';
 export const REROLLS_NORMAL = 2;
 export const REROLLS_HARD = 0;
 
+/** Early runs are disposable; QUIT protects the build once a fifth slot is filled. */
+export const QUIT_CONFIRM_AFTER = 4;
+
+export function quitNeedsConfirmation(filledSlots: number): boolean {
+  return filledSlots > QUIT_CONFIRM_AFTER;
+}
+
 /**
  * WHAT THE START SCREEN COMES BACK ON.
  *
@@ -137,7 +144,6 @@ type GameStore = RunState & {
   runSimulation: () => void;
   setCreationName: (name: string) => void;
   abandonRun: () => void;
-  restartRun: () => void;
   clearEvent: () => void;
 
   // selectors
@@ -409,20 +415,6 @@ export const useGame = create<GameStore>()(
       },
 
       abandonRun: () => set({ ...emptyRun(), entered: false }),
-      /**
-       * START AGAIN, WITH NO DIALOG IN THE WAY.
-       *
-       * It does exactly what abandonRun does, and it is a separate action because it is a
-       * separate intention. QUIT is somebody leaving, so it asks first, and the sentence
-       * it asks with is about what gets deleted. RESTART is somebody who has already
-       * decided, and asking a person who has decided is the thing that got complained
-       * about: walking out of a bad run cost a tap on QUIT, a tap on the dialog, and then
-       * three taps setting the league, position and mode back up.
-       *
-       * The setup survives both, which is the other half of the fix and the reason this
-       * lands on the start screen ready to spin rather than ready to be configured.
-       */
-      restartRun: () => set({ ...emptyRun(), entered: false }),
       clearEvent: () => set({ lastEventMessage: null }),
 
       remainingSlots: () => {

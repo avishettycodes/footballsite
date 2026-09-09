@@ -49,18 +49,15 @@ Every franchise stays in the wheel the whole way in both modes, so landing on th
 roster twice is a legal and fairly common outcome, and in hard mode you have no way to
 talk your way out of it.
 
-QUIT in the header walks out of a run from anywhere, including mid spin, and asks first.
-It deletes the build and the autosave with it, which is why it asks.
+QUIT in the header walks out of a run from anywhere, including mid spin. Through four
+filled slots it leaves immediately, because early in a run there is not much to lose.
+From the fifth slot on it asks first, because late in a run there is. It deletes the build
+and the autosave with it either way. One button whose caution follows the stakes is clearer
+than two buttons that differ only by a dialog.
 
-RESTART sits next to it and does not ask. It costs exactly what QUIT costs, and the
-difference is what the person tapping it has already decided: leaving is something you
-can do by accident, and starting again is not. A tester described the old route as
-tapping QUIT, confirming, and then setting his league, position and mode back up, which
-is four taps to do what he asked for on the first one.
-
-The start screen now opens on whatever you were last playing, so the last three of those
-taps are gone in every route out of a run, BUILD ANOTHER PLAYER included. The setting is
-stored beside the run rather than on it, because a run's league is frozen onto the run for
+The start screen opens on whatever you were last playing, so there is no setup tax after
+leaving a run or tapping BUILD ANOTHER PLAYER. The setting is stored beside the run rather
+than on it, because a run's league is frozen onto the run for
 scoring reasons and this is the opposite kind of thing: a preference that has to survive
 the events that delete a run. The seed is deliberately not remembered, since a seed is one
 specific run and refilling the box with it is the bug where deleting a seed did not delete

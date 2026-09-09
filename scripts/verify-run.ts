@@ -12,7 +12,7 @@
  * actually fires. Tight end is the one to watch, since it has seven slots and the
  * thinnest pools, which is the shortest path to draining a roster.
  */
-import { useGame } from '../src/store/gameStore';
+import { quitNeedsConfirmation, useGame } from '../src/store/gameStore';
 import { ATTRIBUTE_SETS, ERAS, ROSTERS, TEAMS, getPool, positionsWithData } from '../src/data';
 import type { AttributeKey, Era, Position } from '../src/data';
 
@@ -235,6 +235,7 @@ const good = rollFor('SHARED-SEED-1', 'greedy');
 const bad = rollFor('SHARED-SEED-1', 'worst');
 const sameCoin = good.superBowl.roll === bad.superBowl.roll;
 const betterBuildBetterOdds = good.superBowl.odds > bad.superBowl.odds;
+const quitThresholdHolds = !quitNeedsConfirmation(4) && quitNeedsConfirmation(5);
 
 console.log(`\nnormal run completes:   ${a.ok ? 'PASS' : 'FAIL — ' + a.notes.join('; ')}`);
 console.log(`hard run completes:     ${hard.ok ? 'PASS' : 'FAIL — ' + hard.notes.join('; ')}`);
@@ -255,8 +256,9 @@ console.log(`SB coin shared by seed: ${sameCoin ? 'PASS' : 'FAIL'} (roll ${good.
 console.log(`  best build ${good.overall} OVR, ${(good.superBowl.odds * 100).toFixed(0)}% -> ${good.superBowl.won ? 'RING' : 'no ring'}`);
 console.log(`  worst build ${bad.overall} OVR, ${(bad.superBowl.odds * 100).toFixed(0)}% -> ${bad.superBowl.won ? 'RING' : 'no ring'}`);
 console.log(`better build, better odds: ${betterBuildBetterOdds ? 'PASS' : 'FAIL'}`);
+console.log(`QUIT protects a late run: ${quitThresholdHolds ? 'PASS' : 'FAIL'} (immediate at 4 slots, asks at 5)`);
 
 process.exit(
   a.ok && hard.ok && deterministic && stranded === 0 && deadlockHolds && failsLoudly &&
-  idempotent && sameCoin && betterBuildBetterOdds ? 0 : 1,
+  idempotent && sameCoin && betterBuildBetterOdds && quitThresholdHolds ? 0 : 1,
 );

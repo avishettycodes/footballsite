@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ATTRIBUTE_SETS, getTeam } from './data';
 import type { AttributeKey } from './data';
-import { useGame } from './store/gameStore';
+import { quitNeedsConfirmation, useGame } from './store/gameStore';
 import { audioState, lock, primeAudio, setSoundEnabled, subscribeAudio } from './lib/audio';
 import { savedEra } from './lib/hall';
 import type { SavedPlayer } from './lib/hall';
@@ -48,6 +48,13 @@ export default function App() {
   const team = g.currentTeamId ? getTeam(g.currentTeamId) : null;
   const filledCount = ATTRIBUTE_SETS[g.position].filter((k) => g.slots[k]).length;
   const totalSlots = ATTRIBUTE_SETS[g.position].length;
+  const quitRun = () => {
+    if (quitNeedsConfirmation(filledCount)) {
+      setQuitting(true);
+      return;
+    }
+    g.abandonRun();
+  };
 
   return (
     <div className="min-h-full">
@@ -55,7 +62,7 @@ export default function App() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
           <button
             onClick={() => {
-              if (inRun) { setQuitting(true); return; }
+              if (inRun) { quitRun(); return; }
               setViewing(null);
               g.abandonRun();
             }}
@@ -99,37 +106,22 @@ export default function App() {
             {/*
               There was no way out of a run except finishing it. The logo went home, but
               nothing said so and it did it on one tap with the build still on screen, so
-              it was a trap rather than an exit. This is the exit, it is reachable during
-              a spin, and it asks first.
+              it was a trap rather than an exit. This is the exit and it is reachable
+              during a spin.
+
+              The first four slots go immediately because there is little run to protect.
+              After that it asks, because a nearly finished build is worth one extra tap.
+              One button changing its caution with the stakes is clearer than two buttons
+              that both delete the same run.
             */}
             {inRun && (
-              <>
-                {/*
-                  RESTART DOES NOT ASK, and that is the point of it rather than an
-                  oversight. QUIT asks because leaving is a decision somebody might be
-                  making by accident, and the sentence it asks with names how much of the
-                  build goes with it. Restarting is the decision already made: a tester
-                  described the old route as clicking abandon, confirming, and then
-                  choosing his league, position and mode all over again, which is four taps
-                  to do the thing he had already asked for on the first one.
-                  It costs the run, same as QUIT. What it does not cost is the setup, which
-                  the start screen now comes back on.
-                */}
-                <button
-                  onClick={g.restartRun}
-                  title="Drop this run and set up another"
-                  className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-hazard/25 hover:text-hazard"
-                >
-                  RESTART
-                </button>
-                <button
-                  onClick={() => setQuitting(true)}
-                  title="Walk away from this run"
-                  className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-red-500/25 hover:text-red-300"
-                >
-                  QUIT
-                </button>
-              </>
+              <button
+                onClick={quitRun}
+                title="Walk away from this run"
+                className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-red-500/25 hover:text-red-300"
+              >
+                QUIT
+              </button>
             )}
             <button
               onClick={() => {
@@ -353,9 +345,9 @@ export default function App() {
       )}
 
       {/*
-        Confirm, because this is the one button in the app that destroys something. The
-        slot count is in the sentence on purpose: six of seven filled reads very
-        differently from one of seven, and it is the number that changes your mind.
+        Confirm once the run is past four filled slots. The slot count is in the sentence
+        on purpose: six of seven filled reads differently from one of seven, and it is the
+        number that changes your mind.
       */}
       {quitting && (
         <div
