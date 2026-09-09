@@ -15,6 +15,7 @@
     "verify:scoring": "jiti scripts/verify-scoring.ts",
     "verify:career": "jiti scripts/verify-career.ts",
     "verify:copy": "jiti scripts/verify-copy.ts",
+    "rosters": "jiti scripts/print-rosters.ts",
     "verify:audio": "jiti scripts/verify-audio.ts",
     "build:only": "tsc -b && vite build"
   },

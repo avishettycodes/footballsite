@@ -170,10 +170,10 @@ const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
    * quarterbacks and three tight ends per roster is all there is.
    *
    *                All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-   *     QB now       35%     0.6%   0.1%      0%    50%   0.1%      0%      35%
-   *     RB now       67%     5.7%   1.2%    0.1%    56%   0.8%      0%      17%
-   *     WR now       88%    39%     6.3%    1.5%    67%   5.3%    0.8%       5%
-   *     TE now       36%     0.3%     0%    0.1%    53%   0.1%      0%      33%
+   *     QB now       36%     0.3%   0.1%      0%    50%     0%      0%      35%
+   *     RB now       74%     6.6%   1.1%    0.1%    57%   0.8%      0%      14%
+   *     WR now       88%    46%     9.0%    2.2%    67%   7.5%    1.3%       5%
+   *     TE now       40%     0.3%     0%    0.1%    54%   0.1%      0%      31%
    *
    * A LOWER BOUND OF ZERO CANNOT FAIL, and that is the point rather than an oversight.
    * The current league does not produce grand slams at three positions, so a band that

@@ -357,6 +357,36 @@ Player ids are unique across BOTH datasets, since a run stores the ids it has sp
 saved player keeps them forever. Current rows carry a `now-` prefix for that reason, and
 where two men on one roster share a surname the id carries the first name too.
 
+### Refreshing the current pools
+
+Rosters move, and this file says "now" on the start screen, so it gets reconciled against
+the real depth charts every few weeks rather than tracked live. `npm run rosters` prints
+every room in the same shape a depth chart is in, which is the only reason the job is
+quick:
+
+```bash
+npm run rosters -- QB     # one position at a time reads best
+```
+
+Three rules make the reconciliation almost mechanical:
+
+**A card is the man, not the slot.** When somebody signs elsewhere his ratings travel with
+him, so a transfer is a card moving between rooms rather than a rewrite. His old card stays
+where it was with the stint closed, because a franchise's recent alumni are exactly what
+the back half of a six card room is for.
+
+**Every room holds six.** So a man arriving means somebody leaving, and the one to drop is
+the least interesting alum rather than anybody currently playing.
+
+**The two cards need two lines.** A transferred player ends up with a card in each room and
+`npm run verify:copy` will fail if they say the same thing. The old one says what he did
+there and the new one says what he arrived to do.
+
+What the checks cannot do is tell you a name is wrong. They proved these pools were spiky,
+uncorrelated and correctly scaled while three of the players in them did not exist, so the
+names get read against a chart by a person, and that is the whole reason this section is
+here.
+
 Ratings are deliberately spiky. A player is in the pool because of one number, so Chris
 Johnson has 99 speed and 60 power, Jimmy Graham catches everything and blocks nobody,
 and Gus Edwards catches at 38. Some cards are bad on purpose, because a cold spin should
@@ -401,6 +431,43 @@ weights and the whole verification suite. The words on screen come from
 rather than by renaming a key. That is why the key is still `hands` while the screen says
 CATCHING, still `processing` while the screen says READS, and still `burst` while the
 screen says ACCELERATION.
+
+## The current league is a harder league, and the trophy case says so
+
+The gates are identical in both leagues on purpose. A first-team All-Pro has to mean the
+same thing whichever pools you played, so nothing in `src/lib/scoring.ts` asks which league
+it is looking at except the All-Pro floor, which was already derived from supply before any
+of this and now derives it per league as well.
+
+What differs is the supply, and the difference is structural rather than a rating anybody
+can fix. An all-time franchise pool is the seven or eight most memorable players in seventy
+years at that position. A current pool is the six men in the room this season, and four of
+them are backups. Measured over 3,000 sensible runs a position:
+
+```
+                 All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
+    QB all-time     87%    40%     12%    1.5%    65%   8.8%   1.0%       6%
+    QB now          36%   0.3%    0.1%      0%    50%     0%     0%      35%
+    RB all-time     86%    57%     21%    4.1%    68%    16%   2.2%       5%
+    RB now          74%   6.6%    1.1%    0.1%    57%   0.8%     0%      14%
+    WR all-time     89%    73%     23%    7.8%    68%    19%   5.3%       4%
+    WR now          88%    46%     9.0%    2.2%    67%   7.5%   1.3%       5%
+    TE all-time     67%   8.3%    1.3%    1.7%    56%   1.8%   0.3%      18%
+    TE now          40%   0.3%      0%    0.1%    54%   0.1%     0%      31%
+```
+
+**Receiver comes through almost untouched**, because the position is genuinely deep right
+now: six receivers who actually play is a normal roster. Running back is a little thinner.
+Quarterback and tight end are the two positions where a roster carries three men, so those
+rooms reach to a third stringer to fill six cards, and it shows in every column. That is
+why the start screen labels those two THIN ROOM in current mode rather than carrying THE
+HARD ONE across from a league where tight end is hard on its own.
+
+So a current run is chasing All-Pro and a ring, and the top four trophies are close to
+unreachable at three positions. That is an honest consequence of the pools rather than a
+bug, and deriving the record per league was considered and turned down: the trophies are
+what make two runs comparable, and comparing is what the seed link is for. Nothing here was
+retuned to flatter the new data, which is why the numbers are printed above.
 
 ## Tight end, and the one gate that reads the position
 
@@ -463,6 +530,12 @@ npm run verify
 ```
 
 That runs seven suites, and they check more than types.
+
+Everything below runs over BOTH leagues. That is not a formality: the current pools were
+written in one sitting about players everybody has just watched, which is exactly where two
+traits quietly collapse into one pick because the same handful of adjectives get reached
+for all afternoon. The check caught it three times, on power and size at running back, on
+contested catch and size at receiver, and on hands and route running at tight end.
 
 - **data** looks for duplicate ids, out of range values and thin pools, and it flags
   dead cards, meaning players with no elite trait and no funny weakness. It also measures
