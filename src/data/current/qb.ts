@@ -65,7 +65,6 @@ const POOLS: Record<string, Row[]> = {
     ['now-cle-watson', 'Deshaun Watson', '2022–', 'Carries the biggest guaranteed contract in the sport into a backup role.', 90, 76, 92, 76, 84, 75, 64, 66],
     ['now-cle-sanders', 'Shedeur Sanders', '2025–', 'Slid to the fifth round on live television and took it extremely personally.', 84, 88, 81, 66, 70, 83, 84, 58],
     ['now-cle-green', 'Taylen Green', '2026–', 'Six foot six and runs a 4.6, and nobody knows yet whether he can read a defense.', 90, 70, 87, 62, 92, 66, 60, 97],
-    ['now-cle-gabriel', 'Dillon Gabriel', '2025–', 'Left handed, six feet even, and he beat out a much louder rookie.', 80, 90, 79, 78, 78, 89, 76, 44],
   ],
   dal: [
     ['now-dal-dak', 'Dak Prescott', '2016–', 'A fourth round pick who has outlasted every doubt except the January ones.', 88, 92, 89, 91, 68, 94, 88, 78],

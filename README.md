@@ -336,7 +336,7 @@ since that is his name.
 
 Every rating is hand written and completely subjective. Nothing is scraped, no sports
 API is called, and no licensed dataset is involved. There are 1000 all-time players across
-four positions at seven to nine per franchise, and 489 current ones at however many the
+four positions at seven to nine per franchise, and 483 current ones at however many the
 depth chart says.
 
 **The current pools are a second hand-written dataset, not the first one scaled down.**
@@ -402,9 +402,21 @@ left behind, because a pool that holds only current players has nowhere to put o
 
 **A room is as deep as the depth chart says**, and that is a hard rule rather than a target.
 Two quarterbacks is a room of two. A man who signs elsewhere is deleted rather than demoted,
-a man on the practice squad is not in the file at all, and nobody is ever added to round a
-room up. `npm run verify:data` asks all-time for six per franchise and current for one, for
-exactly this reason.
+nobody on the practice squad is in the file, and nobody is ever added to round a room up.
+`npm run verify:data` asks all-time for six per franchise and current for one, for exactly
+this reason.
+
+**Injured reserve counts as not in the room**, along with the exempt list and anybody the
+chart has under Reserves. The test is whether he can line up on Sunday, not whether the
+franchise still holds his rights, so Josh Jacobs and Brandon Aiyuk are both absent from
+these pools while they sit where they sit.
+
+**Read the depth chart twice, from two sources.** The first sweep put seven men in the file
+who should not have been there: five on injured reserve, one on a practice squad, and a
+receiver filed at tight end. Every one of them came from a page reader folding the Reserves
+block into the active list, and none of them tripped a single check, because a card for a
+man on IR is spiky and uncorrelated and correctly scaled like any other. Cross-checking
+ourlads against ESPN caught all seven in one pass.
 
 **A blurb travels with the card, so read it after a move.** The checks will catch two cards
 making the same joke and cannot catch a line about the wrong building, which is how Kirk
@@ -496,7 +508,7 @@ Measured over 3,000 sensible runs a position:
 ```
                  All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
     QB all-time     86%    44%     13%    1.9%    65%   9.7%   1.1%       7%
-    QB now          76%    28%     24%      0%    48%   8.3%     0%      15%
+    QB now          76%    28%     25%      0%    48%   8.4%     0%      15%
     RB all-time     86%    57%     21%    4.1%    68%    16%   2.2%       5%
     RB now          85%    40%     26%    0.2%    56%    12%   0.2%       8%
     WR all-time     89%    73%     23%    7.8%    68%    19%   5.3%       4%

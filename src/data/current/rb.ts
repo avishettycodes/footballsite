@@ -126,7 +126,6 @@ const POOLS: Record<string, Row[]> = {
     ['now-ne-rhamondre', 'Rhamondre Stevenson', '2021–', 'Four hundred pound squat, and the ball keeps coming out at the worst moment.', 82, 87, 85, 92, 88, 88, 88],
     ['now-ne-henderson', 'TreVeyon Henderson', '2025–', 'Ran a 4.43 at 202 pounds and returned a kick 100 yards in his first month.', 97, 97, 81, 74, 84, 84, 70],
     ['now-ne-kiner', 'Corey Kiner', '2026–', 'Cincinnati back who runs angry and went undrafted for being short.', 86, 89, 83, 84, 84, 72, 78],
-    ['now-ne-haskins', 'Hassan Haskins', '2026–', 'Played linebacker for a season and then came back to running back.', 78, 80, 66, 90, 75, 66, 88],
   ],
   no: [
     ['now-no-etienne', 'Travis Etienne', '2026–', 'Went home to Louisiana and got the ball twenty times a week again.', 94, 93, 87, 70, 84, 84, 74],

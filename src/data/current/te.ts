@@ -61,7 +61,6 @@ const POOLS: Record<string, Row[]> = {
     ['now-cle-fannin', 'Harold Fannin Jr.', '2025–', 'Set a college record for the position that had stood since the seventies.', 89, 69, 84, 92, 92, 85, 82],
     ['now-cle-whiteheart', 'Blake Whiteheart', '2024–', 'Wake Forest tight end who has never caught a professional pass.', 73, 87, 77, 71, 64, 87, 88],
     ['now-cle-ryan', 'Carsen Ryan', '2026–', 'Was a fullback at BYU and they are still working out what he is.', 81, 90, 77, 71, 69, 89, 84],
-    ['now-cle-royer', 'Joe Royer', '2025–', 'Undrafted out of Cincinnati and has spent two years learning to block.', 79, 87, 77, 75, 66, 85, 88],
   ],
   dal: [
     ['now-dal-ferguson', 'Jake Ferguson', '2022–', 'Fourth round pick whose grandfather coached the Packers to a Super Bowl.', 92, 81, 77, 90, 75, 91, 88],
@@ -78,16 +77,12 @@ const POOLS: Record<string, Row[]> = {
     ['now-det-laporta', 'Sam LaPorta', '2023–', 'Broke the rookie tight end record and blocks like he was raised on a farm.', 96, 85, 88, 92, 90, 94, 86],
     ['now-det-wright', 'Brock Wright', '2021–', 'Nobody drafted him and he has started January games as an extra lineman.', 77, 94, 77, 73, 69, 91, 88],
     ['now-det-conklin', 'Tyler Conklin', '2026–', 'Has not missed a game in nine years and nobody has built an offense around him.', 89, 75, 79, 85, 73, 87, 86],
-    ['now-det-meeks', 'Jackson Meeks', '2026–', 'Was a receiver at Georgia and Syracuse before anybody called him this.', 87, 71, 84, 81, 77, 78, 84],
   ],
   gb: [
     ['now-gb-kraft', 'Tucker Kraft', '2023–', 'Finishes every catch by lowering a shoulder into whoever arrives first.', 92, 87, 86, 85, 96, 94, 88],
     ['now-gb-smith', 'Jonnu Smith', '2024–', 'Caught 88 passes at 29 after eight seasons of nobody knowing what he was.', 92, 79, 93, 85, 94, 89, 82],
     ['now-gb-whyle', 'Josh Whyle', '2023–', 'Blocks down on ends and turns up on kickoffs every single week.', 85, 92, 81, 71, 71, 89, 92],
     ['now-gb-redman', 'Mark Redman', '2026–', 'Six foot six out of San Diego State, and the hands are why he sticks.', 83, 81, 74, 77, 69, 83, 90],
-    ['now-gb-lachey', 'Luke Lachey', '2025–', 'His father blocked for a living and Iowa taught him to do the same.', 83, 90, 77, 79, 69, 87, 88],
-    ['now-gb-yassmin', 'Thomas Yassmin', '2026–', 'Played rugby in Australia until he was 20 and now he runs seam routes.', 81, 85, 86, 75, 77, 89, 90],
-    ['now-gb-musgrave', 'Luke Musgrave', '2023–', 'The training room has seen a great deal more of him than the field has.', 77, 75, 93, 87, 81, 74, 88],
   ],
   hou: [
     ['now-hou-schultz', 'Dalton Schultz', '2023–', 'Third franchise doing the identical job, and he never drops third and seven.', 92, 83, 74, 87, 71, 89, 88],

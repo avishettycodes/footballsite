@@ -78,12 +78,12 @@ const POOLS: Record<string, Row[]> = {
     ['now-cle-corley', 'Malachi Corley', '2026–', 'Western Kentucky made him look unstoppable and the league has not agreed.', 90, 80, 78, 81, 74, 92, 75],
     ['now-cle-jeudy', 'Jerry Jeudy', '2024–', 'Runs the prettiest routes in football and catches about seven in ten.', 90, 80, 96, 94, 78, 84, 75],
     ['now-cle-wallace', 'Tylan Wallace', '2026–', 'Cleveland signed him for the special teams and he keeps making the roster.', 88, 78, 76, 74, 82, 82, 77],
-    ['now-cle-concepcion', 'KC Concepcion', '2026–', 'Was the best freshman in the ACC and then transferred twice.', 92, 86, 84, 89, 66, 92, 59],
+    ['now-cle-concepcion', 'KC Concepcion', '2026–', 'Was the best freshman in the ACC and then went to the SEC for money.', 92, 86, 84, 89, 66, 92, 59],
   ],
   dal: [
     ['now-dal-pickens', 'George Pickens', '2025–', 'Makes a catch every week that nobody else in the sport could make.', 90, 84, 86, 83, 99, 80, 92],
     ['now-dal-lamb', 'CeeDee Lamb', '2020–', 'Caught 135 passes in a season and does whatever he likes after the catch.', 90, 94, 94, 91, 92, 94, 86],
-    ['now-dal-mingo', 'Jonathan Mingo', '2025–', 'Carolina spent a second round pick on him and traded him for another one.', 86, 76, 74, 79, 74, 78, 90],
+    ['now-dal-mingo', 'Jonathan Mingo', '2025–', 'Carolina spent a second round pick on him and got a fourth back two years later.', 86, 76, 74, 79, 74, 78, 90],
     ['now-dal-flournoy', 'Ryan Flournoy', '2024–', 'Sixth round pick from Southeast Missouri State with two career catches.', 90, 78, 76, 76, 80, 78, 86],
     ['now-dal-turpin', 'KaVontae Turpin', '2022–', 'Was the MVP of a spring league and is the fastest man on this roster.', 97, 74, 72, 81, 66, 94, 55],
   ],
@@ -96,6 +96,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-den-franklin', 'Troy Franklin', '2024–', 'Caught passes from Bo Nix in college and does it again now.', 94, 80, 84, 85, 68, 84, 71],
   ],
   det: [
+    ['now-det-meeks', 'Jackson Meeks', '2026–', 'Six foot two and 235 pounds, and Syracuse got a thousand yards out of him.', 82, 86, 80, 74, 90, 74, 92],
     ['now-det-teslaa', 'Isaac TeSlaa', '2025–', 'Third round pick out of Arkansas who was a walk on at Hillsdale first.', 90, 82, 78, 76, 78, 78, 90],
     ['now-det-tmartin', 'Tay Martin', '2026–', 'Oklahoma State receiver who has been on five practice squads in four years.', 90, 84, 84, 81, 84, 80, 83],
     ['now-det-williams', 'Jameson Williams', '2022–', 'Twelfth overall pick with 4.3 speed who took three years to be trusted.', 97, 80, 84, 87, 76, 92, 73],
@@ -122,7 +123,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-ind-allen', 'Keenan Allen', '2026–', 'Thirty four years old and still nobody can cover him inside ten yards.', 76, 96, 97, 94, 86, 78, 83],
     ['now-ind-dulin', 'Ashton Dulin', '2019–', 'Came out of a Division II school in Ohio and has covered kicks for seven years.', 92, 78, 74, 79, 72, 80, 81],
     ['now-ind-downs', 'Josh Downs', '2023–', 'Nobody in the league wins on third and six from the slot more often.', 90, 92, 92, 91, 82, 88, 59],
-    ['now-ind-burks', 'Deion Burks', '2025–', 'Scored nine touchdowns in a season at Purdue and then got hurt a lot.', 94, 82, 82, 87, 62, 88, 52],
+    ['now-ind-burks', 'Deion Burks', '2025–', 'Scored seven touchdowns in a season at Purdue and then got hurt a lot.', 94, 82, 82, 87, 62, 88, 52],
   ],
   jax: [
     ['now-jax-thomas', 'Brian Thomas Jr.', '2024–', 'Went for 1,282 yards as a rookie while the rest of the offense fell apart.', 96, 88, 88, 87, 88, 90, 92],
