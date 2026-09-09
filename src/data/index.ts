@@ -84,18 +84,17 @@ export type DataIssue = { level: 'error' | 'warn'; message: string };
  * Integrity pass over the seed data. Runs in dev so a bad hand-edit is loud
  * instead of a silent empty wheel at spin time.
  *
- * THE SIX PER FRANCHISE RULE APPLIES TO THE ALL-TIME POOLS ONLY, and that is a rule about
- * the two datasets meaning different things rather than a relaxed standard.
+ * SIX PER FRANCHISE IN BOTH LEAGUES, and the current pools reach back a few seasons to get
+ * there rather than padding with anybody invented.
  *
- * An all-time pool is a selection: seventy years of a franchise at one position, and if
- * somebody can only find five worth writing down he has not looked hard enough. A current
- * pool is not a selection at all, it is a roster. A team carries two quarterbacks and
- * sometimes three, so a room of two IS the correct answer there and a check demanding six
- * would be asking the data to lie about how football teams are built.
+ * That was briefly relaxed, on 2026-09-08, while the current pools held only the men on a
+ * depth chart that morning. Rooms fell to three and the mode stopped working: a hole-free
+ * quarterback build came out under the All-Pro line and half of runs won nothing. Six is
+ * back because six is what the game needs, and the years on each card say who is here now
+ * and who held the job last season.
  *
- * So current pools are checked for being EMPTY, which would strand the wheel, and nothing
- * else. What keeps them honest is not this function, it is a person reading them against a
- * depth chart. See the refresh section in the README.
+ * What no check here can do is tell you a name is wrong. That is a person reading the pools
+ * against a depth chart. See the refresh section in the README.
  */
 export function validateData(): DataIssue[] {
   const issues: DataIssue[] = [];
@@ -137,8 +136,8 @@ export function validateData(): DataIssue[] {
     }
   }
 
-  /** Six per franchise per position, all-time only. See the note above. */
-  const THIN_POOL: Partial<Record<Era, number>> = { alltime: 6 };
+  /** Six per franchise per position, in both leagues. See the note above. */
+  const THIN_POOL: Partial<Record<Era, number>> = { alltime: 6, current: 6 };
 
   for (const era of ERAS) {
     for (const position of positionsWithData(era)) {

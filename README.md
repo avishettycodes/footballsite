@@ -330,21 +330,25 @@ since that is his name.
 
 Every rating is hand written and completely subjective. Nothing is scraped, no sports
 API is called, and no licensed dataset is involved. There are 1000 all-time players across
-four positions at seven to nine per franchise, and 496 current ones at two to five.
+four positions at seven to nine per franchise, and 768 current ones at six.
 
 **The current pools are a second hand-written dataset, not the first one scaled down.**
 A scale factor would keep every ranking exactly where it was and only move the decimal,
 and the rankings are the part that actually changes when the company changes.
 
-**Everybody in `src/data/current/` is on that team's depth chart today.** No recent alumni,
-no man who was here last season, nobody filed under a franchise he has left. That means the
-rooms are as deep as the real thing rather than a fixed size: Buffalo carries two
-quarterbacks, so Buffalo has two. It also means a man appears once, on the roster he is on,
-instead of once per stint the way the all-time pools carry Kerry Collins twice.
+**A current room is the depth chart today plus the men who held the job over the last few
+seasons**, and the years on every card say which is which. Strictly today was tried on
+2026-09-08 and it did not survive being played: a real roster carries three quarterbacks, so
+rooms fell to three or four, and two carefully played runs came out at 92/92/96/90/99/97/90
+and 97/90/92/92/92/92/90. Those are players with no hole anywhere and both finished under
+the 92 overall that first-team All-Pro asks for, one on a coin-flip ring and the other on
+nothing at all. A bar that good play cannot clear is the thing this project calls a bug
+wearing a difficulty costume.
 
-The cost of that rule is real and it is priced in the section below. Seven picks out of
-rooms of three or four is a much harder game than seven picks out of rooms of eight, and
-quarterback and tight end feel it most because that is how many of them a team carries.
+The measurable version of that: a room can be scored by how many of the seven slots it can
+answer at 90 or better. All-time rooms answer six. Strictly-current rooms answered four,
+except at receiver, where six who play is a normal roster. Receiver was also the only
+position that still played well, which is the tell.
 
 **Writing that file taught the same lesson four times, and it is worth reading before
 adding to it.** Every pass rated today's players as if the all-time greats were standing
@@ -450,13 +454,13 @@ three or four at most positions. Measured over 3,000 sensible runs a position:
 ```
                  All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
     QB all-time     87%    40%     12%    1.5%    65%   8.8%   1.0%       6%
-    QB now          18%   0.1%      0%      0%    45%     0%     0%      48%
+    QB now          36%   0.3%    0.1%      0%    50%     0%     0%      36%
     RB all-time     86%    57%     21%    4.1%    68%    16%   2.2%       5%
-    RB now          41%   0.9%      0%      0%    51%     0%     0%      32%
+    RB now          65%   4.9%    0.5%    0.1%    57%   0.4%     0%      18%
     WR all-time     89%    73%     23%    7.8%    68%    19%   5.3%       4%
-    WR now          72%    12%     0.9%    0.1%    62%   0.6%   0.1%      13%
+    WR now          89%    45%     9.1%    2.1%    66%   7.8%   1.3%       5%
     TE all-time     67%   8.3%    1.3%    1.7%    56%   1.8%   0.3%      18%
-    TE now          17%   0.1%      0%      0%    48%     0%     0%      45%
+    TE now          28%   0.2%      0%      0%    51%     0%     0%      37%
 ```
 
 **Receiver holds up best**, because six receivers who actually play is a normal roster.
@@ -465,11 +469,9 @@ landing that offers three men can only answer so many of the slots you have left
 why the start screen labels quarterback and tight end THIN ROOM in current mode rather than
 carrying THE HARD ONE across from a league where tight end is hard on its own.
 
-**These numbers moved a long way when the pools went strictly current**, from 36% All-Pro
-at quarterback to 18%, because the recent alumni that used to pad each room to six are
-gone. That was the deliberate trade: the mode says the men on a roster now and it means it.
-If half a trophy case at quarterback ever feels wrong, the lever is that rule rather than
-any gate.
+**Strictly-current rooms were tried and taken back out**, and the numbers are the reason:
+All-Pro at quarterback fell to 18% with nearly half of runs winning nothing, and playing it
+showed why. The lever is the depth rule rather than any gate, and it stays that way.
 
 So a current run is chasing All-Pro and a ring, and the top four trophies are close to
 unreachable at three positions. That is an honest consequence of the pools rather than a

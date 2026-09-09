@@ -164,17 +164,20 @@ const SLAM_TARGETS: Record<string, { human: Band; sharp: Band }> = {
    * a rating anybody can fix.
    *
    * An all-time franchise pool is the seven or eight most memorable players in seventy
-   * years of that position. A current pool is whoever is on the depth chart this morning,
-   * which is three or four men at most positions and two at some. Receiver holds up best
-   * because six receivers who play is a normal roster. Everything else is thin by
-   * construction: seven picks off seven landings, and a landing that offers three men can
-   * only answer so many of the slots still open.
+   * years of that position. A current pool is six men who are on the roster now or held the
+   * job over the last few seasons, and half of those are backups.
+   *
+   * The statistic that predicts how a pool plays is not its size, it is how many of the
+   * seven slots a room can answer at 90 or better. All-time rooms answer six. Current rooms
+   * answer five, and the strictly-current version tried on 2026-09-08 answered four, which
+   * was unplayable at quarterback and tight end. Receiver answers six in both leagues and
+   * is the only current position that measures like an all-time one.
    *
    *                All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-   *     QB now       18%     0.1%     0%      0%    45%     0%      0%      48%
-   *     RB now       41%     0.9%     0%      0%    51%     0%      0%      32%
-   *     WR now       72%    12%     0.9%    0.1%    62%   0.6%    0.1%      13%
-   *     TE now       17%     0.1%     0%      0%    48%     0%      0%      45%
+   *     QB now       36%     0.3%   0.1%      0%    50%     0%      0%      36%
+   *     RB now       65%     4.9%   0.5%    0.1%    57%   0.4%      0%      18%
+   *     WR now       89%    45%     9.1%    2.1%    66%   7.8%    1.3%       5%
+   *     TE now       28%     0.2%     0%      0%    51%     0%      0%      37%
    *
    * A LOWER BOUND OF ZERO CANNOT FAIL, and that is the point rather than an oversight.
    * The current league does not produce grand slams at three positions, so a band that

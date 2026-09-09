@@ -135,7 +135,7 @@ export function StartScreen({
           </div>
           <div className="font-mono text-[11px] text-white/50">
             {era === 'current'
-              ? 'Only the men on a roster now. Every rating is judged against the rest of the league today, so the best one playing gets the 99.'
+              ? 'The men on a roster now, plus whoever held the job here last season. Every rating is judged against the league today, so the best one playing gets the 99.'
               : 'Everybody a franchise has ever had. Every rating is judged against everybody who has played the position, so the great ones set the top.'}
           </div>
         </div>

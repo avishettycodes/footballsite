@@ -24,11 +24,20 @@ export type Position = 'QB' | 'RB' | 'WR' | 'TE';
  * rows. A scale factor would keep every ranking exactly as it was and just move the
  * decimal, and the rankings are the part that actually changes.
  *
- * CURRENT MEANS ON THE DEPTH CHART TODAY, with nobody kept for depth. So the rooms are
- * whatever size the real thing is, two at quarterback for some teams and five at receiver,
- * and a man appears once rather than once per stint. That is a harder game than the
- * all-time pools deal and the README prices it out, but the alternative was a mode called
- * current players that was quietly full of men who left.
+ * CURRENT MEANS THE DEPTH CHART TODAY PLUS LAST SEASON'S, and the second half of that is
+ * there because the first half alone did not work.
+ *
+ * Strictly today was tried, on 2026-09-08, and it left rooms of three. Two carefully played
+ * quarterback runs came out at 92/92/96/90/99/97/90 and 97/90/92/92/92/92/90, which is a
+ * player with no hole anywhere, and both finished under the 92 overall that first-team
+ * All-Pro asks for. One won a coin-flip ring and the other won nothing. A bar that good
+ * play cannot clear is the thing this project calls a bug wearing a difficulty costume, and
+ * the cause was arithmetic: seven picks off three-man rooms cannot lift the weak link
+ * anchor, whatever the player does.
+ *
+ * So each room carries the men on it now and a couple who held the job last season, and the
+ * years on every card say which is which. Both are honest descriptions of a current league.
+ * Only the first one is a game.
  *
  * Player ids are unique ACROSS both sets, since a run stores the ids it has used and a
  * saved player keeps them forever. Current rows carry a `now-` prefix for that reason.

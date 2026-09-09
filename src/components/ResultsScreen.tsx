@@ -3,7 +3,7 @@ import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import { ERA_LABELS } from '../data';
 import type { AttributeKey, Era, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { RECORD_YARDS, SPIKE_AT, accoladeDefs, allProFloor, softestSlot } from '../lib/scoring';
+import { GATES, RECORD_YARDS, SPIKE_AT, accoladeDefs, allProFloor, softestSlot } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
@@ -519,12 +519,31 @@ export function ResultsScreen({
               nothing else under 95 was told nothing on him dropped below 95 with the 92
               sitting three rows up the same screen. See softestSlot in scoring.ts.
             */}
+            {/*
+              THE THIRD SENTENCE, and it exists because playing the current league found
+              the box telling a true thing that read as a lie.
+
+              A hole-free current mode build lands around 91 and first-team All-Pro asks
+              for 92, so the screen said "there is no hole to find" directly above a trophy
+              case holding nothing. Both halves were correct and the reader is not wrong to
+              call that a contradiction: he was told he built a complete player and handed
+              an empty case, with no word about what actually went wrong.
+
+              What went wrong is not a hole, it is the ceiling. Every number was good and
+              none was good enough, which is a different sentence and the honest one. It is
+              said only when it applies, so a build that clears the gate still just gets
+              told there is no hole in him.
+            */}
             <p className="mt-1 text-[13px] leading-snug text-white/85">
               {softest.value >= allProFloor(position, era) ? (
                 <>
                   Nothing on him drops below{' '}
                   <b style={{ color: ratingColor(softest.value) }}>{softest.value}</b>
                   . There is no hole to find.
+                  {career.overall < GATES.allPro && (
+                    <> Every number was good and not one of them was good enough, which is
+                    what a whole league of good players hands you.</>
+                  )}
                 </>
               ) : (
                 <>
@@ -685,7 +704,7 @@ export function ResultsScreen({
                 {earned.length > 0 && earned.length < 3 && thinPosition && (
                   <div className="w-full font-mono text-[11px] text-white/40">
                     {era === 'current'
-                      ? `A roster carries three of these and you were choosing from six, so most of what you saw was somebody's backup. Getting this far out of that is more than it looks like.`
+                      ? `A roster carries three of these, so half of what you saw was a backup or a man who left last season. Getting this far out of that is more than it looks like.`
                       : 'Tight end is the hard one. A typical roster has less on it at every slot, so getting this far with one is more than it looks like.'}
                   </div>
                 )}
