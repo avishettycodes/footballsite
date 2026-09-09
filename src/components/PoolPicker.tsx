@@ -45,7 +45,7 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
           const spent = usedPlayerIds.includes(player.id);
           const team = getTeam(player.teamId);
           /*
-            Every card is a pitch and a punchline, and an unmarked row of eight bars is
+            Every card is a pitch and a punchline, and an unmarked row of seven bars is
             neither. Marking the best and worst makes "elite at one thing, hopeless at
             another" readable in the second you spend looking at it, which is the whole
             reason a 38 is funny rather than just short.

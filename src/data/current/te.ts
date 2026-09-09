@@ -37,7 +37,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-buf-kincaid', 'Dalton Kincaid', '2023–', 'First round pick who runs routes like a slot receiver and drops too many.', 79, 66, 88, 94, 83, 76, 84],
     ['now-buf-knox', 'Dawson Knox', '2019–', 'Scored in January the week after his brother died and pointed at the sky.', 85, 94, 81, 79, 75, 96, 90],
     ['now-buf-hawes', 'Jackson Hawes', '2025–', 'Fifth round rookie brought in to block, and he is very good at it.', 77, 96, 74, 62, 62, 91, 90],
-    ['now-buf-morrisx', 'Keleki Latu', '2025–', 'Rookie who has to beat out three men who would start almost anywhere else.', 73, 81, 77, 69, 64, 81, 86],
+    ['now-buf-morrisx', 'Keleki Latu', '2025–', 'Rookie who has to beat out three players who would start almost anywhere else.', 73, 81, 77, 69, 64, 81, 86],
   ],
   car: [
     ['now-car-tremble', 'Tommy Tremble', '2021–', 'Drafted to block and he has quietly become good enough to leave on the field.', 79, 94, 88, 77, 79, 91, 86],

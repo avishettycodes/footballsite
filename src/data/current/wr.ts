@@ -13,6 +13,19 @@ import type { Player } from '../types';
  * out. Size is judged the same way it always is, off how big he plays rather than how big
  * the programme lists him.
  *
+ * A CARD MUST NOT CONTRADICT ITS OWN BLURB, which is how CeeDee Lamb got caught.
+ *
+ * `npm run leaders` prints the top five at every trait and then asks the question
+ * backwards: which of the highest rated cards at this position are top five in nothing?
+ * Lamb came out of that list. His line says he caught 135 passes in a season and does
+ * whatever he likes after the catch, and the numbers beside it had him eighth in catching
+ * and eighth in YAC. The blurb and the card were describing two different receivers.
+ *
+ * He reads 97 catching and 96 YAC now, which is level with Chase and Nacua rather than
+ * ahead of Jefferson. DJ Moore came out of the same list and did NOT move: he is a very
+ * good complete receiver with no elite trait, and a card saying exactly that is a correct
+ * card rather than a missing 99.
+ *
  * Row format:
  *   [id, name, years, blurb, SPD, HND, RTE, RLS, CTC, YAC, SZE]
  */
@@ -82,13 +95,13 @@ const POOLS: Record<string, Row[]> = {
   ],
   dal: [
     ['now-dal-pickens', 'George Pickens', '2025–', 'Makes a catch every week that nobody else in the sport could make.', 90, 84, 86, 83, 99, 80, 92],
-    ['now-dal-lamb', 'CeeDee Lamb', '2020–', 'Caught 135 passes in a season and does whatever he likes after the catch.', 90, 94, 94, 91, 92, 94, 86],
+    ['now-dal-lamb', 'CeeDee Lamb', '2020–', 'Caught 135 passes in a season and does whatever he likes after the catch.', 90, 97, 94, 91, 92, 96, 86],
     ['now-dal-mingo', 'Jonathan Mingo', '2025–', 'Carolina spent a second round pick on him and got a fourth back two years later.', 86, 76, 74, 79, 74, 78, 90],
     ['now-dal-flournoy', 'Ryan Flournoy', '2024–', 'Sixth round pick from Southeast Missouri State with two career catches.', 90, 78, 76, 76, 80, 78, 86],
     ['now-dal-turpin', 'KaVontae Turpin', '2022–', 'Was the MVP of a spring league and is the fastest man on this roster.', 97, 74, 72, 81, 66, 94, 55],
   ],
   den: [
-    ['now-den-sutton', 'Courtland Sutton', '2018–', 'Goes up on the sideline against two men and comes down with it anyway.', 84, 86, 86, 79, 96, 74, 96],
+    ['now-den-sutton', 'Courtland Sutton', '2018–', 'Goes up on the sideline against two defenders and comes down with it anyway.', 84, 86, 86, 79, 96, 74, 96],
     ['now-den-humphrey', 'Lil\'Jordan Humphrey', '2026–', 'Six foot four and built like a tight end, and he blocks like one too.', 78, 84, 76, 72, 90, 78, 98],
     ['now-den-waddle', 'Jaylen Waddle', '2026–', 'Cost a great deal to bring in and runs a 4.37 at 28 years old.', 97, 90, 90, 91, 76, 94, 59],
     ['now-den-mims', 'Marvin Mims Jr.', '2023–', 'Went to two Pro Bowls for returning kicks and hardly plays on offense.', 97, 84, 82, 85, 66, 92, 63],
@@ -203,7 +216,7 @@ const POOLS: Record<string, Row[]> = {
   nyj: [
     ['now-nyj-mitchell', 'Adonai Mitchell', '2026–', 'Ran a 4.34 at 6 foot 2, and the drops have followed him everywhere.', 94, 70, 84, 85, 70, 82, 88],
     ['now-nyj-patrick', 'Tim Patrick', '2026–', 'Missed two entire seasons to his legs and turned up in New York at 32.', 82, 88, 84, 74, 90, 68, 92],
-    ['now-nyj-wilson', 'Garrett Wilson', '2022–', 'Nine different men have thrown him the ball and he is still open every week.', 92, 94, 94, 94, 90, 88, 77],
+    ['now-nyj-wilson', 'Garrett Wilson', '2022–', 'Nine different quarterbacks have thrown him the ball and he is still open every week.', 92, 94, 94, 94, 90, 88, 77],
     ['now-nyj-smith', 'Arian Smith', '2025–', 'Ran a 4.36 at Georgia and dropped a lot of what came his way.', 97, 68, 76, 83, 70, 84, 67],
     ['now-nyj-iwilliams', 'Isaiah Williams', '2025–', 'Played quarterback at Illinois until they moved him, and then he caught 82.', 88, 88, 84, 87, 58, 88, 44],
     ['now-nyj-ocooper', 'Omar Cooper Jr.', '2026–', 'Spent a season at Indiana catching everything Mendoza threw at him.', 88, 86, 82, 79, 80, 80, 73],

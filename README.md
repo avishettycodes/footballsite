@@ -52,6 +52,20 @@ talk your way out of it.
 QUIT in the header walks out of a run from anywhere, including mid spin, and asks first.
 It deletes the build and the autosave with it, which is why it asks.
 
+RESTART sits next to it and does not ask. It costs exactly what QUIT costs, and the
+difference is what the person tapping it has already decided: leaving is something you
+can do by accident, and starting again is not. A tester described the old route as
+tapping QUIT, confirming, and then setting his league, position and mode back up, which
+is four taps to do what he asked for on the first one.
+
+The start screen now opens on whatever you were last playing, so the last three of those
+taps are gone in every route out of a run, BUILD ANOTHER PLAYER included. The setting is
+stored beside the run rather than on it, because a run's league is frozen onto the run for
+scoring reasons and this is the opposite kind of thing: a preference that has to survive
+the events that delete a run. The seed is deliberately not remembered, since a seed is one
+specific run and refilling the box with it is the bug where deleting a seed did not delete
+the seed.
+
 Naming your player on the report saves him. He goes into YOUR HALL at the bottom of the
 start screen, where opening him replays the whole report as it came out, fully revealed
 and without sitting through the reveal a second time. Clearing the name takes him back
@@ -266,15 +280,23 @@ runs a position. The current league has its own table further down:
 
 ```
            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-    QB        86%     44%    13%    1.9%    65%   9.7%    1.1%      7.4%
+    QB        87%     40%    12%    1.5%    65%   8.8%    1.0%      6.2%
     RB        86%     57%    21%    4.1%    68%    16%    2.2%      5.3%
     WR        89%     73%    23%    7.8%    68%    19%    5.3%      4.1%
     TE        67%    8.3%   1.3%    1.7%    56%   1.8%    0.3%     17.5%
 ```
 
-Quarterback moved a point or two when size became its eighth pick. That is an extra spin,
-an extra franchise raided and one more number the weak link anchor can find a hole in, and
-nothing was retuned to cancel it out.
+Quarterback moved when size came OFF its card and it went back to seven picks. The table
+above is the seven pick version. All-Pro went 86% to 87%, OPOY 44% to 40%, MVP 13% to 12%
+and the Hall of Fame 9.7% to 8.8%, and nothing was retuned to cancel any of it out.
+
+OPOY getting harder is the interesting one, since the award asks for half the card's slots
+as spikes and half of seven is three where half of eight was four. Losing a slot should
+have made it easier. It did not, because size was the cheapest spike on the quarterback
+card: a typical all-time roster offered 97 for it, better than any other slot, so it was
+very close to a free one. Dropping the requirement by one and the supply by more than one
+nets out harder. That is a good argument for the slot having been weak rather than against
+removing it.
 
 Only the record column moved when the seasons were rebalanced, and every other number in
 that table came back byte identical, which is the evidence that the change reached the
@@ -314,6 +336,15 @@ where the items are bare things with no verb in them. "Six foot three, 220 pound
 ran a 4.39" is a spec sheet. "Threw it sidearm, ran like a statue, and outthought
 everybody on the field" is somebody talking, and that one is fine, so the test is
 whether there is a verb in the things being listed rather than how short they are.
+
+Two more, both asked for by the same player. Nothing on screen calls the pool "the men"
+any more, it says players, because "only the men on the current roster" is a sentence
+somebody quoted back twice. And the league switch no longer says ratings are "judged
+against the league today", which named a comparison without ever saying where the names
+come from. It now says the depth charts are read weekly, that ratings are relative to the
+players in the league right now, and that a missing name is a name not on the chart this
+week. Josh Jacobs is named in that line on purpose: he was the one who actually got asked
+about, and a name is easier to check than a rule is.
 
 `npm run verify:copy` enforces all of this on anything a player can read, which now
 includes the two lines the store says out loud when a run deadlocks or a spin comes back
@@ -359,15 +390,14 @@ three cannot lift the weak link anchor the way a room of eight can, so the first
 strict rooms left a quarterback with no hole anywhere finishing under the 92 overall that
 first-team All-Pro asks for. A bar that good play cannot clear is the thing this project
 calls a bug wearing a difficulty costume, and the honest fix is not to put the wrong names
-back. It is to notice that 92 was measured against a league that supplies 94 and this one
-supplies 90. See "The current league is a harder league" below for how that is derived.
+back. It is to notice that 92 was measured against a league that supplies 93.6 and this one
+supplies 90.1. See "The current league is a harder league" below for how that is derived.
 
-The measurable version: a room can be scored by how many of the card's slots it can answer
-at 90 or better. All-time quarterback rooms answer seven of eight and current ones answer
-four. Receiver answers six of seven in both leagues, because six receivers who actually play
-is a normal roster, and receiver is correspondingly the position that barely moved. Tight
-end answers five in both, which is why it is the one position whose gates did not move at
-all.
+The measurable version: a room can be scored by how many of the card's seven slots it can
+answer at 90 or better. All-time quarterback rooms answer six and current ones answer four.
+Receiver answers six in both leagues, because six receivers who actually play is a normal
+roster, and receiver is correspondingly the position that barely moved. Tight end answers
+five in both, which is why it is the one position whose gates did not move at all.
 
 **Writing that file taught the same lesson four times, and it is worth reading before
 adding to it.** Every pass rated today's players as if the all-time greats were standing
@@ -432,6 +462,71 @@ Johnson has 99 speed and 60 power, Jimmy Graham catches everything and blocks no
 and Gus Edwards catches at 38. Some cards are bad on purpose, because a cold spin should
 hurt.
 
+### Reading the boards, which is the check no check can do
+
+`npm run leaders` prints the top five at every trait for a position and then asks the same
+question backwards: which of the highest rated cards at this position are top five in
+nothing? It passes and fails nothing. It exists because `npm run verify:data` proved these
+pools were spiky, uncorrelated and correctly scaled while a receiver was filed at tight end
+and five players on injured reserve were still in the file. A wrong name at the top of a
+list is obvious to a person and invisible to an assertion.
+
+The backwards pass is the useful half, and it comes with a rule: **a name it prints is
+either rated too low or best at something the card has no slot for, and you have to say
+which.** Both of those turned up in one pass.
+
+**CeeDee Lamb was rated too low, and his own blurb proved it.** The card said he caught 135
+passes in a season and does whatever he likes after the catch, and the numbers beside it had
+him eighth in catching and eighth in YAC. A card contradicting its own line is not a matter
+of taste. He reads 97 catching and 96 YAC now, level with Chase and Nacua rather than ahead
+of Jefferson.
+
+**Drake Maye was the same thing with a second tell.** He and Trevor Lawrence both came out of
+the backwards pass carrying nearly the same seven numbers: good everywhere, elite nowhere,
+which is what an afternoon of cautious writing produces. Only one of them was wrong. Maye led
+the league in completion percentage in his second year, his blurb says he was throwing people
+open, and the card had him at 90 accuracy. He reads 97. Lawrence did not move: a good starting
+quarterback with no elite trait is exactly what he is, and finding him a 99 to fix a list
+would be the failure this whole file warns about.
+
+**Bijan Robinson is the other kind, and he did not move either.** The complaint was that the
+second best card at the position tops out at 98 while a rookie holds two 99s, and the
+complaint is accurate. The backwards pass did not flag him: he is top five in juke, vision,
+acceleration and catching, and the players ahead of him are ahead on things they are really
+better at. What he is best at in this league is not going down when the first defender hits
+him, which is contact balance, which was deleted for moving with power at 0.93. That was the
+right call for the card and it still costs this one player the number he deserves. The
+finding is that the slot is missing, not that a number is wrong, so the fix is an attribute
+rather than a nudge and neither is being done today.
+
+### Speed at running back is ordered off the forty now
+
+The column had gone flat. Seven backs shared a 97 and eleven shared a 94, and inside those
+two numbers sat fifteen hundredths of real forty time: TreVeyon Henderson ran 4.43 and held
+the same 97 as Jahmyr Gibbs at 4.36, while Bijan Robinson at 4.46 sat three points off Gibbs
+and level with Derrick Henry. A column where a tenth of a second is worth nothing is rating
+reputation rather than speed.
+
+The top of the board is anchored on the time now, 99 at 4.32 and about two points for every
+four hundredths after it, and the 99 goes to whoever actually ran fastest. That is three
+players rather than one, because Achane, Tuten and Nwangwu all ran 4.32.
+
+```
+    4.32  99   Achane, Tuten, Nwangwu        4.39  95   Taylor, Hall
+    4.36  97   Gibbs                         4.43  93   Henderson
+    4.37  96   Singleton, Mitchell           4.46  91   Bijan Robinson, Hampton
+    4.38  96   Wright
+```
+
+**The forty is not the whole of speed**, so this stops at the players whose speed is the
+reason they are in the pool. Derrick Henry ran a 4.54 and is still pulling away from
+secondaries at 31, so his 94 is play speed and it stays. A card that clearly outruns its own
+forty keeps the football answer and the blurb should say why.
+
+Ten values changed, spread from 91 to 99 with no two piling onto the same number, which is
+the tally this project asks for after any batch edit. Bijan came DOWN, which is worth saying
+out loud, because this pass started from a complaint that his card was too weak.
+
 Every position is seven picks now. They were uneven for a while, on the theory that a
 shorter build is a harder build, and tight end drew the short straw twice over: five
 slots out of the thinnest pool in the game.
@@ -443,6 +538,23 @@ of a receiver. Size is the first thing anybody says about a receiver, it separat
 cleanly from speed, and it is what you give up when you take the burner. It went on the
 running back and the tight end for the same reason: a 250 pound back and a 190 pound
 back are not the same player even when they run the same speed.
+
+**Size also went on the quarterback and has now come back off.** A player put it in one
+line: you do not need size for a quarterback. He is right, and the argument for it does
+not survive being read again. A six foot six pocket passer and a five foot ten one are
+already separated by pocket presence and mobility, which are two picks people genuinely
+spend a spin on, so size was a slot with no decision in it. Nobody ever weighed a 99 frame
+against a 99 arm.
+
+Two things that looked like defences turned out to be the case against it. It correlated
+with nothing else on the card, which is what a slot has to do to earn its place, and it
+also moved nothing on the report, which `npm run verify:career` says out loud: what a big
+passer actually buys is the sneak and the hit he gets up from, and this game tracks
+neither. A number that moves with nothing and moves nothing is a spin somebody spent for
+no reason.
+
+It stays on the other three, where it is a real trade against speed. Quarterback plays
+seven picks again and so does everybody else.
 
 **Tight end also got toughness**, which took it from five slots to seven. It is the one
 position where being willing to get hit is a skill rather than a compliment, and it is
@@ -484,18 +596,25 @@ The difference is structural rather than a rating anybody can fix. An all-time f
 pool is the seven or eight most memorable players in seventy years at that position. A
 current pool is the men on the depth chart this morning, which is two or three at
 quarterback. Averaged across the card's slots, a typical all-time quarterback room offers
-94 and a current one offers 89.6, so every gate written against 94 was quietly asking the
-current league for something it does not stock.
+93.6 and a current one offers 90.1, so every gate written against the first number was
+quietly asking the current league for something it does not stock.
 
 `gateShift(position, era)` is that shortfall, rounded toward zero and never allowed to go
-positive, and the three overall gates drop by exactly it. It comes back at 4 for
+positive, and the three overall gates drop by exactly it. It comes back at 3 for
 quarterback, 3 for running back, 1 for receiver and 0 for tight end, and tight end
 returning zero is the evidence the statistic is reading something real: it is the one
 position whose rooms were already the size of a real one.
 
+Quarterback used to read 4 and reads 3 since size came off the card. Nobody touched this
+function to do that: size was the thinnest slot the current quarterback rooms had, at 86
+against 97 all-time, so it was contributing most of the shortfall on its own. Removing a
+slot that one league stocks and the other does not narrows the gap between them, and the
+number followed. The All-Pro floor moved with it, from 86 to 88, for the same reason and
+by the same route.
+
 OPOY needed the same treatment for a reason that is not obvious from the ratings. The
-current pools are SPIKIER per man than the all-time ones, 0.30 traits at 97 or better per
-quarterback against 0.19, and OPOY still fell under one run in a hundred. The statistic
+current pools are SPIKIER per player than the all-time ones, 0.26 traits at 97 or better per
+quarterback against 0.12, and OPOY still fell under one run in a hundred. The statistic
 that explains it is per room rather than per player: an all-time quarterback room answers
 one slot of the card at 97 and a current room of two or three answers none, and you only
 visit seven franchises. So `spikeAt` drops the bar to the highest number at which a typical
@@ -507,12 +626,12 @@ Measured over 3,000 sensible runs a position:
 
 ```
                  All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-    QB all-time     86%    44%     13%    1.9%    65%   9.7%   1.1%       7%
-    QB now          76%    28%     25%      0%    48%   8.4%     0%      15%
+    QB all-time     87%    40%     12%    1.5%    65%   8.8%   1.0%       6%
+    QB now          72%    33%     10%      0%    49%   6.3%     0%      17%
     RB all-time     86%    57%     21%    4.1%    68%    16%   2.2%       5%
-    RB now          85%    40%     26%    0.2%    56%    12%   0.2%       8%
+    RB now          83%    39%     25%    0.2%    56%    11%   0.2%       9%
     WR all-time     89%    73%     23%    7.8%    68%    19%   5.3%       4%
-    WR now          75%    66%     28%    0.9%    65%    20%   0.6%      10%
+    WR now          75%    67%     30%    1.2%    65%    22%   0.9%       9%
     TE all-time     67%   8.3%    1.3%    1.7%    56%   1.8%   0.3%      18%
     TE now          61%   5.9%    0.5%    1.1%    56%   1.1%   0.2%      20%
 ```
@@ -529,18 +648,25 @@ in either league, which is the bar this project holds a mode to.
 If that ever grates, the fix is not to lower the threshold. It is to make the record line on
 the report say what the run would have needed instead of only showing a miss.
 
-**MVP fires more often in the current league than in the all-time one at three positions**,
-which is the part of this table that is not yet right, and two played runs show it better
-than the percentages do. Seed CURQB1 finished 92/90/94/93/90/99/90/97, overall 90, and took
-All-Pro. Seed CURQB4 finished 96/93/99/94/92/94/92/92, overall 92, and took All-Pro AND MVP.
-Two points of overall separate the entry trophy from the best player in the league. In the
-all-time pools that distance is four, 92 against 96.
+**MVP fires more often in the current league than in the all-time one at two positions**,
+which is the part of this table that is not yet right. It used to be three, and quarterback
+came off the list for a reason worth reading, because nobody fixed it on purpose.
 
 The cause is that a shift is a translation and the two distributions are not translations of
-each other: the current spread is wider at the bottom and shorter at the top, so both gates
-moved down by 4 and the compressed top collapsed the distance between them. It wants a scale
-rather than an offset. Nothing has been nudged by hand to hide it, because a number picked
-to make a rate look right is the failure this whole section exists to avoid.
+each other. The current spread is wider at the bottom and shorter at the top, so when both
+gates move down by the same amount the compressed top collapses the distance between them,
+and the entry trophy ends up sitting a point or two under the best player in the league
+instead of four. It wants a scale rather than an offset. Nothing has been nudged by hand to
+hide it, because a number picked to make a rate look right is the failure this whole section
+exists to avoid.
+
+Quarterback stopped showing it when size came off the card and the shift went from 4 to 3.
+All-Pro and MVP now sit 4 apart at 89 and 93, which is the same distance they sit apart in
+the all-time pools, and current quarterback MVP fell from 25% to 10% against all-time's 12%.
+That is the shift being smaller, not the compression being solved: running back is still
+shifted by 3 and still inverted, 25% against 21%, and receiver is inverted at 30% against
+23% on a shift of only 1. The scale is still the fix. The quarterback case is now evidence
+of what causes it rather than an example of it.
 
 **Receiver holds up best**, because six receivers who actually play is a normal roster.
 The start screen still labels quarterback and tight end THIN ROOM in current mode rather
@@ -582,10 +708,68 @@ ever hand-picked, so if the tight end pool gets deeper the floor rises on its ow
 exception dissolves without anybody editing it.
 
 **Everything above All-Pro stays position blind**, and that is not an oversight. OPOY at
-8% and MVP at 1% for tight end come from the position producing 0.04 traits at 97 or
-better per player against 0.27 at receiver. That is a real fact about tight end history,
+8% and MVP at 1% for tight end come from the position producing 0.15 traits at 97 or
+better per player against 0.26 at receiver, counting every card in the all-time pool. That is a real fact about tight end history,
 it is what THE HARD ONE on the start screen is promising, and no gate should paper over
 it.
+
+### What a nearly perfect current tight end actually earns
+
+A player posted a seven for seven current tight end, 99 catching, 98 route running, 99
+YAC, 98 toughness, 97 size, 96 blocking and 93 speed, which averages 97.1. It missed the
+Hall of Fame and he asked what more he was supposed to do. That is a fair question and the
+results screen is never going to answer it, so `npm run ceiling` does. MEASURED, NOT FIXED:
+nothing below has been adjusted.
+
+```
+  overall 96, six traits at the spike bar
+  All-Pro 100%   OPOY 100%   MVP 0%   record 37%   ring 73%   Hall of Fame 27%
+```
+
+**MVP was lost on the floor and not on the overall.** MVP asks for 96 with nothing under
+95, and he finished on exactly 96. The 93 speed is the whole of it. Raising that one number
+to 95 and changing nothing else takes him to overall 97, MVP 100% and the Hall of Fame 93%,
+because the Hall counts four of five and MVP is the fourth. Without it he has to win both
+the record and the ring, which is a 27% parlay.
+
+**Two points of speed is not a small ask at this position.** Five of the 32 current tight
+end rooms carry a 95 anywhere, and one carries a 99. So the honest answer to what he has to
+do is: land on one of five specific rooms and spend his speed pick there.
+
+**The gate shift did not reach tight end the way it reached quarterback, and that is
+correct arithmetic rather than a bug.** `gateShift` measures a league against the SAME
+position in the reference league, and current tight end supplies 90.9 where all-time tight
+end supplies 91.1, so it returns 0 and every gate keeps its calibrated number. It is saying
+the true thing: current tight end is no thinner than all-time tight end. What it structurally
+cannot say is that tight end sits below the other positions in BOTH leagues, because the
+reference it reads is per position by design.
+
+The measurable consequence is worth writing down even though nothing was changed for it.
+Counting rooms that can fill a slot to the MVP floor, the median position by slot is:
+
+```
+    QB   11 of 32 rooms      RB   12 of 32
+    WR   15 of 32            TE    5 of 32
+```
+
+Tight end clears its own MVP floor in a third as many rooms as anywhere else. Whether that
+is the position being hard or a gate being wrong is a design decision rather than a
+measurement, and this project has already made it once: everything above All-Pro stays
+position blind. This section is here so that the next person to reopen it argues with the
+numbers rather than with a rate.
+
+### Is a 99 overall reachable?
+
+Somebody asked whether a 99 tight end is possible at all, since no current tight end runs a
+99. The answer is yes at all four positions in both leagues, and the reasoning is not the
+obvious one. Half the overall is the weak link anchor, so the ceiling is set by the WORST
+slot a league can fill rather than the best, and every slot at every position has a 99
+somewhere in the current league. `npm run ceiling` prints the build and the names.
+
+Reachable is not the same as gettable. The 99 at a slot usually lives in one room, so the
+run has to land there AND spend that particular pick there, seven times over. What the
+ceiling really answers is that no position is arithmetically walled off, which is the thing
+worth knowing.
 
 ## Deploying
 
@@ -682,6 +866,22 @@ contested catch and size at receiver, and on hands and route running at tight en
   when the piled-up items have no verb in them, though real clauses joined with "and"
   are fine because those read as somebody talking. It also catches overlong blurbs and
   two cards making the same joke.
+
+### Two tools that check nothing
+
+`npm run leaders` and `npm run ceiling` print rather than assert, and that is the point of
+them. The suite above proves the pools are internally consistent and it cannot tell you a
+name is wrong or a bar is unreachable, which are the two ways this project has actually
+shipped bugs.
+
+```bash
+npm run leaders            # top five at every trait, then who is top five in nothing
+npm run leaders -- TE      # one position
+npm run leaders -- alltime # the other league
+npm run ceiling            # what a perfect build earns, and whether 99 is reachable
+```
+
+`npm run rosters` is the third of these and it is for the weekly depth chart reconciliation.
 
 `src/lib/scoring.ts` is fenced. The weights and gates in there are calibrated against
 measured distributions, so if `verify:scoring` fails after new data lands, the data is

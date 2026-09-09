@@ -10,6 +10,57 @@ import type { Player } from '../types';
  * THE SCALE IS TODAY'S LEAGUE. Derrick Henry is a 99 for power in both files because
  * nobody in either league runs through people like that. Everybody underneath him moves.
  *
+ * SPEED IS ORDERED OFF THE FORTY, and it was not before.
+ *
+ * The column had gone flat at the top. Seven backs shared a 97 and eleven shared a 94, and
+ * inside those two numbers sat a fifteen hundredths spread of real forty times: TreVeyon
+ * Henderson ran 4.43 and held the same 97 as Jahmyr Gibbs at 4.36, while Bijan Robinson at
+ * 4.46 sat three points off Gibbs and level with Derrick Henry. A column where a tenth of a
+ * second is worth nothing is not rating speed, it is rating reputation.
+ *
+ * So the top of the board is anchored on the time: 99 at 4.32, and about two points for
+ * every four hundredths after it. The 99 goes to whoever actually ran fastest, which is
+ * three players rather than one, because Achane, Tuten and Nwangwu all ran 4.32.
+ *
+ *   4.32  99   Achane, Tuten, Nwangwu
+ *   4.36  97   Gibbs
+ *   4.37  96   Singleton, Mitchell
+ *   4.38  96   Wright
+ *   4.39  95   Taylor, Hall
+ *   4.43  93   Henderson
+ *   4.46  91   Bijan Robinson, Hampton
+ *
+ * THE FORTY IS NOT THE WHOLE OF SPEED and this stops at the players whose speed is the
+ * reason they are in the pool. Derrick Henry ran 4.54 and is still pulling away from
+ * secondaries at 31, so his 94 is play speed rather than a stopwatch and it stays. The
+ * table above is where the two agree; a card that clearly outruns its own forty keeps the
+ * football answer, and the blurb should say why.
+ *
+ * Nine of the ten changed values landed between 91 and 99 with no two of them piling onto
+ * the same number, which is the tally this project asks for after any batch edit. Bijan
+ * came DOWN, which is worth saying out loud: this pass started from a complaint that his
+ * card was too weak.
+ *
+ * BIJAN ROBINSON HAS NO 99 AND IS NOT GETTING ONE, and the reason is worth keeping.
+ *
+ * The complaint that started this pass was that the second best card at the position tops
+ * out at 98 while a rookie holds two 99s. The complaint is accurate. Raising him would
+ * have been rating to the metric, so `npm run leaders` was pointed at the question
+ * instead: it lists the best cards that are top five in nothing, and it did not flag him.
+ * He is top five in juke, vision, acceleration and catching. He is simply not first in any
+ * of them, and the three players who beat him are beating him on things they really are
+ * better at.
+ *
+ * This is the other half of the reverse check, and it is the half that does not end in an
+ * edit. What Bijan is actually best at in the league is not going down when somebody hits
+ * him, which his own blurb says and which no slot on this card asks about. Contact balance
+ * was deleted for moving with power at 0.93, and that was the right call for the card and
+ * still cost this one player the number he deserves. So the honest reading is that the
+ * thing he is best at is not on the sheet, not that a number is wrong, and the fix would be
+ * an attribute rather than a nudge.
+ *
+ * His speed went DOWN in the same pass, from 94 to 91, because he ran a 4.46.
+ *
  * Row format:
  *   [id, name, years, blurb, SPD, BRS, JKE, PWR, VIS, HND, SZE]
  */
@@ -23,7 +74,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-ari-knight', 'Bam Knight', '2022–', 'Undrafted out of NC State and has started games nobody remembers.', 86, 84, 79, 80, 79, 68, 76],
   ],
   atl: [
-    ['now-atl-bijan', 'Bijan Robinson', '2023–', 'Runs like a man who has never once been tackled by the first defender.', 94, 96, 98, 88, 97, 92, 86],
+    ['now-atl-bijan', 'Bijan Robinson', '2023–', 'Runs like a man who has never once been tackled by the first defender.', 91, 96, 98, 88, 97, 92, 86],
     ['now-atl-brobinson', 'Brian Robinson Jr.', '2026–', 'Third franchise in three years for a man who has never had a bad one.', 82, 84, 75, 86, 84, 74, 90],
   ],
   bal: [
@@ -82,12 +133,12 @@ const POOLS: Record<string, Row[]> = {
     ['now-hou-marks', 'Woody Marks', '2025–', 'Caught 261 passes in college, which is a receiver number.', 88, 89, 85, 72, 81, 94, 70],
   ],
   ind: [
-    ['now-ind-jtaylor', 'Jonathan Taylor', '2020–', 'Ran for 1,811 yards in a season and does it again whenever he is healthy.', 97, 96, 87, 92, 97, 76, 88],
+    ['now-ind-jtaylor', 'Jonathan Taylor', '2020–', 'Ran for 1,811 yards in a season and does it again whenever he is healthy.', 95, 96, 87, 92, 97, 76, 88],
     ['now-ind-mcgowan', 'Seth McGowan', '2026–', 'Left Oklahoma under a cloud, went to Cincinnati, and ran his way back.', 88, 87, 79, 84, 77, 72, 82],
     ['now-ind-giddens', 'DJ Giddens', '2025–', 'Second best back in the state of Kansas and they took him anyway.', 90, 91, 85, 76, 84, 80, 84],
   ],
   jax: [
-    ['now-jax-tuten', 'Bhayshul Tuten', '2025–', 'Ran a 4.32 at 206 pounds, which is not supposed to be possible.', 97, 96, 79, 80, 75, 72, 76],
+    ['now-jax-tuten', 'Bhayshul Tuten', '2025–', 'Ran a 4.32 at 206 pounds, which is not supposed to be possible.', 99, 96, 79, 80, 75, 72, 76],
     ['now-jax-crodriguez', 'Chris Rodriguez', '2026–', 'Kentucky bruiser who finally got a room where somebody would use him.', 80, 82, 70, 88, 77, 66, 86],
     ['now-jax-lallen', 'LeQuint Allen', '2025–', 'Caught 64 passes at Syracuse and blocks like he means it.', 86, 87, 83, 76, 79, 90, 76],
     ['now-jax-abdullah', 'Ameer Abdullah', '2026–', 'Eleven seasons of third downs, and he has never once missed a blitz pickup.', 88, 89, 87, 66, 81, 92, 62],
@@ -103,8 +154,8 @@ const POOLS: Record<string, Row[]> = {
     ['now-lv-laube', 'Dylan Laube', '2024–', 'Caught 68 passes at New Hampshire and covers kicks here.', 86, 87, 83, 66, 73, 90, 64],
   ],
   lac: [
-    ['now-lac-hampton', 'Omarion Hampton', '2025–', 'Two hundred and twenty pounds with a 4.46, taken 22nd overall.', 92, 93, 85, 96, 90, 80, 90],
-    ['now-lac-kmitchell', 'Keaton Mitchell', '2026–', 'The knee held up, and he still runs like nobody has told him about it.', 97, 96, 89, 58, 75, 74, 54],
+    ['now-lac-hampton', 'Omarion Hampton', '2025–', 'Two hundred and twenty pounds with a 4.46, taken 22nd overall.', 91, 93, 85, 96, 90, 80, 90],
+    ['now-lac-kmitchell', 'Keaton Mitchell', '2026–', 'The knee held up, and he still runs like nobody has told him about it.', 96, 96, 89, 58, 75, 74, 54],
     ['now-lac-vidal', 'Kimani Vidal', '2024–', 'Ran for 1,661 yards at Troy and went in the sixth round for being short.', 88, 91, 85, 82, 86, 78, 68],
   ],
   lar: [
@@ -114,7 +165,7 @@ const POOLS: Record<string, Row[]> = {
   ],
   mia: [
     ['now-mia-achane', 'De\'Von Achane', '2023–', 'The fastest man in the sport, and he is listed at 188 pounds.', 99, 99, 94, 56, 86, 92, 54],
-    ['now-mia-jwright', 'Jaylen Wright', '2024–', 'Ran a 4.38 at Tennessee and has 100 career carries to show for it.', 95, 93, 79, 76, 77, 72, 72],
+    ['now-mia-jwright', 'Jaylen Wright', '2024–', 'Ran a 4.38 at Tennessee and has 100 career carries to show for it.', 96, 93, 79, 76, 77, 72, 72],
     ['now-mia-gordon', 'Ollie Gordon', '2025–', 'Won the Doak Walker as a sophomore and slid to the sixth round.', 82, 84, 75, 82, 84, 76, 90],
   ],
   min: [
@@ -124,7 +175,7 @@ const POOLS: Record<string, Row[]> = {
   ],
   ne: [
     ['now-ne-rhamondre', 'Rhamondre Stevenson', '2021–', 'Four hundred pound squat, and the ball keeps coming out at the worst moment.', 82, 87, 85, 92, 88, 88, 88],
-    ['now-ne-henderson', 'TreVeyon Henderson', '2025–', 'Ran a 4.43 at 202 pounds and returned a kick 100 yards in his first month.', 97, 97, 81, 74, 84, 84, 70],
+    ['now-ne-henderson', 'TreVeyon Henderson', '2025–', 'Ran a 4.43 at 202 pounds and returned a kick 100 yards in his first month.', 93, 97, 81, 74, 84, 84, 70],
     ['now-ne-kiner', 'Corey Kiner', '2026–', 'Cincinnati back who runs angry and went undrafted for being short.', 86, 89, 83, 84, 84, 72, 78],
   ],
   no: [
@@ -140,10 +191,10 @@ const POOLS: Record<string, Row[]> = {
     ['now-nyg-najee', 'Najee Harris', '2026–', 'Signed to run out the fourth quarter of games they are trying to win.', 80, 82, 72, 86, 86, 82, 88],
   ],
   nyj: [
-    ['now-nyj-hall', 'Breece Hall', '2022–', 'Blew out a knee in October and ran a 4.39 the following August.', 94, 93, 92, 82, 88, 90, 80],
+    ['now-nyj-hall', 'Breece Hall', '2022–', 'Blew out a knee in October and ran a 4.39 the following August.', 95, 93, 92, 82, 88, 90, 80],
     ['now-nyj-ballen', 'Braelon Allen', '2024–', 'Started college at 17 and is now 235 pounds of very young man.', 84, 84, 72, 88, 77, 76, 97],
     ['now-nyj-idavis', 'Isaiah Davis', '2024–', 'South Dakota State bruiser who went in the fifth and blocks well.', 84, 87, 77, 90, 79, 78, 84],
-    ['now-nyj-nwangwu', 'Kene Nwangwu', '2024–', 'Has returned four kickoffs for touchdowns and carried the ball eleven times.', 97, 96, 70, 68, 66, 70, 70],
+    ['now-nyj-nwangwu', 'Kene Nwangwu', '2024–', 'Has returned four kickoffs for touchdowns and carried the ball eleven times.', 99, 96, 70, 68, 66, 70, 70],
   ],
   phi: [
     ['now-phi-saquon', 'Saquon Barkley', '2024–', 'Ran backwards over a defender on television and then ran for 2,000 yards.', 95, 99, 99, 88, 99, 88, 84],
@@ -173,7 +224,7 @@ const POOLS: Record<string, Row[]> = {
   ten: [
     ['now-ten-pollard', 'Tony Pollard', '2024–', 'Got the every down job at last and ran for a thousand quietly.', 94, 93, 87, 70, 86, 84, 76],
     ['now-ten-spears', 'Tyjae Spears', '2023–', 'Plays without an ACL in one knee and jukes people out of the stadium.', 92, 87, 98, 76, 84, 84, 66],
-    ['now-ten-singleton', 'Nicholas Singleton', '2026–', 'Penn State back who runs a 4.37 and shared carries there for four years.', 95, 93, 85, 84, 84, 76, 84],
+    ['now-ten-singleton', 'Nicholas Singleton', '2026–', 'Penn State back who runs a 4.37 and shared carries there for four years.', 96, 93, 85, 84, 84, 76, 84],
     ['now-ten-chestnut', 'Julius Chestnut', '2022–', 'Undrafted out of Sacred Heart and blocks his way onto the roster yearly.', 82, 82, 72, 90, 75, 72, 84],
   ],
   was: [

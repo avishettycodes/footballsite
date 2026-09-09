@@ -1,16 +1,16 @@
 /**
  * Prints the current-era rooms, one line per franchise per position.
  *
- * THIS EXISTS FOR THE REFRESH. The current pools claim to hold the men on a roster now,
- * and rosters move, so somebody has to sit down with a depth chart a few times a season
+ * THIS EXISTS FOR THE REFRESH. The current pools claim to hold the players on a roster
+ * now, and rosters move, so somebody has to sit down with a depth chart every few weeks
  * and reconcile. That job is only cheap if the file can be read in the same shape the
  * depth chart is in, which is what this prints.
  *
- * The rule the reconciliation follows is on the Era type in src/data/types.ts: the top of a
- * room is whoever is on the depth chart today, and the rest are the men who held the job
- * over the last few seasons, with the years saying which is which. Six a room, because
- * three does not play. A man who signs elsewhere gets a card at his new franchise and keeps
- * a closed one where he was.
+ * The rule the reconciliation follows is on the Era type in src/data/types.ts, and this
+ * comment used to describe the older, looser version of it. A room is exactly as deep as
+ * the depth chart says. Nobody is added to round a room up, injured reserve and the exempt
+ * list both count as out, and a player who signs elsewhere moves rather than leaving a
+ * card behind.
  *
  *   npm run rosters            every position
  *   npm run rosters -- QB TE   just those
@@ -37,6 +37,6 @@ const total = positions.reduce(
   0,
 );
 console.log(
-  `\n${total} cards across ${positions.join(', ')}. Six a room: the men there now, ` +
-  'and the ones who held the job over the last few seasons.',
+  `\n${total} cards across ${positions.join(', ')}. A room is as deep as the depth ` +
+  'chart says, so some hold two and some hold six.',
 );

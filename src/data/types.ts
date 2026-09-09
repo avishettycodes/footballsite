@@ -136,25 +136,31 @@ export type Player = {
  * Tight end got the two it was short, size and toughness. It stays the hard one because
  * its pool is genuinely thinner, not because it plays a shorter build.
  *
- * SIZE FINISHED THE JOB AND WENT ON THE QUARTERBACK TOO, which is the one thing that
- * makes the positions uneven. Quarterback plays eight picks now and everybody else plays
- * seven.
+ * SIZE WENT ON THE QUARTERBACK FOR A WHILE AND CAME BACK OFF, and a player said why in
+ * one line: you do not need size for a quarterback.
  *
- * Evenness was worth something and it was not worth this. The frame is the first thing
- * anybody says about a passer, it is the whole argument about half of them, and there was
- * nowhere on the card for the difference between Flacco at six foot six and Kyler Murray
- * at five foot ten. Nothing else on the sheet was saying it either: size correlates with
- * nothing on the quarterback pools, which is exactly what a slot has to do to earn its
- * place. The alternative was dropping deep ball to make room, and deep ball is a pick
- * people actually spend a spin on.
+ * He is right, and the argument that put it there does not survive being read again. The
+ * frame really is the first thing anybody says about a passer, but the card was already
+ * saying the parts of it that matter. A six foot six pocket passer and a five foot ten
+ * one are separated by pocket presence and mobility, which are two picks people genuinely
+ * spend a spin on, so size was a slot with no decision in it: nobody was ever weighing a
+ * 99 frame against a 99 arm. It survived the independence check because it correlates
+ * with nothing, and that turned out to be the tell rather than the defence. A number that
+ * moves with nothing else on the card was also moving nothing on the report, which
+ * `npm run verify:career` says out loud, since a big passer's real edge is the sneak and
+ * the hit he gets up from and this game tracks neither.
  *
- * The eighth slot is a real cost rather than a free one. It is an extra spin, an extra
- * franchise raided, and one more number the weak link anchor can find a hole in, and the
- * calibration in `npm run verify:scoring` moved a point or two everywhere because of it.
- * Nothing was retuned to cancel that out.
+ * It stays on the other three, where it is a real trade. Size against speed is the
+ * difference between a Julio build and a Tyreek build, and a 250 pound back and a 190
+ * pound back are not the same player even when they run the same time.
+ *
+ * Every position plays seven picks again. Dropping the eighth is one fewer spin, one
+ * fewer franchise raided and one fewer number the weak link anchor can find a hole in, so
+ * the calibration in `npm run verify:scoring` moved at quarterback and nothing was retuned
+ * to cancel it out.
  */
 export const ATTRIBUTE_SETS: Record<Position, AttributeKey[]> = {
-  QB: ['armStrength', 'accuracy', 'deepBall', 'pocketPresence', 'mobility', 'processing', 'clutch', 'size'],
+  QB: ['armStrength', 'accuracy', 'deepBall', 'pocketPresence', 'mobility', 'processing', 'clutch'],
   RB: ['speed', 'burst', 'juke', 'power', 'vision', 'hands', 'size'],
   WR: ['speed', 'hands', 'routeRunning', 'release', 'contestedCatch', 'yac', 'size'],
   TE: ['hands', 'blocking', 'speed', 'routeRunning', 'yac', 'toughness', 'size'],

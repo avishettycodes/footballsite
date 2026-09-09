@@ -708,7 +708,7 @@ export function ResultsScreen({
                 {earned.length > 0 && earned.length < 3 && thinPosition && (
                   <div className="w-full font-mono text-[11px] text-white/40">
                     {era === 'current'
-                      ? `A roster carries two or three of these, so most of the rooms you landed on held one man worth taking. Getting this far out of that is more than it looks like.`
+                      ? `A roster carries two or three of these, so most of the rooms you landed on held one player worth taking. Getting this far out of that is more than it looks like.`
                       : 'Tight end is the hard one. A typical roster has less on it at every slot, so getting this far with one is more than it looks like.'}
                   </div>
                 )}

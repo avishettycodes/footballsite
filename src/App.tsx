@@ -103,13 +103,33 @@ export default function App() {
               a spin, and it asks first.
             */}
             {inRun && (
-              <button
-                onClick={() => setQuitting(true)}
-                title="Walk away from this run"
-                className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-red-500/25 hover:text-red-300"
-              >
-                QUIT
-              </button>
+              <>
+                {/*
+                  RESTART DOES NOT ASK, and that is the point of it rather than an
+                  oversight. QUIT asks because leaving is a decision somebody might be
+                  making by accident, and the sentence it asks with names how much of the
+                  build goes with it. Restarting is the decision already made: a tester
+                  described the old route as clicking abandon, confirming, and then
+                  choosing his league, position and mode all over again, which is four taps
+                  to do the thing he had already asked for on the first one.
+                  It costs the run, same as QUIT. What it does not cost is the setup, which
+                  the start screen now comes back on.
+                */}
+                <button
+                  onClick={g.restartRun}
+                  title="Drop this run and set up another"
+                  className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-hazard/25 hover:text-hazard"
+                >
+                  RESTART
+                </button>
+                <button
+                  onClick={() => setQuitting(true)}
+                  title="Walk away from this run"
+                  className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-red-500/25 hover:text-red-300"
+                >
+                  QUIT
+                </button>
+              </>
             )}
             <button
               onClick={() => {
@@ -158,6 +178,7 @@ export default function App() {
       ) : g.phase === 'setup' || !g.entered ? (
         <StartScreen
           onStart={(opts) => { primeAudio(); g.startRun(opts); }}
+          setup={g.setup}
           canResume={g.hasSavedRun()}
           onResume={() => { primeAudio(); g.resumeRun(); }}
           hall={g.hall}

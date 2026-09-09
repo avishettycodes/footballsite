@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DATA_STATS } from '../data';
 import type { Era, Position } from '../data';
 import type { SavedPlayer } from '../lib/hall';
+import type { Setup } from '../store/gameStore';
 import { makeSeed, parseSeedInput, seedFromUrl } from '../lib/rng';
 import { HallOfBuilds } from './HallOfBuilds';
 
@@ -32,6 +33,8 @@ const HARD_ONES: Record<Era, Partial<Record<Position, string>>> = {
 
 type Props = {
   onStart: (opts: { position: Position; hardMode: boolean; era: Era; seed?: string }) => void;
+  /** The league, position and mode to open on. See `Setup` in the store for why. */
+  setup: Setup;
   canResume: boolean;
   onResume: () => void;
   hall: SavedPlayer[];
@@ -40,11 +43,24 @@ type Props = {
 };
 
 export function StartScreen({
-  onStart, canResume, onResume, hall, onOpenSaved, onDeleteSaved,
+  onStart, setup, canResume, onResume, hall, onOpenSaved, onDeleteSaved,
 }: Props) {
-  const [position, setPosition] = useState<Position>('RB');
-  const [hardMode, setHardMode] = useState(false);
-  const [era, setEra] = useState<Era>('current');
+  /*
+    THE SCREEN OPENS ON WHAT YOU WERE JUST PLAYING.
+
+    These three were hardcoded to running back, normal mode and the current league, so
+    finishing a hard mode tight end run and tapping BUILD ANOTHER PLAYER put you back at
+    the top of a form you had already filled in once. The run itself is gone by then, which
+    is correct, but what you were in the mood for is not part of the run.
+
+    Read once, on mount, and that is the whole of it. This screen unmounts for the length
+    of a run and comes back fresh, so the initial value is always the setup of the run that
+    just ended. Nothing here writes back: the store records a setup when a run actually
+    starts, not while somebody is still flicking the switches.
+  */
+  const [position, setPosition] = useState<Position>(setup.position);
+  const [hardMode, setHardMode] = useState(setup.hardMode);
+  const [era, setEra] = useState<Era>(setup.era);
   const [linkSeed, setLinkSeed] = useState(() => seedFromUrl());
   const [seed, setSeed] = useState(linkSeed ?? '');
   /** What the last thing typed or pasted in the seed box turned out to be. */
@@ -103,12 +119,12 @@ export function StartScreen({
       {/*
         THE LEAGUE COMES FIRST because it decides what everything after it means. Picking
         a position before knowing whether the pool is a franchise's whole history or the
-        men on its roster this morning is picking blind.
+        players on its depth chart this week is picking blind.
 
         CURRENT IS THE DEFAULT and all-time is the switch, which is the way round it
-        should always have been. The men playing this Sunday are who somebody opening this
-        wants to argue about, and the whole history of a franchise is the deeper cut you go
-        looking for.
+        should always have been. The players lining up this Sunday are who somebody opening
+        this wants to argue about, and the whole history of a franchise is the deeper cut
+        you go looking for.
 
         Same switch as the mode below it, on purpose. Two settings that work identically
         should look identical, and the box always names the league it is currently set to
@@ -140,7 +156,7 @@ export function StartScreen({
           </div>
           <div className="font-mono text-[11px] text-white/50">
             {era === 'current'
-              ? 'Only the men on a roster this morning, read off the depth chart. Every rating is judged against the league today, so the best one playing gets the 99.'
+              ? 'Only the players on a roster this week, read straight off the depth charts. Every rating is relative to the players in the league right now, so the best one playing gets the 99.'
               : 'Everybody a franchise has ever had. Every rating is judged against everybody who has played the position, so the great ones set the top.'}
           </div>
         </div>
@@ -157,6 +173,29 @@ export function StartScreen({
           </div>
         </div>
       </button>
+
+      {/*
+        WHERE THE ROOMS COME FROM, SAID OUT LOUD.
+
+        "Judged against the league today" was the old line and it does not mean anything
+        to somebody who has not read the README. It named the comparison without ever
+        saying where the names come from, so the first question every tester asked was why
+        a player he expected was not in the room. One of them worked it out from the
+        depth chart rule once it was explained to him, which is the tell that the rule was
+        fine and only the copy was missing.
+
+        So this says the three facts a missing name needs: the charts are read weekly, a
+        room is exactly what the chart says, and out is out. Josh Jacobs is named because
+        he is the one who actually got asked about, and a name is easier to check than a
+        rule is.
+      */}
+      {era === 'current' && (
+        <p className="mt-3 font-mono text-[11px] leading-relaxed text-white/45">
+          The depth charts get read again every week. If somebody is missing, it is because
+          he is not on the chart this week. Injured reserve counts as out and so does the
+          exempt list, which is why you will not find Josh Jacobs.
+        </p>
+      )}
 
       <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">2 · Pick your position</h2>
       <div className="mt-3 grid grid-cols-4 gap-2">

@@ -26,6 +26,25 @@ import { safeStorage } from '../lib/storage';
 export const REROLLS_NORMAL = 2;
 export const REROLLS_HARD = 0;
 
+/**
+ * WHAT THE START SCREEN COMES BACK ON.
+ *
+ * This is deliberately NOT part of RunState. A run's league is frozen onto the run
+ * because a career is scored against the pools it came out of, and the whole reason that
+ * field cannot drift is written on `era` below. This is the opposite kind of thing: a
+ * preference about what to offer you next, which has to survive exactly the events that
+ * delete a run.
+ *
+ * It exists because the screen kept forgetting. BUILD ANOTHER PLAYER dropped you back on
+ * running back, normal mode and the current league no matter what you had just spent ten
+ * minutes playing, so anybody doing a second tight end run in hard mode had to set all
+ * three again every time. A tester put it plainly: he was tired of walking out of a run
+ * and then rechoosing.
+ */
+export type Setup = { position: Position; hardMode: boolean; era: Era };
+
+const DEFAULT_SETUP: Setup = { position: 'RB', hardMode: false, era: 'current' };
+
 export type FilledSlot = {
   attribute: AttributeKey;
   value: number;
@@ -93,6 +112,12 @@ export type RunState = {
 
 type GameStore = RunState & {
   soundOn: boolean;
+  /**
+   * The last league, position and mode that were actually played. Persisted, so it
+   * survives a reload as well as a restart, and updated only by startRun, so a run you
+   * abandoned three spins in still counts as what you were playing.
+   */
+  setup: Setup;
   /** Not persisted — a rehydrated run waits on the start screen until you opt in. */
   entered: boolean;
   /**
@@ -112,6 +137,7 @@ type GameStore = RunState & {
   runSimulation: () => void;
   setCreationName: (name: string) => void;
   abandonRun: () => void;
+  restartRun: () => void;
   clearEvent: () => void;
 
   // selectors
@@ -203,6 +229,7 @@ export const useGame = create<GameStore>()(
     (set, get) => ({
       ...emptyRun(),
       soundOn: true,
+      setup: DEFAULT_SETUP,
       entered: false,
       hall: loadHall(),
 
@@ -231,6 +258,10 @@ export const useGame = create<GameStore>()(
           phase: 'ready',
           startedAt: Date.now(),
           entered: true,
+          // Remembered for the next visit to the start screen. The seed is deliberately
+          // not in here: a seed is one specific run, and refilling the box with it would
+          // be the bug where deleting a seed did not delete the seed, rebuilt by hand.
+          setup: { position, hardMode, era },
         });
       },
 
@@ -378,6 +409,20 @@ export const useGame = create<GameStore>()(
       },
 
       abandonRun: () => set({ ...emptyRun(), entered: false }),
+      /**
+       * START AGAIN, WITH NO DIALOG IN THE WAY.
+       *
+       * It does exactly what abandonRun does, and it is a separate action because it is a
+       * separate intention. QUIT is somebody leaving, so it asks first, and the sentence
+       * it asks with is about what gets deleted. RESTART is somebody who has already
+       * decided, and asking a person who has decided is the thing that got complained
+       * about: walking out of a bad run cost a tap on QUIT, a tap on the dialog, and then
+       * three taps setting the league, position and mode back up.
+       *
+       * The setup survives both, which is the other half of the fix and the reason this
+       * lands on the start screen ready to spin rather than ready to be configured.
+       */
+      restartRun: () => set({ ...emptyRun(), entered: false }),
       clearEvent: () => set({ lastEventMessage: null }),
 
       remainingSlots: () => {
@@ -412,7 +457,7 @@ export const useGame = create<GameStore>()(
         usedPlayerIds: s.usedPlayerIds, visitedTeamIds: s.visitedTeamIds,
         rerollsLeft: s.rerollsLeft, phase: s.phase, currentTeamId: s.currentTeamId,
         repeatVisit: s.repeatVisit,
-        startedAt: s.startedAt, soundOn: s.soundOn,
+        startedAt: s.startedAt, soundOn: s.soundOn, setup: s.setup,
         creationName: s.creationName, career: s.career,
       }),
       onRehydrateStorage: () => (state) => {
@@ -423,6 +468,10 @@ export const useGame = create<GameStore>()(
         // half finished player comes back with `undefined` where his league should be,
         // every pool lookup returns nothing, and the wheel spins onto empty rosters.
         if (state && !state.era) state.era = 'alltime';
+        // Same shape of problem one field along. An autosave written before the start
+        // screen remembered anything has no setup on it, and a start screen reading
+        // `undefined.position` renders nothing at all.
+        if (state && !state.setup) state.setup = DEFAULT_SETUP;
       },
     },
   ),

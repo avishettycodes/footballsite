@@ -16,6 +16,8 @@
     "verify:career": "jiti scripts/verify-career.ts",
     "verify:copy": "jiti scripts/verify-copy.ts",
     "rosters": "jiti scripts/print-rosters.ts",
+    "leaders": "jiti scripts/print-leaders.ts",
+    "ceiling": "jiti scripts/print-ceiling.ts",
     "verify:audio": "jiti scripts/verify-audio.ts",
     "build:only": "tsc -b && vite build"
   },
