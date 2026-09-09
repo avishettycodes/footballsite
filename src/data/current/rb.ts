@@ -218,7 +218,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-nyj-idavis', 'Isaiah Davis', '2024–', 'South Dakota State bruiser who went in the fifth and blocks well.', 84, 86, 76, 90, 78, 78, 84],
     ['now-nyj-nwangwu', 'Kene Nwangwu', '2024–', 'Has returned four kickoffs for touchdowns and carried the ball eleven times.', 97, 94, 70, 68, 66, 70, 70],
     ['now-nyj-mcarter', 'Michael Carter', '2021–2023', 'Fourth round pick who looked like the answer for about half a season.', 88, 90, 88, 62, 80, 86, 62],
-    ['now-nyj-zknight', 'Zonovan Knight', '2022–2023', 'Came off the practice squad and ran for 200 yards in two games.', 88, 88, 82, 76, 78, 78, 76],
+    ['now-nyj-zknight', 'Bam Knight', '2022–2023', 'Came off the practice squad and ran for 200 yards in two games.', 88, 88, 82, 76, 78, 78, 76],
   ],
   phi: [
     ['now-phi-saquon', 'Saquon Barkley', '2024–', 'Ran backwards over a defender on television and then ran for 2,000 yards.', 95, 97, 97, 88, 96, 88, 84],
