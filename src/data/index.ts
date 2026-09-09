@@ -84,14 +84,17 @@ export type DataIssue = { level: 'error' | 'warn'; message: string };
  * Integrity pass over the seed data. Runs in dev so a bad hand-edit is loud
  * instead of a silent empty wheel at spin time.
  *
- * SIX PER FRANCHISE IN BOTH LEAGUES, and the current pools reach back a few seasons to get
- * there rather than padding with anybody invented.
+ * THE TWO LEAGUES ARE CHECKED AGAINST DIFFERENT RULES HERE, and that is the point rather
+ * than a loosening.
  *
- * That was briefly relaxed, on 2026-09-08, while the current pools held only the men on a
- * depth chart that morning. Rooms fell to three and the mode stopped working: a hole-free
- * quarterback build came out under the All-Pro line and half of runs won nothing. Six is
- * back because six is what the game needs, and the years on each card say who is here now
- * and who held the job last season.
+ * All-time asks for six per franchise, because a franchise history that cannot produce
+ * six quarterbacks has been written lazily. Current asks for one, because a current room
+ * is however many men are actually in it. The Raiders carry three quarterbacks and that
+ * is the answer, not a gap to be filled by reaching back to somebody who left.
+ *
+ * Padding the current rooms to six was tried and taken back out. It meant Aaron Rodgers
+ * appeared on the Packers in a league where he plays for Pittsburgh, which is the one
+ * thing this mode exists not to do.
  *
  * What no check here can do is tell you a name is wrong. That is a person reading the pools
  * against a depth chart. See the refresh section in the README.
@@ -136,8 +139,8 @@ export function validateData(): DataIssue[] {
     }
   }
 
-  /** Six per franchise per position, in both leagues. See the note above. */
-  const THIN_POOL: Partial<Record<Era, number>> = { alltime: 6, current: 6 };
+  /** See the note above: six for a franchise history, one for a room that exists today. */
+  const THIN_POOL: Partial<Record<Era, number>> = { alltime: 6, current: 1 };
 
   for (const era of ERAS) {
     for (const position of positionsWithData(era)) {

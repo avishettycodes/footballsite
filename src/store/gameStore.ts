@@ -127,7 +127,7 @@ const emptyRun = (): RunState => ({
   rngState: 0,
   position: 'RB',
   hardMode: false,
-  era: 'alltime',
+  era: 'current',
   slots: {},
   pickOrder: [],
   usedPlayerIds: [],

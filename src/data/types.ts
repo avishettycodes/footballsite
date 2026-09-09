@@ -24,20 +24,24 @@ export type Position = 'QB' | 'RB' | 'WR' | 'TE';
  * rows. A scale factor would keep every ranking exactly as it was and just move the
  * decimal, and the rankings are the part that actually changes.
  *
- * CURRENT MEANS THE DEPTH CHART TODAY PLUS LAST SEASON'S, and the second half of that is
- * there because the first half alone did not work.
+ * CURRENT MEANS THE DEPTH CHART AND NOTHING ELSE. Everybody in `src/data/current/` is on
+ * the active roster of the franchise he is filed under. No practice squad, nobody who has
+ * left, and no franchise reaching back to a man who used to play there. A room is however
+ * many men are actually in it, which is two or three quarterbacks and five or six
+ * receivers.
  *
- * Strictly today was tried, on 2026-09-08, and it left rooms of three. Two carefully played
- * quarterback runs came out at 92/92/96/90/99/97/90 and 97/90/92/92/92/92/90, which is a
- * player with no hole anywhere, and both finished under the 92 overall that first-team
- * All-Pro asks for. One won a coin-flip ring and the other won nothing. A bar that good
- * play cannot clear is the thing this project calls a bug wearing a difficulty costume, and
- * the cause was arithmetic: seven picks off three-man rooms cannot lift the weak link
- * anchor, whatever the player does.
+ * IT WAS PADDED TO SIX ONCE AND THE PADDING IS WHAT BROKE IT. Filling every room to six
+ * meant reaching back a few seasons, and reaching back put Aaron Rodgers on the Packers
+ * in a league where he plays for Pittsburgh. A mode whose entire promise is "the men on a
+ * roster now" cannot ship a card that says otherwise, whatever it does for the pool sizes.
  *
- * So each room carries the men on it now and a couple who held the job last season, and the
- * years on every card say which is which. Both are honest descriptions of a current league.
- * Only the first one is a game.
+ * The pool sizes really do suffer for it, and the awards are what noticed. A three man room
+ * cannot lift the weak link anchor the way an eight man one can, so the first attempt at
+ * strict rooms left a hole-free quarterback finishing under the All-Pro line. That is fixed
+ * where it belongs now rather than by putting the wrong names back: gateShift in
+ * src/lib/scoring.ts measures how far short of the reference league a league's supply comes
+ * and drops the overall gates by exactly that, and spikeAt does the same for OPOY. All-time
+ * is the reference and never moves.
  *
  * Player ids are unique ACROSS both sets, since a run stores the ids it has used and a
  * saved player keeps them forever. Current rows carry a `now-` prefix for that reason.
@@ -65,7 +69,7 @@ export type AttributeKey =
   | 'routeRunning' | 'release' | 'contestedCatch' | 'yac'
   // TE
   | 'blocking' | 'toughness'
-  // RB, WR and TE all share this one
+  // Every position carries this one
   | 'size'
   // OL
   | 'passBlock' | 'runBlock' | 'strength' | 'agility';
@@ -129,12 +133,28 @@ export type Player = {
  * pounds and a back who is 190 are not the same player even when they run the same
  * speed, and that difference had no slot to live in.
  *
- * Positions are even now at seven picks each, and tight end got the two it was short:
- * size and toughness. It stays the hard one because its pool is genuinely thinner, not
- * because it plays a shorter build.
+ * Tight end got the two it was short, size and toughness. It stays the hard one because
+ * its pool is genuinely thinner, not because it plays a shorter build.
+ *
+ * SIZE FINISHED THE JOB AND WENT ON THE QUARTERBACK TOO, which is the one thing that
+ * makes the positions uneven. Quarterback plays eight picks now and everybody else plays
+ * seven.
+ *
+ * Evenness was worth something and it was not worth this. The frame is the first thing
+ * anybody says about a passer, it is the whole argument about half of them, and there was
+ * nowhere on the card for the difference between Flacco at six foot six and Kyler Murray
+ * at five foot ten. Nothing else on the sheet was saying it either: size correlates with
+ * nothing on the quarterback pools, which is exactly what a slot has to do to earn its
+ * place. The alternative was dropping deep ball to make room, and deep ball is a pick
+ * people actually spend a spin on.
+ *
+ * The eighth slot is a real cost rather than a free one. It is an extra spin, an extra
+ * franchise raided, and one more number the weak link anchor can find a hole in, and the
+ * calibration in `npm run verify:scoring` moved a point or two everywhere because of it.
+ * Nothing was retuned to cancel that out.
  */
 export const ATTRIBUTE_SETS: Record<Position, AttributeKey[]> = {
-  QB: ['armStrength', 'accuracy', 'deepBall', 'pocketPresence', 'mobility', 'processing', 'clutch'],
+  QB: ['armStrength', 'accuracy', 'deepBall', 'pocketPresence', 'mobility', 'processing', 'clutch', 'size'],
   RB: ['speed', 'burst', 'juke', 'power', 'vision', 'hands', 'size'],
   WR: ['speed', 'hands', 'routeRunning', 'release', 'contestedCatch', 'yac', 'size'],
   TE: ['hands', 'blocking', 'speed', 'routeRunning', 'yac', 'toughness', 'size'],

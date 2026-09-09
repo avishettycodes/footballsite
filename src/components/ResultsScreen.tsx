@@ -3,7 +3,7 @@ import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS, TEAMS_BY_ID } from '../data';
 import { ERA_LABELS } from '../data';
 import type { AttributeKey, Era, Position } from '../data';
 import type { FilledSlot } from '../store/gameStore';
-import { GATES, RECORD_YARDS, SPIKE_AT, accoladeDefs, allProFloor, softestSlot } from '../lib/scoring';
+import { GATES, RECORD_YARDS, accoladeDefs, allProFloor, softestSlot, spikeAt } from '../lib/scoring';
 import type { CareerResult } from '../lib/scoring';
 import { STAT_LABELS, careerLength, careerPath, careerStats, commas, draftSlot } from '../lib/career';
 import {
@@ -573,7 +573,10 @@ export function ResultsScreen({
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
               <span>AVERAGE OF THE {keys.length} <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
               <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
-              <span>TRAITS AT {SPIKE_AT}+ <b className="text-white/75">{career.breakdown.spikeCount}</b></span>
+              {/* The bar is the league's own, so this label has to read it rather than the
+                  constant. Printing 97+ over a count taken at 96 is the same report
+                  contradicting itself this screen keeps getting caught doing. */}
+              <span>TRAITS AT {spikeAt(position, era)}+ <b className="text-white/75">{career.breakdown.spikeCount}</b></span>
             </div>
           </div>
 
@@ -695,16 +698,17 @@ export function ResultsScreen({
                 {/*
                   THE HARD POSITION DEPENDS ON THE LEAGUE, and this line used to name tight
                   end in both of them. In the current pools quarterback measures exactly as
-                  hard, because a real roster carries three of each and the sixth card in
-                  those rooms is a man who has never started, so the sentence would have
-                  been the start screen and the report disagreeing about the same fact.
+                  hard, because a real roster carries two or three of each, so a landing
+                  there hands you a room half the size of a receiver's and the sentence
+                  would have been the start screen and the report disagreeing about the
+                  same fact.
                   The reason differs too: all-time it is a shortage of great players across
                   seventy years, and now it is a shortage of players in the building.
                 */}
                 {earned.length > 0 && earned.length < 3 && thinPosition && (
                   <div className="w-full font-mono text-[11px] text-white/40">
                     {era === 'current'
-                      ? `A roster carries three of these, so half of what you saw was a backup or a man who left last season. Getting this far out of that is more than it looks like.`
+                      ? `A roster carries two or three of these, so most of the rooms you landed on held one man worth taking. Getting this far out of that is more than it looks like.`
                       : 'Tight end is the hard one. A typical roster has less on it at every slot, so getting this far with one is more than it looks like.'}
                   </div>
                 )}

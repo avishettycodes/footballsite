@@ -59,7 +59,7 @@ import { REROLLS_NORMAL, useGame } from '../src/store/gameStore';
 import { ATTRIBUTE_SETS, ERAS, ERA_LABELS, TEAMS, getPool, positionsWithData } from '../src/data';
 import type { AttributeKey, Era, Position } from '../src/data';
 import { hashSeed, nextRandom } from '../src/lib/rng';
-import { GATES, RECORD_YARDS, WEAK_LINK_SHARE, WEIGHTS, allProFloor, computeOverall, isGrandSlam, simulateCareer, softestSlot } from '../src/lib/scoring';
+import { GATES, RECORD_YARDS, SPIKE_AT, WEAK_LINK_SHARE, WEIGHTS, allProFloor, computeOverall, gateShift, isGrandSlam, mvpFloor, simulateCareer, softestSlot, spikeAt } from '../src/lib/scoring';
 import type { AccoladeId } from '../src/lib/scoring';
 
 type Policy = 'random' | 'fan' | 'human' | 'sharp' | 'blind';
@@ -440,7 +440,7 @@ function floorsBite(): boolean {
     const weights = WEIGHTS[position];
     const softest = [...keys].sort((a, b) => (weights[a] ?? 1) - (weights[b] ?? 1))[0];
 
-    for (const [award, floor] of [['allPro', allProFloor(position, era)], ['mvp', GATES.mvpFloor]] as const) {
+    for (const [award, floor] of [['allPro', allProFloor(position, era)], ['mvp', mvpFloor(position, era)]] as const) {
       // Everything at 99 except the one trait, which sits on the floor and then under it.
       const clean: Partial<Record<AttributeKey, number>> = {};
       for (const k of keys) clean[k] = 99;
@@ -502,6 +502,59 @@ function floorsFitTheirPools(): boolean {
   console.log(ok
     ? '  floors fit their pools: PASS, every floor is the league standard or what the position can reach'
     : '  floors fit their pools: FAIL, a floor has been picked rather than derived');
+  return ok;
+}
+
+/**
+ * THE LEAGUE ADJUSTMENTS ARE DERIVED, NOT PICKED.
+ *
+ * Two numbers move with the league you are playing in: the overall gates drop by
+ * gateShift, and OPOY's spike bar drops to spikeAt. Both exist so that a shallower set of
+ * pools does not decide an award before the player does, and both are the kind of thing
+ * that turns into a thumb on the scale the moment somebody nudges one to make a rate look
+ * better. So this asserts what they are allowed to be rather than what they happen to be.
+ *
+ * Three rules. All-time is the reference league and must come back untouched at every
+ * position, or the numbers those gates were calibrated against have quietly moved. Neither
+ * adjustment may ever make a league HARDER, since a deep pool does not earn a tougher
+ * trophy. And the shift has to match the shortfall it claims to be reading.
+ */
+function leagueAdjustmentsAreDerived(): boolean {
+  let ok = true;
+  for (const { era, position } of eraPositions) {
+    const supplyOf = (e: Era) => {
+      const slots = ATTRIBUTE_SETS[position].map((key) => {
+        const bests = TEAMS
+          .map((t) => getPool(position, t.id, e))
+          .filter((pool) => pool.length > 0)
+          .map((pool) => Math.max(...pool.map((p) => p.attributes[key] ?? 0)))
+          .sort((a, b) => a - b);
+        return bests[Math.floor(bests.length / 2)];
+      });
+      return slots.reduce((sum, v) => sum + v, 0) / slots.length;
+    };
+
+    const shift = gateShift(position, era);
+    const bar = spikeAt(position, era);
+    const want = Math.min(0, Math.ceil(supplyOf(era) - supplyOf('alltime')));
+    const problems: string[] = [];
+
+    if (era === 'alltime' && (shift !== 0 || bar !== SPIKE_AT)) {
+      problems.push('the reference league has moved');
+    }
+    if (shift > 0 || bar > SPIKE_AT) problems.push('an adjustment made this league harder');
+    if (shift !== want) problems.push(`shift should be ${want}`);
+
+    if (problems.length) ok = false;
+    console.log(
+      `    ${era} ${position} gates ${shift === 0 ? 'unmoved' : `${shift}`}, spike bar ${bar}, ` +
+      `supply ${supplyOf(era).toFixed(1)} against ${supplyOf('alltime').toFixed(1)}` +
+      `  ${problems.length ? `x ${problems.join('; ')}` : ''}`,
+    );
+  }
+  console.log(ok
+    ? '  league adjustments derived: PASS, all-time is untouched and every drop matches its shortfall'
+    : '  league adjustments derived: FAIL, an adjustment has been picked rather than measured');
   return ok;
 }
 
@@ -582,6 +635,7 @@ console.log(
 
 let failed = !floorsBite();
 failed = !floorsFitTheirPools() || failed;
+failed = !leagueAdjustmentsAreDerived() || failed;
 failed = !theBoxAgreesWithTheCard() || failed;
 console.log();
 

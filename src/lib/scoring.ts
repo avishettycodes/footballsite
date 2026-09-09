@@ -48,7 +48,7 @@ export type Build = Partial<Record<AttributeKey, number>>;
  */
 export const WEIGHTS: Record<Position, Partial<Record<AttributeKey, number>>> = {
   RB: { vision: 1.50, speed: 1.15, burst: 1.15, power: 1.10, juke: 1.05, size: 0.80, hands: 0.70 },
-  QB: { accuracy: 1.55, processing: 1.45, pocketPresence: 1.15, deepBall: 1.05, armStrength: 1.00, clutch: 0.95, mobility: 0.80 },
+  QB: { accuracy: 1.55, processing: 1.45, pocketPresence: 1.15, deepBall: 1.05, armStrength: 1.00, clutch: 0.95, mobility: 0.80, size: 0.70 },
   WR: { hands: 1.40, routeRunning: 1.35, speed: 1.15, release: 1.05, contestedCatch: 1.00, yac: 1.00, size: 0.85 },
   TE: { hands: 1.45, routeRunning: 1.15, toughness: 1.05, blocking: 1.05, size: 0.95, yac: 0.95, speed: 0.90 },
 };
@@ -118,7 +118,7 @@ export type OverallBreakdown = {
   spikeCount: number;
 };
 
-export function computeOverall(position: Position, build: Build): OverallBreakdown {
+export function computeOverall(position: Position, build: Build, era: Era = 'alltime'): OverallBreakdown {
   const keys = ATTRIBUTE_SETS[position];
   const weights = WEIGHTS[position];
 
@@ -147,7 +147,7 @@ export function computeOverall(position: Position, build: Build): OverallBreakdo
     // Reported as the raw number, since that is what the player actually picked.
     weakest: { attribute: shortfalls[0].key, value: build[shortfalls[0].key] ?? 0 },
     eliteCount: keys.filter((k) => (build[k] ?? 0) >= 95).length,
-    spikeCount: keys.filter((k) => (build[k] ?? 0) >= SPIKE_AT).length,
+    spikeCount: keys.filter((k) => (build[k] ?? 0) >= spikeAt(position, era)).length,
   };
 }
 
@@ -411,6 +411,49 @@ const FLOORS = new Map<string, number>();
  * because it produces 0.04 traits at 97 or better per player against 0.27 at receiver,
  * and that is the position genuinely being harder rather than a bar it cannot reach.
  */
+/**
+ * HOW FAR SHORT OF THE REFERENCE LEAGUE THIS ONE COMES, in points of supply.
+ *
+ * All-time is the reference and always returns 0, so every number in GATES stays exactly
+ * the number it was calibrated to. Nothing above this line moves for the league it is in.
+ *
+ * The second dataset needed this the moment its rooms became honest. A current room is the
+ * men on the depth chart, which is two or three quarterbacks rather than eight, so the
+ * median franchise offers 90 for a slot where its all-time equivalent offers 94. Every
+ * overall gate in this file was written against that 94. Handing the same 92 to a league
+ * that cannot supply it is not a harder difficulty, it is the arithmetic deciding the
+ * award before the player does: at 3,000 played runs the strict current pools produced
+ * All-Pro 36% against 86%, and MVP, the record and the Hall of Fame at flat zero. A
+ * quarterback with no hole anywhere finished under the entry trophy.
+ *
+ * So a gate drops by exactly the shortfall and by nothing else. It is measured off the
+ * same statistic allProFloor reads, it is asserted in `npm run verify:scoring`, and it
+ * dissolves on its own the day a league can supply the bar. It NEVER goes positive: a
+ * league with a deep pool does not get a harder award, for the same reason the floor is
+ * capped at the league standard.
+ *
+ * This is the second exception to gates staying position blind, and it is the same
+ * exception as the first. The question asked is identical everywhere, "is this the best
+ * player in the league", and only the answer to "what can this league hand you" differs.
+ * QB and RB come back at 4, receiver at 3 and tight end at 0, and tight end returning
+ * zero is the evidence the statistic is reading something real: it is the one position
+ * whose rooms were already the size of a real one.
+ */
+const SHIFTS = new Map<string, number>();
+
+export function gateShift(position: Position, era: Era): number {
+  const cacheKey = `${era}:${position}`;
+  const cached = SHIFTS.get(cacheKey);
+  if (cached !== undefined) return cached;
+  const supplyOf = (e: Era) => {
+    const slots = ATTRIBUTE_SETS[position].map((key) => typicalSupply(position, key, e));
+    return slots.reduce((sum, v) => sum + v, 0) / slots.length;
+  };
+  const shift = Math.min(0, Math.ceil(supplyOf(era) - supplyOf('alltime')));
+  SHIFTS.set(cacheKey, shift);
+  return shift;
+}
+
 export function allProFloor(position: Position, era: Era): number {
   const cacheKey = `${era}:${position}`;
   const cached = FLOORS.get(cacheKey);
@@ -421,6 +464,73 @@ export function allProFloor(position: Position, era: Era): number {
   const floor = Math.min(GATES.allProFloor, thinnest);
   FLOORS.set(cacheKey, floor);
   return floor;
+}
+
+/**
+ * WHAT COUNTS AS A SPIKE IN THE LEAGUE YOU ARE PLAYING IN.
+ *
+ * SPIKE_AT is 97 and stays 97 for the league it was measured against, so all-time returns
+ * it unchanged at every position and nothing there moves.
+ *
+ * OPOY broke in the current league for a reason that had nothing to do with the ratings.
+ * The current pools are SPIKIER per man than the all-time ones, 0.30 traits at 97 or better
+ * per quarterback against 0.19, and OPOY still fell to under one run in a hundred. The
+ * statistic that explains it is not per player, it is per room: an all-time quarterback
+ * room answers one slot of the card at 97, and a current room of two or three answers
+ * none. You visit seven franchises in a run, so the all-time league lets you collect the
+ * four spikes the award asks for and the current one hands you about one.
+ *
+ * So the bar drops to the highest number at which a typical room in THIS league answers as
+ * many slots as a typical all-time room answers at 97. It is the same move allProFloor
+ * makes, asking the same question of a different supply, and it lands where the pools put
+ * it rather than where a rate looks nice. It stops at 88, because a league that cannot
+ * offer a genuinely elite trait at 88 should lose the award rather than have it handed
+ * down to it.
+ */
+function spikeSupply(position: Position, era: Era, bar: number): number {
+  const counts = TEAMS
+    .map((team) => getPool(position, team.id, era))
+    .filter((pool) => pool.length > 0)
+    .map((pool) => ATTRIBUTE_SETS[position].filter(
+      (key) => Math.max(...pool.map((p) => p.attributes[key] ?? 0)) >= bar,
+    ).length)
+    .sort((a, b) => a - b);
+  return counts[Math.floor(counts.length / 2)];
+}
+
+const SPIKE_BARS = new Map<string, number>();
+
+export function spikeAt(position: Position, era: Era): number {
+  const cacheKey = `${era}:${position}`;
+  const cached = SPIKE_BARS.get(cacheKey);
+  if (cached !== undefined) return cached;
+  const target = spikeSupply(position, 'alltime', SPIKE_AT);
+  let bar = SPIKE_AT;
+  while (bar > 88 && spikeSupply(position, era, bar) < target) bar -= 1;
+  SPIKE_BARS.set(cacheKey, bar);
+  return bar;
+}
+
+/**
+ * MVP'S FLOOR, MOVED BY THE SAME SHORTFALL THE OVERALL GATES ARE.
+ *
+ * A flat 95 is right for the league it was measured in, and gateShift returns 0 there, so
+ * all-time keeps exactly the number it was calibrated to at every position.
+ *
+ * It could not stay flat for a shallower league. MVP is an overall AND a floor, and the two
+ * halves have to describe the same player: dropping the overall to 92 for the current
+ * quarterback pools while still asking for nothing under 95 leaves an award nobody can win,
+ * which is the failure this whole section exists to avoid. So the floor travels with the
+ * gate it belongs to.
+ *
+ * DERIVING IT OFF THE SUPPLY DIRECTLY WAS TRIED FIRST and it is the more obvious idea,
+ * allProFloor's rule applied one rung up. It fails a check that matters: at current tight
+ * end it produced 88, and a player sitting on 88 with 99 everywhere else grades out at 95
+ * against a 96 gate, so the floor could never turn an award off. A floor that cannot bite
+ * is decoration, and `npm run verify:scoring` says so out loud.
+ */
+export function mvpFloor(position: Position, era: Era): number {
+  return GATES.mvpFloor + gateShift(position, era);
 }
 
 /**
@@ -512,7 +622,7 @@ export function simulateCareer(
   seed: string,
   era: Era,
 ): CareerResult {
-  const breakdown = computeOverall(position, build);
+  const breakdown = computeOverall(position, build, era);
   const { overall, spikeCount } = breakdown;
   const floor = breakdown.weakest.value;
 
@@ -523,9 +633,10 @@ export function simulateCareer(
 
   // Each award asks a different question on purpose. All-Pro wants a complete player,
   // OPOY wants peaks, MVP wants both at the top end, the record wants a career.
-  const allPro = overall >= GATES.allPro && floor >= allProFloor(position, era);
-  const opoy = overall >= GATES.opoy && spikeCount >= spikeTraitsRequired(position);
-  const mvp = overall >= GATES.mvp && floor >= GATES.mvpFloor;
+  const shift = gateShift(position, era);
+  const allPro = overall >= GATES.allPro + shift && floor >= allProFloor(position, era);
+  const opoy = overall >= GATES.opoy + shift && spikeCount >= spikeTraitsRequired(position);
+  const mvp = overall >= GATES.mvp + shift && floor >= mvpFloor(position, era);
   const record = stats.yards >= RECORD_YARDS[position];
 
   const odds = superBowlOdds(overall);
@@ -555,10 +666,11 @@ export function isGrandSlam(accolades: Record<AccoladeId, boolean>): boolean {
 }
 
 export function accoladeDefs(position: Position, era: Era): AccoladeDef[] {
+  const shift = gateShift(position, era);
   return [
-    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro}+ with nothing under ${allProFloor(position, era)}` },
-    { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy}+ with ${spikeTraitsRequired(position)} traits at ${SPIKE_AT} or better` },
-    { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp}+ with nothing under ${GATES.mvpFloor}` },
+    { id: 'allPro', label: 'First-Team All-Pro', trophy: 'star', requirement: `Overall ${GATES.allPro + shift}+ with nothing under ${allProFloor(position, era)}` },
+    { id: 'opoy', label: 'Offensive Player of the Year', trophy: 'helmet', requirement: `Overall ${GATES.opoy + shift}+ with ${spikeTraitsRequired(position)} traits at ${spikeAt(position, era)} or better` },
+    { id: 'mvp', label: 'MVP', trophy: 'trophy', requirement: `Overall ${GATES.mvp + shift}+ with nothing under ${mvpFloor(position, era)}` },
     { id: 'record', label: recordLabel(position), trophy: 'stopwatch', requirement: `${RECORD_YARDS[position].toLocaleString()} career yards, which takes both a long career and a good one` },
     { id: 'superBowl', label: 'Super Bowl', trophy: 'ring', requirement: 'Down to the roll' },
     { id: 'hof', label: 'Hall of Fame', trophy: 'laurel', requirement: `Any ${GATES.hofPoints} of the ones above` },

@@ -248,27 +248,33 @@ First-team All-Pro wants a complete player: a high overall with no hole in him. 
 entry award, and it is the one the whole game is about, because the way you lose it is by
 chasing a big number and leaving a hole three spins back.
 
-Where a hole starts is read off the position rather than fixed at one number, and that is
-the only gate in the game that knows what position it is looking at. See the tight end
-section below for why, and `allProFloor` in `src/lib/scoring.ts` for the argument in
-full.
+Where a hole starts is read off the position and the league rather than fixed at one
+number. See the tight end section below for why, and `allProFloor` in
+`src/lib/scoring.ts` for the argument in full.
 
 Offensive Player of the Year wants peaks instead. It asks for a high overall and a number
-of traits at 97 or better, scaled to how many slots your position has.
+of traits at the top of the league, scaled to how many slots your position has. That bar
+is 97 in the all-time pools and reads off the supply in any shallower league, which is
+`spikeAt` in the same file.
 
 MVP wants both at once, with a harder floor. The record wants a career rather than a
 rating, since it is a yardage total and yardage takes years. The Super Bowl is a weighted
 coin you cannot build for. The Hall of Fame is any four of those five.
 
-What a sensible player actually walks away with, measured over 1,500 runs a position:
+What a sensible player actually walks away with in the all-time pools, measured over 3,000
+runs a position. The current league has its own table further down:
 
 ```
            All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-    QB        88%     41%    13%    1.6%    64%    10%    1.2%      6.1%
-    RB        86%     57%    21%    4.5%    69%    16%    2.6%      4.9%
-    WR        88%     74%    24%    8.4%    68%    19%    5.7%      3.9%
-    TE        68%      8%     1%    1.7%    55%     2%    0.3%     18.2%
+    QB        86%     44%    13%    1.9%    65%   9.7%    1.1%      7.4%
+    RB        86%     57%    21%    4.1%    68%    16%    2.2%      5.3%
+    WR        89%     73%    23%    7.8%    68%    19%    5.3%      4.1%
+    TE        67%    8.3%   1.3%    1.7%    56%   1.8%    0.3%     17.5%
 ```
+
+Quarterback moved a point or two when size became its eighth pick. That is an extra spin,
+an extra franchise raided and one more number the weak link anchor can find a hole in, and
+nothing was retuned to cancel it out.
 
 Only the record column moved when the seasons were rebalanced, and every other number in
 that table came back byte identical, which is the evidence that the change reached the
@@ -330,25 +336,38 @@ since that is his name.
 
 Every rating is hand written and completely subjective. Nothing is scraped, no sports
 API is called, and no licensed dataset is involved. There are 1000 all-time players across
-four positions at seven to nine per franchise, and 768 current ones at six.
+four positions at seven to nine per franchise, and 489 current ones at however many the
+depth chart says.
 
 **The current pools are a second hand-written dataset, not the first one scaled down.**
 A scale factor would keep every ranking exactly where it was and only move the decimal,
 and the rankings are the part that actually changes when the company changes.
 
-**A current room is the depth chart today plus the men who held the job over the last few
-seasons**, and the years on every card say which is which. Strictly today was tried on
-2026-09-08 and it did not survive being played: a real roster carries three quarterbacks, so
-rooms fell to three or four, and two carefully played runs came out at 92/92/96/90/99/97/90
-and 97/90/92/92/92/92/90. Those are players with no hole anywhere and both finished under
-the 92 overall that first-team All-Pro asks for, one on a coin-flip ring and the other on
-nothing at all. A bar that good play cannot clear is the thing this project calls a bug
-wearing a difficulty costume.
+**A current room is the depth chart and nothing else.** Everybody in `src/data/current/`
+is on the active roster of the franchise he is filed under. No practice squad, nobody who
+has left, and no franchise reaching back to somebody who used to play there. So the Raiders
+carry Kirk Cousins, Fernando Mendoza and Aidan O'Connell at quarterback, and that is the
+whole room.
 
-The measurable version of that: a room can be scored by how many of the seven slots it can
-answer at 90 or better. All-time rooms answer six. Strictly-current rooms answered four,
-except at receiver, where six who play is a normal roster. Receiver was also the only
-position that still played well, which is the tell.
+**Padding to six was tried and the padding is what broke it.** Filling every room meant
+reaching back a few seasons, and reaching back put Aaron Rodgers on the Packers in a league
+where he plays for Pittsburgh. A mode whose entire promise is "the men on a roster now"
+cannot ship a card that says otherwise, whatever it does for the pool sizes.
+
+The pool sizes really do suffer for it, and the awards are what noticed first. A room of
+three cannot lift the weak link anchor the way a room of eight can, so the first attempt at
+strict rooms left a quarterback with no hole anywhere finishing under the 92 overall that
+first-team All-Pro asks for. A bar that good play cannot clear is the thing this project
+calls a bug wearing a difficulty costume, and the honest fix is not to put the wrong names
+back. It is to notice that 92 was measured against a league that supplies 94 and this one
+supplies 90. See "The current league is a harder league" below for how that is derived.
+
+The measurable version: a room can be scored by how many of the card's slots it can answer
+at 90 or better. All-time quarterback rooms answer seven of eight and current ones answer
+four. Receiver answers six of seven in both leagues, because six receivers who actually play
+is a normal roster, and receiver is correspondingly the position that barely moved. Tight
+end answers five in both, which is why it is the one position whose gates did not move at
+all.
 
 **Writing that file taught the same lesson four times, and it is worth reading before
 adding to it.** Every pass rated today's players as if the all-time greats were standing
@@ -381,9 +400,11 @@ Three rules make the reconciliation almost mechanical:
 him, so a transfer is a card moving between rooms rather than a rewrite. There is no card
 left behind, because a pool that holds only current players has nowhere to put one.
 
-**A room is as deep as the depth chart says.** Nobody is kept for depth, so a man who signs
-elsewhere is deleted rather than demoted, and the room simply gets shorter until his
-replacement is written in.
+**A room is as deep as the depth chart says**, and that is a hard rule rather than a target.
+Two quarterbacks is a room of two. A man who signs elsewhere is deleted rather than demoted,
+a man on the practice squad is not in the file at all, and nobody is ever added to round a
+room up. `npm run verify:data` asks all-time for six per franchise and current for one, for
+exactly this reason.
 
 **A blurb travels with the card, so read it after a move.** The checks will catch two cards
 making the same joke and cannot catch a line about the wrong building, which is how Kirk
@@ -439,45 +460,68 @@ rather than by renaming a key. That is why the key is still `hands` while the sc
 CATCHING, still `processing` while the screen says READS, and still `burst` while the
 screen says ACCELERATION.
 
-## The current league is a harder league, and the trophy case says so
+## The current league is a harder league, and the gates read that off the supply
 
-The gates are identical in both leagues on purpose. A first-team All-Pro has to mean the
-same thing whichever pools you played, so nothing in `src/lib/scoring.ts` asks which league
-it is looking at except the All-Pro floor, which was already derived from supply before any
-of this and now derives it per league as well.
+The gates are written as one set of numbers and calibrated once, against the all-time
+pools. What changes between leagues is what those pools can hand you, and by 2026-09-09
+three things in `src/lib/scoring.ts` read that rather than assuming it: the All-Pro floor,
+the overall gates, and OPOY's spike bar. All-time is the reference league and every one of
+them returns it untouched.
 
-What differs is the supply, and the difference is structural rather than a rating anybody
-can fix. An all-time franchise pool is the seven or eight most memorable players in seventy
-years at that position. A current pool is the men on the depth chart this morning, which is
-three or four at most positions. Measured over 3,000 sensible runs a position:
+The difference is structural rather than a rating anybody can fix. An all-time franchise
+pool is the seven or eight most memorable players in seventy years at that position. A
+current pool is the men on the depth chart this morning, which is two or three at
+quarterback. Averaged across the card's slots, a typical all-time quarterback room offers
+94 and a current one offers 89.6, so every gate written against 94 was quietly asking the
+current league for something it does not stock.
+
+`gateShift(position, era)` is that shortfall, rounded toward zero and never allowed to go
+positive, and the three overall gates drop by exactly it. It comes back at 4 for
+quarterback, 3 for running back, 1 for receiver and 0 for tight end, and tight end
+returning zero is the evidence the statistic is reading something real: it is the one
+position whose rooms were already the size of a real one.
+
+OPOY needed the same treatment for a reason that is not obvious from the ratings. The
+current pools are SPIKIER per man than the all-time ones, 0.30 traits at 97 or better per
+quarterback against 0.19, and OPOY still fell under one run in a hundred. The statistic
+that explains it is per room rather than per player: an all-time quarterback room answers
+one slot of the card at 97 and a current room of two or three answers none, and you only
+visit seven franchises. So `spikeAt` drops the bar to the highest number at which a typical
+room in this league answers as many slots as a typical all-time room answers at 97. It
+lands on 96 for current quarterback, receiver and tight end, and stays at 97 everywhere
+else.
+
+Measured over 3,000 sensible runs a position:
 
 ```
                  All-Pro   OPOY    MVP  record   ring    HoF   slam   nothing at all
-    QB all-time     87%    40%     12%    1.5%    65%   8.8%   1.0%       6%
-    QB now          36%   0.3%    0.1%      0%    50%     0%     0%      36%
+    QB all-time     86%    44%     13%    1.9%    65%   9.7%   1.1%       7%
+    QB now          76%    28%     24%      0%    48%   8.3%     0%      15%
     RB all-time     86%    57%     21%    4.1%    68%    16%   2.2%       5%
-    RB now          65%   4.9%    0.5%    0.1%    57%   0.4%     0%      18%
+    RB now          85%    40%     26%    0.2%    56%    12%   0.2%       8%
     WR all-time     89%    73%     23%    7.8%    68%    19%   5.3%       4%
-    WR now          89%    45%     9.1%    2.1%    66%   7.8%   1.3%       5%
+    WR now          75%    66%     28%    0.9%    65%    20%   0.6%      10%
     TE all-time     67%   8.3%    1.3%    1.7%    56%   1.8%   0.3%      18%
-    TE now          28%   0.2%      0%      0%    51%     0%     0%      37%
+    TE now          61%   5.9%    0.5%    1.1%    56%   1.1%   0.2%      20%
 ```
 
+**The record did not move and is not going to.** It is a real career total, the one number
+on the report that is a claim about football rather than about this game, and a league two
+or three men deep per room is not going to break it. That is why the record column reads
+0% at quarterback and the grand slam with it. Everything else is now within reach of a
+well-played run in either league, which is the bar this project holds a mode to.
+
+**MVP fires more often in the current league than in the all-time one at three positions**,
+which is the part of this table that is not yet right. The shift is a translation and the
+distributions are not translations of each other: the current overall spread is wider at
+the bottom and shorter at the top, so a gate moved down by the supply gap lands lower in
+the current league's percentile than it does in all-time's. It wants a shape rather than an
+offset. Nothing has been nudged by hand to hide it, because a number picked to make a rate
+look right is the failure this whole section exists to avoid.
+
 **Receiver holds up best**, because six receivers who actually play is a normal roster.
-Everything else is thin by construction: a run makes seven picks off seven landings, and a
-landing that offers three men can only answer so many of the slots you have left. That is
-why the start screen labels quarterback and tight end THIN ROOM in current mode rather than
-carrying THE HARD ONE across from a league where tight end is hard on its own.
-
-**Strictly-current rooms were tried and taken back out**, and the numbers are the reason:
-All-Pro at quarterback fell to 18% with nearly half of runs winning nothing, and playing it
-showed why. The lever is the depth rule rather than any gate, and it stays that way.
-
-So a current run is chasing All-Pro and a ring, and the top four trophies are close to
-unreachable at three positions. That is an honest consequence of the pools rather than a
-bug, and deriving the record per league was considered and turned down: the trophies are
-what make two runs comparable, and comparing is what the seed link is for. Nothing here was
-retuned to flatter the new data, which is why the numbers are printed above.
+The start screen still labels quarterback and tight end THIN ROOM in current mode rather
+than carrying THE HARD ONE across from a league where tight end is hard on its own.
 
 ## Tight end, and the one gate that reads the position
 

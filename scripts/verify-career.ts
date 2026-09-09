@@ -589,7 +589,11 @@ console.log('\nwhich picks actually move the stat line');
  */
 const RATING_ONLY: Record<Position, AttributeKey[]> = {
   // The pocket is the reason the other numbers happen rather than a number of its own.
-  QB: ['pocketPresence'],
+  // Size joined it when the frame arrived on the quarterback card. What a big passer
+  // actually buys is the hit he gets up from and the sneak from the one yard line, and
+  // this report tracks neither. Scrambling is mobility's, and handing a share of it to
+  // size as well would pay the same pick twice.
+  QB: ['pocketPresence', 'size'],
   // Breaking a tackle and outrunning the angle both land in yards per carry, which vision
   // and burst already carry. Worth revisiting; it is a gap rather than a principle.
   RB: ['speed', 'juke'],
