@@ -17,10 +17,11 @@ npm run dev
 
 Then open http://localhost:5173. There is a debug view of the raw data at `?debug`.
 
-The global leaderboard uses Upstash Redis through a Vercel Function. Connect an Upstash
-Redis database to the Vercel project before deploying; the integration supplies
-`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Without those variables the game
-still runs and saves players locally, but the shared board reports that it is unavailable.
+The leaderboard uses the same browser storage as YOUR HALL. It needs no account, database
+or environment variables. Builds stay on the device that saved them.
+
+On wide desktop screens the layout reserves left and right advertisement rails. Ad code can
+mount into `#ad-slot-left` and `#ad-slot-right` without changing the game layout.
 
 ## What works right now
 
@@ -68,10 +69,9 @@ the events that delete a run. The seed is deliberately not remembered, since a s
 specific run and refilling the box with it is the bug where deleting a seed did not delete
 the seed.
 
-Naming your player on the report saves him locally and puts the verified finished build on
-the global leaderboard. The server reads every stolen rating back out of the roster data
-and rebuilds the career before accepting it, so changing the request in a browser cannot
-post a fake 99. YOUR HALL still keeps twenty players in that browser, newest first, and
+Naming your player on the report saves him and puts the finished build on the leaderboard.
+The board separates quarterbacks, running backs, receivers and tight ends, then ranks each
+position by overall. YOUR HALL keeps twenty players in that browser, newest first, and
 opening one replays the report without sitting through the reveal again.
 
 ## The career report

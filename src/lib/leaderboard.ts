@@ -1,47 +1,49 @@
 import type { Era, Position } from '../data';
+import { savedEra } from './hall';
 import type { SavedPlayer } from './hall';
 
-/** The public part of a finished build. The server derives every number except the name. */
+export const LEADERBOARD_POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+
 export type LeaderboardEntry = {
+  id: string;
   name: string;
   position: Position;
-  era: Era;
   hardMode: boolean;
   overall: number;
   trophies: number;
   seasons: number;
   careerYards: number;
-  submittedAt: number;
+  savedAt: number;
 };
 
-/** Enough of the run for the server to verify the picks and reproduce the career. */
-export type LeaderboardSubmission = Pick<
-  SavedPlayer,
-  'id' | 'name' | 'position' | 'hardMode' | 'era' | 'seed' | 'slots'
->;
-
-export type LeaderboardSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-export async function loadLeaderboard(
-  position: Position,
+/**
+ * The leaderboard is another view of YOUR HALL, not another copy of its data. Naming a
+ * finished player already saves him there, so he cannot wind up in one list but not the
+ * other. Each position ranks overall first, then uses the career as the tie-breaker.
+ */
+export function rankLeaderboard(
+  hall: SavedPlayer[],
   era: Era,
-  signal?: AbortSignal,
-): Promise<LeaderboardEntry[]> {
-  const query = new URLSearchParams({ position, era, limit: '10' });
-  const response = await fetch(`/api/leaderboard?${query}`, {
-    cache: 'no-store',
-    signal,
-  });
-  if (!response.ok) throw new Error('Leaderboard unavailable');
-  const body = await response.json() as { entries?: LeaderboardEntry[] };
-  return Array.isArray(body.entries) ? body.entries : [];
-}
-
-export async function submitLeaderboard(entry: LeaderboardSubmission): Promise<void> {
-  const response = await fetch('/api/leaderboard', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(entry),
-  });
-  if (!response.ok) throw new Error('Leaderboard submission failed');
+  position: Position,
+  limit = 10,
+): LeaderboardEntry[] {
+  return hall
+    .filter((player) => player.position === position && savedEra(player) === era && player.name.trim())
+    .map((player) => ({
+      id: player.id,
+      name: player.name.trim(),
+      position: player.position,
+      hardMode: player.hardMode,
+      overall: player.career.overall,
+      trophies: Object.values(player.career.accolades).filter(Boolean).length,
+      seasons: player.career.seasons,
+      careerYards: player.career.careerYards,
+      savedAt: player.savedAt,
+    }))
+    .sort((a, b) =>
+      b.overall - a.overall
+      || b.trophies - a.trophies
+      || b.careerYards - a.careerYards
+      || b.savedAt - a.savedAt)
+    .slice(0, Math.max(0, limit));
 }

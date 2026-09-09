@@ -5,9 +5,8 @@ import { quitNeedsConfirmation, useGame } from './store/gameStore';
 import { audioState, lock, primeAudio, setSoundEnabled, subscribeAudio } from './lib/audio';
 import { savedEra } from './lib/hall';
 import type { SavedPlayer } from './lib/hall';
-import { submitLeaderboard } from './lib/leaderboard';
-import type { LeaderboardSaveState } from './lib/leaderboard';
 import { Chevron, SoundOff, SoundOn } from './components/Icons';
+import { AdLayout } from './components/AdLayout';
 import { SlotMachine } from './components/SlotMachine';
 import { BuildSheet } from './components/BuildSheet';
 import { PoolPicker } from './components/PoolPicker';
@@ -19,7 +18,6 @@ export default function App() {
   const g = useGame();
   const [hover, setHover] = useState<AttributeKey | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [leaderboardState, setLeaderboardState] = useState<LeaderboardSaveState>('idle');
   /** Confirm step for walking out on a run. See the quit control in the header. */
   const [quitting, setQuitting] = useState(false);
   /**
@@ -57,25 +55,6 @@ export default function App() {
       return;
     }
     g.abandonRun();
-  };
-  const saveToLeaderboard = async () => {
-    const name = g.creationName.trim();
-    if (!name || !g.career) return;
-    setLeaderboardState('saving');
-    try {
-      await submitLeaderboard({
-        id: g.runId,
-        name,
-        position: g.position,
-        hardMode: g.hardMode,
-        era: g.era,
-        seed: g.seed,
-        slots: g.slots,
-      });
-      setLeaderboardState('saved');
-    } catch {
-      setLeaderboardState('error');
-    }
   };
 
   return (
@@ -178,6 +157,7 @@ export default function App() {
         </div>
       </header>
 
+      <AdLayout>
       {viewing ? (
         <main className="mx-auto max-w-7xl px-4 py-5">
           <ResultsScreen
@@ -319,9 +299,7 @@ export default function App() {
                 seed={g.seed}
                 hardMode={g.hardMode}
                 creationName={g.creationName}
-                onName={(name) => { setLeaderboardState('idle'); g.setCreationName(name); }}
-                onNameCommit={saveToLeaderboard}
-                leaderboardState={leaderboardState}
+                onName={g.setCreationName}
                 onRestart={g.abandonRun}
                 soundOn={g.soundOn}
               />
@@ -375,6 +353,7 @@ export default function App() {
           </div>
         </main>
       )}
+      </AdLayout>
 
       {/*
         Confirm once the run is past four filled slots. The slot count is in the sentence

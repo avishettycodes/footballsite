@@ -291,7 +291,7 @@ export function StartScreen({
         {pasted === 'junk' ? 'Fix the seed first' : 'Build a player'}
       </button>
 
-      <Leaderboard position={position} era={era} />
+      <Leaderboard hall={hall} era={era} />
       <HallOfBuilds hall={hall} onOpen={onOpenSaved} onDelete={onDeleteSaved} />
     </div>
   );

@@ -14,7 +14,6 @@ import type { RunShape } from '../lib/narrative';
 import { inkOn, teamMark } from '../lib/contrast';
 import { Chevron, Ring, RingBroken, TrophyIcon } from './Icons';
 import { deflate, fanfare, heartbeat } from '../lib/audio';
-import type { LeaderboardSaveState } from '../lib/leaderboard';
 import { ratingColor } from './AttributeBar';
 
 type Props = {
@@ -29,8 +28,6 @@ type Props = {
   hardMode: boolean;
   creationName: string;
   onName: (name: string) => void;
-  onNameCommit?: () => void;
-  leaderboardState?: LeaderboardSaveState;
   onRestart: () => void;
   soundOn: boolean;
   /**
@@ -77,7 +74,7 @@ function Section({ index, title, aside, children }: {
 
 export function ResultsScreen({
   position, era, slots, pickOrder, career, seed, hardMode, creationName,
-  onName, onNameCommit, leaderboardState = 'idle', onRestart, soundOn, replay = false,
+  onName, onRestart, soundOn, replay = false,
 }: Props) {
   const [stage, setStage] = useState<Stage>(replay ? 'done' : 'overall');
   const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -245,7 +242,6 @@ export function ResultsScreen({
               <input
                 value={creationName}
                 onChange={(e) => onName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') onNameCommit?.(); }}
                 placeholder="NAME YOUR PLAYER"
                 className={`w-full bg-transparent font-display leading-none tracking-tighter uppercase placeholder:text-white/25 focus:outline-none sm:text-4xl md:text-5xl ${
                   creationName.length > 20 ? 'text-base' : creationName.length > 14 ? 'text-lg' : 'text-2xl'
@@ -254,30 +250,13 @@ export function ResultsScreen({
             )}
             {!replay && (
               <div className="mt-2">
-                {!creationName.trim() ? (
-                  <div className="font-mono text-[10px] tracking-wider text-white/35">
-                    Name your player to put him on the leaderboard.
-                  </div>
-                ) : leaderboardState === 'saving' ? (
-                  <div className="font-mono text-[10px] tracking-wider text-white/35">
-                    Putting him on the leaderboard…
-                  </div>
-                ) : leaderboardState === 'saved' ? (
-                  <div className="font-mono text-[10px] tracking-wider text-emerald-300">
-                    He is on the leaderboard.
-                  </div>
-                ) : (
-                  <button
-                    onClick={onNameCommit}
-                    className={`rounded border px-2 py-1 font-mono text-[10px] font-bold tracking-wider ${
-                      leaderboardState === 'error'
-                        ? 'border-red-500/60 text-red-300 hover:bg-red-500/15'
-                        : 'border-hazard/60 text-hazard hover:bg-hazard/10'
-                    }`}
-                  >
-                    {leaderboardState === 'error' ? 'TRY LEADERBOARD AGAIN' : 'PUT HIM ON THE LEADERBOARD'}
-                  </button>
-                )}
+                <div className={`font-mono text-[10px] tracking-wider ${
+                  creationName.trim() ? 'text-emerald-300' : 'text-white/35'
+                }`}>
+                  {creationName.trim()
+                    ? 'Saved. He is on the leaderboard.'
+                    : 'Name your player to save him and put him on the leaderboard.'}
+                </div>
               </div>
             )}
             {/*

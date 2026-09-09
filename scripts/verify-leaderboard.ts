@@ -1,63 +1,61 @@
-/** The public board accepts real finished cards and rejects ratings invented by a client. */
-import { ATTRIBUTE_SETS, ROSTERS } from '../src/data';
-import type { AttributeKey } from '../src/data';
-import type { LeaderboardSubmission } from '../src/lib/leaderboard';
-import { cleanPlayerName, leaderboardScore, verifySubmission } from '../api/_leaderboard';
+import type { Position } from '../src/data';
+import type { SavedPlayer } from '../src/lib/hall';
+import { rankLeaderboard } from '../src/lib/leaderboard';
 
-const position = 'RB' as const;
-const era = 'alltime' as const;
-const used = new Set<string>();
-const slots: LeaderboardSubmission['slots'] = {};
-
-for (const key of ATTRIBUTE_SETS[position]) {
-  const player = ROSTERS[era].find((candidate) =>
-    candidate.position === position && !used.has(candidate.id) && typeof candidate.attributes[key] === 'number',
-  );
-  if (!player) throw new Error(`No player for ${key}`);
-  used.add(player.id);
-  slots[key] = {
-    attribute: key,
-    value: player.attributes[key]!,
-    playerId: player.id,
-    playerName: player.name,
-    teamId: player.teamId,
+function build(
+  id: string,
+  position: Position,
+  overall: number,
+  trophies: number,
+  era: 'alltime' | 'current' = 'current',
+): SavedPlayer {
+  return {
+    id,
+    name: id,
+    position,
+    era,
+    hardMode: false,
+    seed: 'TEST-SEED',
+    savedAt: Number(id.replace(/\D/g, '')) || 1,
+    pickOrder: [],
+    slots: {},
+    career: {
+      overall,
+      seasons: 8,
+      careerYards: overall * 100,
+      accolades: {
+        allPro: trophies > 0,
+        opoy: trophies > 1,
+        mvp: trophies > 2,
+        record: trophies > 3,
+        superBowl: trophies > 4,
+        hof: trophies > 5,
+      },
+    } as SavedPlayer['career'],
   };
 }
 
-const submission: LeaderboardSubmission = {
-  id: 'test-run-GRIDIRON-7QX3',
-  name: '  The   Bus  ',
-  position,
-  hardMode: false,
-  era,
-  seed: 'GRIDIRON-7QX3',
-  slots,
-};
+const hall = [
+  build('rb90', 'RB', 90, 1),
+  build('qb95', 'QB', 95, 1),
+  build('rb95-low', 'RB', 95, 1),
+  build('rb95-high', 'RB', 95, 3),
+  build('old-rb99', 'RB', 99, 6, 'alltime'),
+];
 
-const verified = verifySubmission(submission, 1234);
-const acceptsRealBuild = verified.name === 'The Bus'
-  && verified.submittedAt === 1234
-  && Number.isInteger(verified.overall);
+const runningBacks = rankLeaderboard(hall, 'current', 'RB');
+const quarterbacks = rankLeaderboard(hall, 'current', 'QB');
+const limited = rankLeaderboard(hall, 'current', 'RB', 1);
 
-const fake = structuredClone(submission);
-const first = ATTRIBUTE_SETS[position][0] as AttributeKey;
-fake.slots[first]!.value++;
-let rejectsFakeRating = false;
-try {
-  verifySubmission(fake);
-} catch {
-  rejectsFakeRating = true;
-}
+const positionFiltered = runningBacks.length === 3 && quarterbacks.length === 1;
+const overallFirst = runningBacks.map((entry) => entry.id).join(',') === 'rb95-high,rb95-low,rb90';
+const eraFiltered = !runningBacks.some((entry) => entry.id === 'old-rb99');
+const limitWorks = limited.length === 1 && limited[0]?.id === 'rb95-high';
 
-const hard = { ...verified, hardMode: true };
-const scoreOrder = leaderboardScore({ ...verified, overall: verified.overall + 1 })
-  > leaderboardScore({ ...hard, trophies: 6 });
-const nameClean = cleanPlayerName(' A\u0000   Name ') === 'A Name';
+console.log('\nGridironLab — local leaderboard');
+console.log(`  separated by position: ${positionFiltered ? 'PASS' : 'FAIL'}`);
+console.log(`  ranked by overall:     ${overallFirst ? 'PASS' : 'FAIL'}`);
+console.log(`  separated by league:   ${eraFiltered ? 'PASS' : 'FAIL'}`);
+console.log(`  display limit works:   ${limitWorks ? 'PASS' : 'FAIL'}`);
 
-console.log('\nGridironLab — leaderboard');
-console.log(`  real build accepted: ${acceptsRealBuild ? 'PASS' : 'FAIL'}`);
-console.log(`  fake rating rejected: ${rejectsFakeRating ? 'PASS' : 'FAIL'}`);
-console.log(`  overall ranks first:  ${scoreOrder ? 'PASS' : 'FAIL'}`);
-console.log(`  names cleaned:        ${nameClean ? 'PASS' : 'FAIL'}`);
-
-process.exit(acceptsRealBuild && rejectsFakeRating && scoreOrder && nameClean ? 0 : 1);
+process.exit(positionFiltered && overallFirst && eraFiltered && limitWorks ? 0 : 1);
