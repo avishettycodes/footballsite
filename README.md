@@ -519,17 +519,28 @@ Measured over 3,000 sensible runs a position:
 
 **The record did not move and is not going to.** It is a real career total, the one number
 on the report that is a claim about football rather than about this game, and a league two
-or three men deep per room is not going to break it. That is why the record column reads
-0% at quarterback and the grand slam with it. Everything else is now within reach of a
-well-played run in either league, which is the bar this project holds a mode to.
+or three men deep per room passing Warren Moon would be the game lying about something a
+reader can check. That is why the record column reads 0% at quarterback and the grand slam
+with it, and the trophy case being completable in one league and not the other is
+information rather than a gap: it says all-time is where the ceiling lives, which is the
+reason to reach for the switch at all. Everything else is within reach of a well-played run
+in either league, which is the bar this project holds a mode to.
+
+If that ever grates, the fix is not to lower the threshold. It is to make the record line on
+the report say what the run would have needed instead of only showing a miss.
 
 **MVP fires more often in the current league than in the all-time one at three positions**,
-which is the part of this table that is not yet right. The shift is a translation and the
-distributions are not translations of each other: the current overall spread is wider at
-the bottom and shorter at the top, so a gate moved down by the supply gap lands lower in
-the current league's percentile than it does in all-time's. It wants a shape rather than an
-offset. Nothing has been nudged by hand to hide it, because a number picked to make a rate
-look right is the failure this whole section exists to avoid.
+which is the part of this table that is not yet right, and two played runs show it better
+than the percentages do. Seed CURQB1 finished 92/90/94/93/90/99/90/97, overall 90, and took
+All-Pro. Seed CURQB4 finished 96/93/99/94/92/94/92/92, overall 92, and took All-Pro AND MVP.
+Two points of overall separate the entry trophy from the best player in the league. In the
+all-time pools that distance is four, 92 against 96.
+
+The cause is that a shift is a translation and the two distributions are not translations of
+each other: the current spread is wider at the bottom and shorter at the top, so both gates
+moved down by 4 and the compressed top collapsed the distance between them. It wants a scale
+rather than an offset. Nothing has been nudged by hand to hide it, because a number picked
+to make a rate look right is the failure this whole section exists to avoid.
 
 **Receiver holds up best**, because six receivers who actually play is a normal roster.
 The start screen still labels quarterback and tight end THIN ROOM in current mode rather
