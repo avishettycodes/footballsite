@@ -133,8 +133,8 @@ export type Player = {
  * pounds and a back who is 190 are not the same player even when they run the same
  * speed, and that difference had no slot to live in.
  *
- * Tight end got the two it was short, size and toughness. It stays the hard one because
- * its pool is genuinely thinner, not because it plays a shorter build.
+ * Tight end got the two it was short, size and toughness. Its pool is genuinely thinner,
+ * but it no longer plays a shorter build.
  *
  * SIZE WENT ON THE QUARTERBACK FOR A WHILE AND CAME BACK OFF, and a player said why in
  * one line: you do not need size for a quarterback.

@@ -5,31 +5,9 @@ import type { SavedPlayer } from '../lib/hall';
 import type { Setup } from '../store/gameStore';
 import { makeSeed, parseSeedInput, seedFromUrl } from '../lib/rng';
 import { HallOfBuilds } from './HallOfBuilds';
+import { Leaderboard } from './Leaderboard';
 
 const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
-
-/**
- * WHICH POSITION IS THE HARD ONE DEPENDS ON THE LEAGUE, and it stopped being one answer
- * the moment the second dataset landed.
- *
- * All-time, tight end is the hard one on its own and always has been. Its history holds by
- * far the fewest great players, so a typical roster offers less in every slot and the top
- * awards sit further away. Measured, a sensible run there ends with an empty trophy case
- * about one time in five against one in twenty at receiver.
- *
- * In the current league the reason changes and so does the answer. Quarterback and tight
- * end are the two positions where a real roster carries two or three men, so a landing
- * there is a room of two or three cards while a receiver room holds five or six. Measured,
- * both end about one run in six with nothing at all, against one in ten at receiver, so
- * both are labelled and the label says why.
- *
- * Leaving THE HARD ONE under tight end alone would have been a sentence the game's own
- * numbers contradict, which is the bug this project keeps finding on the results screen.
- */
-const HARD_ONES: Record<Era, Partial<Record<Position, string>>> = {
-  alltime: { TE: 'THE HARD ONE' },
-  current: { QB: 'THIN ROOM', TE: 'THIN ROOM' },
-};
 
 type Props = {
   onStart: (opts: { position: Position; hardMode: boolean; era: Era; seed?: string }) => void;
@@ -154,11 +132,6 @@ export function StartScreen({
           >
             {era === 'current' ? 'Current players' : 'All-time'}
           </div>
-          <div className="font-mono text-[11px] text-white/50">
-            {era === 'current'
-              ? 'Only the players on a roster this week, read straight off the depth charts. Every rating is relative to the players in the league right now, so the best one playing gets the 99.'
-              : 'Everybody a franchise has ever had. Every rating is judged against everybody who has played the position, so the great ones set the top.'}
-          </div>
         </div>
         <div className="shrink-0 text-center">
           <div
@@ -174,26 +147,9 @@ export function StartScreen({
         </div>
       </button>
 
-      {/*
-        WHERE THE ROOMS COME FROM, SAID OUT LOUD.
-
-        "Judged against the league today" was the old line and it does not mean anything
-        to somebody who has not read the README. It named the comparison without ever
-        saying where the names come from, so the first question every tester asked was why
-        a player he expected was not in the room. One of them worked it out from the
-        depth chart rule once it was explained to him, which is the tell that the rule was
-        fine and only the copy was missing.
-
-        So this says the three facts a missing name needs: the charts are read weekly, a
-        room is exactly what the chart says, and out is out. Josh Jacobs is named because
-        he is the one who actually got asked about, and a name is easier to check than a
-        rule is.
-      */}
       {era === 'current' && (
-        <p className="mt-3 font-mono text-[11px] leading-relaxed text-white/45">
-          The depth charts get read again every week. If somebody is missing, it is because
-          he is not on the chart this week. Injured reserve counts as out and so does the
-          exempt list, which is why you will not find Josh Jacobs.
+        <p className="mt-3 font-mono text-[11px] text-white/45">
+          Players updated every week!
         </p>
       )}
 
@@ -216,11 +172,6 @@ export function StartScreen({
             >
               {pos}
               {!live && <div className="font-mono text-[9px] opacity-60">SOON</div>}
-              {live && HARD_ONES[era][pos] && (
-                <div className="font-mono text-[8px] tracking-wider text-red-400">
-                  {HARD_ONES[era][pos]}
-                </div>
-              )}
             </button>
           );
         })}
@@ -340,6 +291,7 @@ export function StartScreen({
         {pasted === 'junk' ? 'Fix the seed first' : 'Build a player'}
       </button>
 
+      <Leaderboard position={position} era={era} />
       <HallOfBuilds hall={hall} onOpen={onOpenSaved} onDelete={onDeleteSaved} />
     </div>
   );

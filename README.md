@@ -17,6 +17,11 @@ npm run dev
 
 Then open http://localhost:5173. There is a debug view of the raw data at `?debug`.
 
+The global leaderboard uses Upstash Redis through a Vercel Function. Connect an Upstash
+Redis database to the Vercel project before deploying; the integration supplies
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Without those variables the game
+still runs and saves players locally, but the shared board reports that it is unavailable.
+
 ## What works right now
 
 Solo build mode is playable end to end. Pick a league, pick a position, spin, steal
@@ -63,10 +68,11 @@ the events that delete a run. The seed is deliberately not remembered, since a s
 specific run and refilling the box with it is the bug where deleting a seed did not delete
 the seed.
 
-Naming your player on the report saves him. He goes into YOUR HALL at the bottom of the
-start screen, where opening him replays the whole report as it came out, fully revealed
-and without sitting through the reveal a second time. Clearing the name takes him back
-out, which is also the undo. Twenty players are kept, newest first.
+Naming your player on the report saves him locally and puts the verified finished build on
+the global leaderboard. The server reads every stolen rating back out of the roster data
+and rebuilds the career before accepting it, so changing the request in a browser cannot
+post a fake 99. YOUR HALL still keeps twenty players in that browser, newest first, and
+opening one replays the report without sitting through the reveal again.
 
 ## The career report
 
@@ -559,8 +565,8 @@ not blocking wearing a different hat. Antonio Gates played on a torn plantar fas
 never blocked anybody. Across the pool the two correlate at 0.67, which is entangled the
 way football is entangled rather than the way a lazy pool is.
 
-Tight end is still the hard one and the seven slot pass is not what fixed it. See the
-tight end section below.
+Tight end is still the hardest position and the seven slot pass is not what fixed it. See
+the tight end section below.
 
 **Three attributes were deleted and none of them is coming back.** Contact balance moved
 with power at 0.93 correlation and catch radius said what hands and contested work
@@ -666,8 +672,8 @@ shifted by 3 and still inverted, 25% against 21%, and receiver is inverted at 30
 of what causes it rather than an example of it.
 
 **Receiver holds up best**, because six receivers who actually play is a normal roster.
-The start screen still labels quarterback and tight end THIN ROOM in current mode rather
-than carrying THE HARD ONE across from a league where tight end is hard on its own.
+The start screen leaves these differences to the game instead of labeling positions in
+advance.
 
 ## Tight end, and the one gate that reads the position
 
@@ -706,9 +712,8 @@ exception dissolves without anybody editing it.
 
 **Everything above All-Pro stays position blind**, and that is not an oversight. OPOY at
 8% and MVP at 1% for tight end come from the position producing 0.15 traits at 97 or
-better per player against 0.26 at receiver, counting every card in the all-time pool. That is a real fact about tight end history,
-it is what THE HARD ONE on the start screen is promising, and no gate should paper over
-it.
+better per player against 0.26 at receiver, counting every card in the all-time pool. That
+is a real fact about tight end history, and no gate should paper over it.
 
 ### What a nearly perfect current tight end actually earns
 
