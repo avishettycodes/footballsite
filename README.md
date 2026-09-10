@@ -17,8 +17,8 @@ npm run dev
 
 Then open http://localhost:5173. There is a debug view of the raw data at `?debug`.
 
-The leaderboard uses the same browser storage as YOUR HALL. It needs no account, database
-or environment variables. Builds stay on the device that saved them.
+YOUR BUILDS uses the same browser storage as YOUR HALL. It needs no account, database or
+environment variables. Builds stay on the device that saved them.
 
 On wide desktop screens the layout reserves left and right advertisement rails. Ad code can
 mount into `#ad-slot-left` and `#ad-slot-right` without changing the game layout.
@@ -69,8 +69,8 @@ the events that delete a run. The seed is deliberately not remembered, since a s
 specific run and refilling the box with it is the bug where deleting a seed did not delete
 the seed.
 
-Naming your player on the report saves him and puts the finished build on the leaderboard.
-The board separates quarterbacks, running backs, receivers and tight ends, then ranks each
+Naming your player on the report saves him and puts the finished build in YOUR BUILDS. The
+list separates quarterbacks, running backs, receivers and tight ends, then ranks each
 position by overall. YOUR HALL keeps twenty players in that browser, newest first, and
 opening one replays the report without sitting through the reveal again.
 

@@ -126,10 +126,10 @@ export default function App() {
             )}
             {!inRun && !viewing && (
               <a
-                href="#leaderboard"
+                href="#your-builds"
                 className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-white/15 hover:text-white/80"
               >
-                LEADERBOARD
+                YOUR BUILDS
               </a>
             )}
             <button

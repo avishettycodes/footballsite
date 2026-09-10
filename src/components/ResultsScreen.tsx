@@ -254,8 +254,8 @@ export function ResultsScreen({
                   creationName.trim() ? 'text-emerald-300' : 'text-white/35'
                 }`}>
                   {creationName.trim()
-                    ? 'Saved. He is on the leaderboard.'
-                    : 'Name your player to save him and put him on the leaderboard.'}
+                    ? 'Saved to YOUR BUILDS.'
+                    : 'Name your player to save him in YOUR BUILDS.'}
                 </div>
               </div>
             )}

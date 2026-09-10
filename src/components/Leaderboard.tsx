@@ -8,9 +8,9 @@ type Props = { hall: SavedPlayer[]; era: Era };
 
 export function Leaderboard({ hall, era }: Props) {
   return (
-    <section id="leaderboard" className="mt-10 scroll-mt-20">
+    <section id="your-builds" className="mt-10 scroll-mt-20">
       <div className="flex items-end justify-between gap-3">
-        <h2 className="font-display text-2xl tracking-tight uppercase">Leaderboard</h2>
+        <h2 className="font-display text-2xl tracking-tight uppercase">Your builds</h2>
         <span className="font-mono text-[10px] tracking-wider text-white/35">
           {ERA_LABELS[era].toUpperCase()} · SAVED BUILDS
         </span>
