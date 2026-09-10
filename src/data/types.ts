@@ -1,9 +1,9 @@
 /**
  * Build a 99 data layer.
  *
- * Every rating in this app is hand-authored, subjective, and made up for fun.
- * No licensed dataset, no scraped source, no API. If you disagree with a number,
- * you are probably right and we do not care.
+ * All-time ratings are hand-authored for the game. Current-mode ratings are derived
+ * from EA SPORTS Madden NFL 27 launch ratings using the documented model in
+ * scripts/current-rating-model.ts.
  */
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
@@ -13,22 +13,15 @@ export type Position = 'QB' | 'RB' | 'WR' | 'TE';
  *
  * Two complete datasets, not one dataset with a filter on it, and that is the whole
  * design. All-time is every player in a franchise's history rated against everybody who
- * has ever played the position, so Jerry Rice sets the top of the receiver scale and a
- * good player today sits below him. Current is only the men on a roster right now, rated
- * against each other, so the best receiver playing this season gets the 99.
- *
- * The same man therefore has two different cards, and both are correct. Lamar Jackson's
- * arm against Elway and Marino is not his arm against the quarterbacks he lines up
- * opposite on Sunday. A single set of numbers cannot answer both questions, which is why
- * `src/data/current/` is written by hand rather than derived by scaling the all-time
- * rows. A scale factor would keep every ranking exactly as it was and just move the
- * decimal, and the rankings are the part that actually changes.
+ * has ever played the position. Current is only the active Week 1 depth chart, with
+ * one-to-one traits taken directly from Madden and composite traits ranked against the
+ * other active players at that position.
  *
  * CURRENT MEANS THE DEPTH CHART AND NOTHING ELSE. Everybody in `src/data/current/` is on
- * the active roster of the franchise he is filed under. No practice squad, nobody who has
- * left, and no franchise reaching back to a man who used to play there. A room is however
- * many men are actually in it, which is two or three quarterbacks and five or six
- * receivers.
+ * the active 53-man roster of the franchise he is filed under. No practice squad, injured
+ * reserve, PUP, NFI, reserve or suspended list, and no franchise reaching back to a man
+ * who used to play there. A short-term game-status designation does not remove a player
+ * who still holds an active-roster spot.
  *
  * IT WAS PADDED TO SIX ONCE AND THE PADDING IS WHAT BROKE IT. Filling every room to six
  * meant reaching back a few seasons, and reaching back put Aaron Rodgers on the Packers

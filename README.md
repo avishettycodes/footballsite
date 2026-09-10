@@ -346,8 +346,7 @@ somebody quoted back twice. And the league switch no longer says ratings are "ju
 against the league today", which named a comparison without ever saying where the names
 come from. It now says the depth charts are read weekly, that ratings are relative to the
 players in the league right now, and that a missing name is a name not on the chart this
-week. Josh Jacobs is named in that line on purpose: he was the one who actually got asked
-about, and a name is easier to check than a rule is.
+week.
 
 `npm run verify:copy` enforces all of this on anything a player can read, which now
 includes the two lines the store says out loud when a run deadlocks or a spin comes back
@@ -368,49 +367,26 @@ since that is his name.
 
 ## The data
 
-Every rating is hand written and completely subjective. Nothing is scraped, no sports
-API is called, and no licensed dataset is involved. There are 1000 all-time players across
-four positions at seven to nine per franchise, and 483 current ones at however many the
-depth chart says.
+The 1000 all-time ratings are hand written and subjective. The 490 current-player cards
+are a separate, source-backed dataset: the names come from the 2026 Week 1 active depth
+charts and the ratings come from EA SPORTS Madden NFL 27 launch ratings.
 
-**The current pools are a second hand-written dataset, not the first one scaled down.**
-A scale factor would keep every ranking exactly where it was and only move the decimal,
-and the rankings are the part that actually changes when the company changes.
-
-**A current room is the depth chart and nothing else.** Everybody in `src/data/current/`
-is on the active roster of the franchise he is filed under. No practice squad, nobody who
-has left, and no franchise reaching back to somebody who used to play there. So the Raiders
-carry Kirk Cousins, Fernando Mendoza and Aidan O'Connell at quarterback, and that is the
-whole room.
+**A current room is the active 53-man depth chart and nothing else.** Practice squad,
+injured reserve, PUP, NFI, reserve and suspended players are excluded. A one-game injury
+designation does not erase an active roster spot, so an active player listed Out for Week
+1 remains in the pool unless he was moved to a reserve list.
 
 **Padding to six was tried and the padding is what broke it.** Filling every room meant
 reaching back a few seasons, and reaching back put Aaron Rodgers on the Packers in a league
 where he plays for Pittsburgh. A mode whose entire promise is "the men on a roster now"
 cannot ship a card that says otherwise, whatever it does for the pool sizes.
 
-The pool sizes really do suffer for it, and the awards are what noticed first. A room of
-three cannot lift the weak link anchor the way a room of eight can, so the first attempt at
-strict rooms left a quarterback with no hole anywhere finishing under the 92 overall that
-first-team All-Pro asks for. A bar that good play cannot clear is the thing this project
-calls a bug wearing a difficulty costume, and the honest fix is not to put the wrong names
-back. It is to notice that 92 was measured against a league that supplies 93.6 and this one
-supplies 90.1. See "The current league is a harder league" below for how that is derived.
-
-The measurable version: a room can be scored by how many of the card's seven slots it can
-answer at 90 or better. All-time quarterback rooms answer six and current ones answer four.
-Receiver answers six in both leagues, because six receivers who actually play is a normal
-roster, and receiver is correspondingly the position that barely moved. Tight end answers
-five in both, which is why it is the one position whose gates did not move at all.
-
-**Writing that file taught the same lesson four times, and it is worth reading before
-adding to it.** Every pass rated today's players as if the all-time greats were standing
-in the room, which is the habit the second dataset exists to escape. A 90 in the pocket
-means a good starting quarterback, so Trevor Lawrence is a 90 and not the 82 he was first
-written at. The tell was the harness rather than any individual card: a typical current
-franchise was offering 82 where a typical all-time one offers 92, which is not a fact
-about football, it is the same hand being cautious 192 times. The top of the scale had it
-too. These pools carried half as many ratings at 97 or better per player, because the best
-passer of an era belongs at the top of his own era's scale and was being written at 94.
+One-to-one traits use Madden exactly: speed is Speed, acceleration is Acceleration, arm
+strength is Throw Power, and release is Release. Categories that do not exist as one
+Madden field use documented averages. For example, contested catch averages Catch in
+Traffic, Spectacular Catch and Jumping. Composite categories are then anchored against
+the other active players at that position, with 50 held as the neutral point and the best
+active value set to 99. The complete formula is in `scripts/current-rating-model.ts`.
 
 Player ids are unique across BOTH datasets, since a run stores the ids it has spent and a
 saved player keeps them forever. Current rows carry a `now-` prefix for that reason, and
@@ -418,10 +394,9 @@ where two men on one roster share a surname the id carries the first name too.
 
 ### Refreshing the current pools
 
-Rosters move, and this file says "now" on the start screen, so it gets reconciled against
-the real depth charts every few weeks rather than tracked live. `npm run rosters` prints
-every room in the same shape a depth chart is in, which is the only reason the job is
-quick:
+Rosters move, so each current-mode release is tied to a dated snapshot. The present one
+is 2026 Week 1, reconciled between ESPN's roster/depth-chart feeds and PFN's all-team depth
+charts. `npm run rosters` prints every room in the same shape a depth chart is in:
 
 ```bash
 npm run rosters -- QB     # one position at a time reads best
@@ -439,31 +414,31 @@ nobody on the practice squad is in the file, and nobody is ever added to round a
 `npm run verify:data` asks all-time for six per franchise and current for one, for exactly
 this reason.
 
-**Injured reserve counts as not in the room**, along with the exempt list and anybody the
-chart has under Reserves. The test is whether he can line up on Sunday, not whether the
-franchise still holds his rights, so Josh Jacobs and Brandon Aiyuk are both absent from
-these pools while they sit where they sit.
+**Reserve status, not a one-week game designation, decides eligibility.** Injured reserve,
+PUP, NFI, Reserve/Left Squad, suspension and the practice squad are out. Players who still
+hold an active-roster spot remain in even when the Week 1 injury report says Out. That is
+why Josh Jacobs is included, Brandon Aiyuk is excluded, and a temporary practice-squad
+elevation such as Lan Larison is not treated as a 53-man roster spot.
 
 **Read the depth chart twice, from two sources.** The first sweep put seven men in the file
 who should not have been there: five on injured reserve, one on a practice squad, and a
 receiver filed at tight end. Every one of them came from a page reader folding the Reserves
 block into the active list, and none of them tripped a single check, because a card for a
-man on IR is spiky and uncorrelated and correctly scaled like any other. Cross-checking
-ourlads against ESPN caught all seven in one pass.
+man on IR is numerically ordinary. Cross-checking PFN against ESPN caught the category
+errors, and official club roster pages resolve any disagreement.
 
 **A blurb travels with the card, so read it after a move.** The checks will catch two cards
 making the same joke and cannot catch a line about the wrong building, which is how Kirk
 Cousins arrived in Las Vegas still talking about Atlanta.
 
-What the checks cannot do is tell you a name is wrong. They proved these pools were spiky,
-uncorrelated and correctly scaled while three of the players in them did not exist, so the
-names get read against a chart by a person, and that is the whole reason this section is
-here.
+`scripts/fixtures/current-week-1.json` freezes the roster and the Madden inputs used for
+every card. `npm run verify:current` rebuilds all 3,430 displayed values from that fixture
+and fails on any roster or rating drift. To intentionally update a newly audited roster,
+download the official EA pages and run:
 
-Ratings are deliberately spiky. A player is in the pool because of one number, so Chris
-Johnson has 99 speed and 60 power, Jimmy Graham catches everything and blocks nobody,
-and Gus Edwards catches at 38. Some cards are bad on purpose, because a cold spin should
-hurt.
+```bash
+npm run sync:current-ratings -- /path/to/madden-html
+```
 
 ### Reading the boards, which is the check no check can do
 
