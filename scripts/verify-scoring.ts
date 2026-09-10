@@ -619,7 +619,7 @@ function theBoxAgreesWithTheCard(): boolean {
 }
 
 console.log(
-  `GridironLab scoring calibration. ${RUNS} runs per policy, ` +
+  `Build a 99 scoring calibration. ${RUNS} runs per policy, ` +
   `leagues: ${eraPositions.map((p) => `${p.era} ${p.position}`).join(', ')}`,
 );
 /**

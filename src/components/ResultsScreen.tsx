@@ -213,7 +213,7 @@ export function ResultsScreen({
         {/* Both halves of this bar wrapped onto two lines each on a phone. */}
         <div className="flex items-center justify-between gap-2 bg-hazard px-4 py-1.5">
           <span className="truncate font-display text-[11px] tracking-[0.15em] text-turf-950 uppercase sm:text-sm sm:tracking-[0.2em]">
-            GridironLab · Career Report
+            Build a 99 · Career Report
           </span>
           <span className="shrink-0 font-mono text-[10px] font-bold whitespace-nowrap text-turf-950">
             {hardMode ? 'HARD · ' : ''}{seed}

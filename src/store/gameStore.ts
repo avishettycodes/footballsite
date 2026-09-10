@@ -433,7 +433,7 @@ export const useGame = create<GameStore>()(
     }),
     {
       /**
-       * DO NOT RENAME THIS KEY. The game is called GridironLab now and this still says
+       * DO NOT RENAME THIS KEY. The game is called Build a 99 now and this still says
        * megatron, on purpose: the key is the address of everybody's autosaved run, and
        * changing it would strand every half finished player currently sitting in a
        * browser. A storage key is not player-facing copy, it is a pointer, and pointers

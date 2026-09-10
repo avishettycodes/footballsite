@@ -149,7 +149,7 @@ export function StartScreen({
 
       {era === 'current' && (
         <p className="mt-3 font-mono text-[11px] text-white/45">
-          Players updated every week!
+          Players update every week based on the current depth charts.
         </p>
       )}
 

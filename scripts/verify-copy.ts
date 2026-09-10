@@ -250,7 +250,8 @@ for (let i = 0; i < words.length; i++) {
  * sees.
  *
  * The storage keys are deliberately still called megatron and are not affected, since
- * they live in string literals rather than in markup.
+ * they live in string literals rather than in markup. GridironLab is checked too now
+ * that Build a 99 is the player-facing name.
  */
 const oldName: Problem[] = [];
 for (const file of screens()) {
@@ -259,9 +260,9 @@ for (const file of screens()) {
     .replace(/\/\/.*/g, ' ')
     .replace(/<[^>]*>/g, '')
     .replace(/\{[^{}]*\}/g, ' ');
-  if (/megatron/i.test(text)) {
-    const line = text.split('\n').findIndex((l) => /megatron/i.test(l)) + 1;
-    oldName.push({ where: `${file} (around line ${line})`, what: 'this screen still says Megatron' });
+  if (/megatron|gridironlab/i.test(text)) {
+    const line = text.split('\n').findIndex((l) => /megatron|gridironlab/i.test(l)) + 1;
+    oldName.push({ where: `${file} (around line ${line})`, what: 'this screen still uses an old name' });
   }
 }
 
@@ -283,7 +284,7 @@ const failed = [
   report(`blurbs over ${MAX_BLURB} characters`, 'trim to one punchy line', longBlurb),
   report('duplicate blurbs', 'every player needs his own line', dupes),
   report('near-duplicate blurbs', 'these two are making the same joke, rewrite one', nearDupes),
-  report('the old name on a screen', 'the game is called GridironLab now', oldName),
+  report('the old name on a screen', 'the game is called Build a 99 now', oldName),
 ].some(Boolean);
 
 if (failed) process.exit(1);

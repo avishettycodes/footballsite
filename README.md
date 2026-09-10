@@ -1,4 +1,4 @@
-# GRIDIRONLAB
+# BUILD A 99
 
 Build a Frankenstein football player by spinning a wheel of NFL teams. Each spin lands
 on a franchise, you look at every notable player at your position in that team's history,
@@ -357,8 +357,8 @@ on one of the lists at the top of `scripts/verify-copy.ts`.
 
 ## The name, and the storage keys
 
-The game was called MEGATRON and is now called GridironLab, because Megatron reads as a
-receiver game and this one has four positions in it.
+The game was called MEGATRON, then GridironLab, and is now called Build a 99. Megatron
+reads as a receiver game and this one has four positions in it.
 
 The localStorage keys did NOT move. They are `megatron.run.v1` for the autosaved run and
 `megatron.hall.v1` for saved players. A key is the address of somebody's data rather

@@ -1,5 +1,5 @@
 /**
- * GridironLab data layer.
+ * Build a 99 data layer.
  *
  * Every rating in this app is hand-authored, subjective, and made up for fun.
  * No licensed dataset, no scraped source, no API. If you disagree with a number,

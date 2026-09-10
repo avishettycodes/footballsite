@@ -69,8 +69,8 @@ export default function App() {
             }}
             className="text-left"
           >
-            <h1 className="font-display text-2xl leading-none tracking-tighter uppercase sm:text-3xl">
-              Gridiron<span className="text-hazard">Lab</span>
+            <h1 className="font-display text-2xl leading-none tracking-tighter whitespace-nowrap uppercase sm:text-3xl">
+              Build a <span className="text-hazard">99</span>
             </h1>
           </button>
 
@@ -400,7 +400,7 @@ export default function App() {
       )}
 
       <footer className="mt-8 border-t border-white/10 px-4 py-6 text-center font-mono text-[10px] leading-relaxed text-white/30">
-        GridironLab is a fan project. It has nothing to do with the NFL and no team has endorsed
+        Build a 99 is a fan project. It has nothing to do with the NFL and no team has endorsed
         it. Team names are here so you know whose history you are digging through. Every
         rating was written by hand for fun, and none of it comes from a real scouting source.
         If you disagree with a number, you are probably right.

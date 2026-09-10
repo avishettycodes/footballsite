@@ -216,7 +216,7 @@ const badEnvelope = Object.entries(audio.ALL_SOUNDS).flatMap(([name, voices]) =>
 );
 check('every voice has a playable envelope', badEnvelope.length === 0, badEnvelope.join('; '));
 
-console.log('GridironLab — audio\n');
+console.log('Build a 99 — audio\n');
 let failed = 0;
 for (const c of checks) {
   if (!c.ok) failed++;

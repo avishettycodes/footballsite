@@ -9,7 +9,7 @@ const issues = validateData();
 const errors = issues.filter((i) => i.level === 'error');
 const warnings = issues.filter((i) => i.level === 'warn');
 
-console.log('GridironLab — data check\n');
+console.log('Build a 99 — data check\n');
 console.log(`teams:   ${DATA_STATS.teams}`);
 console.log(`players: ${DATA_STATS.players}`);
 for (const era of ERAS) {

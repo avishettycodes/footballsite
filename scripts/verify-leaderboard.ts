@@ -52,7 +52,7 @@ const overallFirst = runningBacks.map((entry) => entry.id).join(',') === 'rb95-h
 const eraFiltered = !runningBacks.some((entry) => entry.id === 'old-rb99');
 const limitWorks = limited.length === 1 && limited[0]?.id === 'rb95-high';
 
-console.log('\nGridironLab — local leaderboard');
+console.log('\nBuild a 99 — local leaderboard');
 console.log(`  separated by position: ${positionFiltered ? 'PASS' : 'FAIL'}`);
 console.log(`  ranked by overall:     ${overallFirst ? 'PASS' : 'FAIL'}`);
 console.log(`  separated by league:   ${eraFiltered ? 'PASS' : 'FAIL'}`);

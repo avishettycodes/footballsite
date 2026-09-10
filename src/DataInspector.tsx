@@ -50,7 +50,7 @@ export default function DataInspector() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-4 py-5">
           <div>
             <h1 className="font-display text-4xl leading-none tracking-tighter uppercase sm:text-5xl">
-              Gridiron<span className="text-hazard">Lab</span>
+              Build a <span className="text-hazard">99</span>
             </h1>
             <p className="mt-1 font-mono text-[11px] tracking-[0.2em] text-white/40 uppercase">
               Build a player · Steal his best part
@@ -222,7 +222,7 @@ export default function DataInspector() {
       </main>
 
       <footer className="mt-8 border-t border-white/10 px-4 py-6 text-center font-mono text-[10px] leading-relaxed text-white/30">
-        GridironLab is a fan project. It has nothing to do with the NFL and no team has endorsed
+        Build a 99 is a fan project. It has nothing to do with the NFL and no team has endorsed
         it. Team names are here so you know whose history you are digging through. Every
         rating was written by hand for fun, and none of it comes from a real scouting source.
         If you disagree with a number, you are probably right.

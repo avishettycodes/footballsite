@@ -90,7 +90,7 @@ const positions = positionsWithData('alltime');
 const eraPositions = ERAS.flatMap((era) =>
   positionsWithData(era).map((position) => ({ era, position, label: `${era} ${position}` })),
 );
-console.log(`GridironLab career model. ${SEEDS} seeds per position.\n`);
+console.log(`Build a 99 career model. ${SEEDS} seeds per position.\n`);
 
 // ---------------------------------------------------------------------------
 console.log('the same seed gives the same career');

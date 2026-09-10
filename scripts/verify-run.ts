@@ -78,7 +78,7 @@ function playRun(seed: string, hardMode: boolean, position: Position = 'RB', era
   };
 }
 
-console.log('GridironLab — run simulation\n');
+console.log('Build a 99 — run simulation\n');
 
 const a = playRun('GRIDIRON-7QX3', false);
 const b = playRun('GRIDIRON-7QX3', false);
