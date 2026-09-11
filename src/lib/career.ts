@@ -238,7 +238,45 @@ export type DraftSlot = {
   pick: number;
   /** 1 to 224. Zero when he went undrafted. */
   overallPick: number;
+  /** The program he entered the league from. */
+  college: string;
 };
+
+export type CollegeTier = 'small-school' | 'average' | 'power' | 'contender' | 'powerhouse';
+
+type CollegeBand = {
+  minOverall: number;
+  tier: CollegeTier;
+  schools: readonly string[];
+};
+
+/**
+ * Recruiting pedigree follows the player the user actually built. A 99 should read like
+ * a blue-chip prospect from a national power, while an ordinary rating should come from
+ * an ordinary FBS program. The school inside a band is seeded so shared runs and saved
+ * players always reproduce the same background.
+ */
+const COLLEGE_BANDS: readonly CollegeBand[] = [
+  { minOverall: 97, tier: 'powerhouse', schools: ['Alabama', 'Georgia', 'Ohio State', 'Michigan'] },
+  { minOverall: 93, tier: 'contender', schools: ['LSU', 'Texas', 'Notre Dame', 'USC', 'Clemson', 'Oregon'] },
+  { minOverall: 87, tier: 'power', schools: ['Penn State', 'Oklahoma', 'Tennessee', 'Florida State', 'Washington', 'Wisconsin', 'Miami'] },
+  { minOverall: 78, tier: 'average', schools: ['Iowa State', 'NC State', 'Minnesota', 'Purdue', 'Kansas State', 'Arizona', 'Maryland', 'Baylor'] },
+  { minOverall: 0, tier: 'small-school', schools: ['Boise State', 'Fresno State', 'Toledo', 'Tulane', 'Appalachian State', 'UTSA', 'Western Kentucky', 'Marshall'] },
+];
+
+function collegeBand(overall: number): CollegeBand {
+  return COLLEGE_BANDS.find((band) => overall >= band.minOverall) ?? COLLEGE_BANDS[COLLEGE_BANDS.length - 1];
+}
+
+export function collegeTier(overall: number): CollegeTier {
+  return collegeBand(overall).tier;
+}
+
+export function collegeFor(overall: number, seed: string): string {
+  const band = collegeBand(overall);
+  const roll = stream(seed, 'COLLEGE');
+  return band.schools[Math.floor(roll() * band.schools.length)] ?? band.schools[0];
+}
 
 /**
  * Quarterbacks get reached for and running backs get pushed down, and both of those are
@@ -277,15 +315,23 @@ const ESTIMATE_DECAY = 0.16;
 /** Spread of the board's error, as the full width of the bell. About ten points of sd. */
 const ESTIMATE_NOISE = 63;
 
+/** At this level the player is a UDFA in every seed, rather than a lucky first-rounder. */
+export const GUARANTEED_UDFA_MAX_OVERALL = 72;
+
 export function draftSlot(position: Position, overall: number, seed: string): DraftSlot {
   const roll = stream(seed, 'DRAFT');
+  const college = collegeFor(overall, seed);
+
+  if (overall <= GUARANTEED_UDFA_MAX_OVERALL) {
+    return { undrafted: true, round: 0, pick: 0, overallPick: 0, college };
+  }
 
   const estimate = overall + (bell(roll) - 0.5) * ESTIMATE_NOISE + DRAFT_LIFT[position];
   const expected = ANCHOR_PICK * Math.exp(-ESTIMATE_DECAY * (estimate - ANCHOR_ESTIMATE));
   const overallPick = Math.round(expected * (0.85 + 0.3 * roll()));
 
   if (!Number.isFinite(overallPick) || overallPick > LAST_PICK) {
-    return { undrafted: true, round: 0, pick: 0, overallPick: 0 };
+    return { undrafted: true, round: 0, pick: 0, overallPick: 0, college };
   }
 
   const at = Math.max(1, overallPick);
@@ -294,6 +340,7 @@ export function draftSlot(position: Position, overall: number, seed: string): Dr
     round: Math.ceil(at / PICKS_PER_ROUND),
     pick: ((at - 1) % PICKS_PER_ROUND) + 1,
     overallPick: at,
+    college,
   };
 }
 
@@ -321,7 +368,9 @@ function poolStrength(position: Position, teamId: string, era: Era): number {
   const means = pool
     .map((p) => keys.reduce((sum, k) => sum + (p.attributes[k] ?? 0), 0) / keys.length)
     .sort((a, b) => b - a);
-  return means.length === 1 ? means[0] : (means[0] + means[1]) / 2;
+  // A room with one useful player and nobody behind him is still dry. Treat the missing
+  // second player as replacement-level depth instead of letting one star hide the hole.
+  return (means[0] + (means[1] ?? 55)) / 2;
 }
 
 /**
@@ -379,10 +428,9 @@ export type Stint = {
 };
 
 export type CareerPath = {
-  drafted: Team | null;
+  /** First NFL team. For a UDFA this is the club that signed him. */
+  entryTeam: Team | null;
   stints: Stint[];
-  /** Why a franchise from the build still took him despite its existing room. */
-  draftStory: 'camp-injury' | 'succession-plan' | null;
 };
 
 /**
@@ -414,25 +462,16 @@ function stintCount(overall: number, seasons: number, available: number, r: numb
   return 1 + Math.floor(Math.pow(r, 1.4) * cap);
 }
 
-/**
- * The weaker half of the league has a real opening at the position. A team below this
- * line can still make the pick, but only as the exceptional version of the story (an
- * injury or a succession plan) rather than as an unexplained depth-chart mismatch.
- */
+/** The weaker half of the league has a real opening at the position. */
 export const DRAFT_NEED_FLOOR = 0.5;
 
-/** A depth-chart exception is an occasional plot turn, never the default answer. */
-const DRAFT_STORY_CHANCE = 0.07;
-
 /**
- * THE FRANCHISE THAT DRAFTED HIM USUALLY WAS NOT PART OF THE BUILD.
+ * THE FRANCHISE THAT DRAFTED OR SIGNED HIM WAS NOT PART OF THE BUILD.
  *
  * Taking a trait from a player does not make his franchise need another player at that
- * position. The first team therefore normally has BOTH properties that make the result
- * believable: it was not part of the build and its depth chart actually needs him. A
- * franchise that fails either test can still be the answer as a rare story beat, but the
- * report then says what changed: an injury opened the job or the pick was a succession
- * plan. Later stops can be anywhere in the league and are weighted by positional need.
+ * position. The first team therefore always has both properties that make the result
+ * believable: it was not part of the build and its depth chart actually needs him.
+ * Later stops can be anywhere in the league and are weighted by positional need.
  */
 export function careerPath(
   position: Position,
@@ -443,32 +482,24 @@ export function careerPath(
   era: Era,
 ): CareerPath {
   const roll = stream(seed, 'PATH');
-  if (!TEAMS.length || seasons < 1) return { drafted: null, stints: [], draftStory: null };
+  if (!TEAMS.length || seasons < 1) return { entryTeam: null, stints: [] };
 
   const raided = new Set(raidedTeamIds.filter((id) => Boolean(TEAMS_BY_ID[id])));
   const clearFits = TEAMS.filter((team) =>
     !raided.has(team.id) && positionalNeed(position, team.id, era) >= DRAFT_NEED_FLOOR,
   );
-  const exceptions = TEAMS.filter((team) => !clearFits.includes(team));
 
-  const storyDraft = exceptions.length > 0
-    && clearFits.length > 0
-    && roll() < DRAFT_STORY_CHANCE;
-  const firstPool = storyDraft ? exceptions : (clearFits.length ? clearFits : TEAMS);
-  if (!firstPool.length) return { drafted: null, stints: [], draftStory: null };
+  // A seven-pick build cannot consume all sixteen teams in the needy half of the league.
+  const firstPool = clearFits;
+  if (!firstPool.length) return { entryTeam: null, stints: [] };
 
-  const drafted = firstPool[weightedIndex(
+  const entryTeam = firstPool[weightedIndex(
     firstPool.map((team) => needWeight(position, team, era)),
     roll(),
   )];
-  const draftStory = storyDraft
-    ? (positionalNeed(position, drafted.id, era) < DRAFT_NEED_FLOOR
-      ? 'succession-plan'
-      : 'camp-injury')
-    : null;
 
-  const chosen: Team[] = [drafted];
-  const remaining = TEAMS.filter((team) => team.id !== drafted.id);
+  const chosen: Team[] = [entryTeam];
+  const remaining = TEAMS.filter((team) => team.id !== entryTeam.id);
   const count = stintCount(overall, seasons, TEAMS.length, roll());
   while (chosen.length < count && remaining.length) {
     const index = weightedIndex(
@@ -498,7 +529,7 @@ export function careerPath(
     return { team, seasons: lengths[i], from, to: cursor - 1 };
   });
 
-  return { drafted: stints[0]?.team ?? null, stints, draftStory };
+  return { entryTeam: stints[0]?.team ?? null, stints };
 }
 
 // ---------------------------------------------------------------------------

@@ -301,7 +301,7 @@ export function ResultsScreen({
         */}
         <Section index="01" title="THE CAREER">
           <p className="text-[14px] leading-relaxed text-white/85">
-            <b className="text-white">{draftLine(draft, path.drafted, path.draftStory)}</b>{' '}
+            <b className="text-white">{draftLine(draft, path.entryTeam)}</b>{' '}
             {tenureLine(seasons, path.stints, length.cutShort)}{' '}
             {productionLine(position, stats)}
             {stage === 'done' && <> {honorsLine(career)}</>}

@@ -26,8 +26,9 @@
 import { ATTRIBUTE_SETS, ERAS, TEAMS, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import {
-  CAREER_SHAPE, DRAFT_NEED_FLOOR, LAST_PICK, MAX_SEASONS, PICKS_PER_ROUND, ROUNDS,
-  QB_RUSHING_RECORD, careerLength, careerPath, careerStats, draftSlot, positionalNeed,
+  CAREER_SHAPE, DRAFT_NEED_FLOOR, GUARANTEED_UDFA_MAX_OVERALL, LAST_PICK, MAX_SEASONS,
+  PICKS_PER_ROUND, ROUNDS, QB_RUSHING_RECORD, careerLength, careerPath, careerStats,
+  collegeFor, collegeTier, draftSlot, positionalNeed,
 } from '../src/lib/career';
 import { GATES, RECORD_YARDS, computeOverall, superBowlOdds } from '../src/lib/scoring';
 import { draftLine, emptyCaseLine, missedBecause, recordMissLine, ringMissLine } from '../src/lib/narrative';
@@ -106,7 +107,7 @@ console.log('the same seed gives the same career');
       if (a.seasons !== b.seasons || a.cutShort !== b.cutShort) stable = false;
       const d1 = draftSlot(position, 92, s);
       const d2 = draftSlot(position, 92, s);
-      if (d1.overallPick !== d2.overallPick || d1.undrafted !== d2.undrafted) stable = false;
+      if (d1.overallPick !== d2.overallPick || d1.undrafted !== d2.undrafted || d1.college !== d2.college) stable = false;
       if (careerLength(position, 92, s).seasons !== careerLength(position, 92, seed(i + 1)).seasons) {
         diverged = true;
       }
@@ -261,17 +262,35 @@ if (positions.includes('QB') && positions.includes('RB')) {
 }
 
 {
-  const sample = { undrafted: false, round: 1, pick: 12, overallPick: 12 };
+  const tierOrder = ['small-school', 'average', 'power', 'contender', 'powerhouse'];
+  const tierRanks = [68, 82, 89, 94, 98].map((overall) => tierOrder.indexOf(collegeTier(overall)));
+  check('better players come from better college tiers',
+    tierRanks.every((rank, i) => i === 0 || rank > tierRanks[i - 1]),
+    [68, 82, 89, 94, 98].map((overall) => `${overall}:${collegeTier(overall)}`).join('  '));
+
+  check('the school is seeded and replayable',
+    collegeFor(92, 'COLLEGE-7') === collegeFor(92, 'COLLEGE-7'),
+    collegeFor(92, 'COLLEGE-7'));
+
+  const guaranteedUdfas = positions.flatMap((position) =>
+    Array.from({ length: 100 }, (_, i) => draftSlot(position, GUARANTEED_UDFA_MAX_OVERALL, seed(i))),
+  );
+  check('low-end prospects are guaranteed UDFAs',
+    guaranteedUdfas.every((slot) => slot.undrafted),
+    `${guaranteedUdfas.length} of ${guaranteedUdfas.length} set cases went undrafted`);
+
+  const sample = { undrafted: false, round: 1, pick: 12, overallPick: 12, college: 'Georgia' };
+  const udfa = { undrafted: true, round: 0, pick: 0, overallPick: 0, college: 'Toledo' };
   const team = TEAMS[0] ?? null;
-  check('an injury exception is visible in the draft story',
-    draftLine(sample, team, 'camp-injury').includes('starter went down'),
-    'the result names the injury that opened the job');
-  check('a succession exception is visible in the draft story',
-    draftLine(sample, team, 'succession-plan').includes('succession plan'),
-    'the result names the plan behind the crowded room');
+  check('the draft story names the college',
+    draftLine(sample, team).startsWith('Out of Georgia,'),
+    'the result opens with his school');
   check('the draft story names the franchise unambiguously',
-    !team || draftLine(sample, team).startsWith(`${team.city} ${team.name}`),
+    !team || draftLine(sample, team).includes(`${team.city} ${team.name}`),
     'the result uses the city and team name');
+  check('an undrafted entry is called a UDFA',
+    draftLine(udfa, team).includes('signed him as a UDFA'),
+    'the signing is distinct from a draft pick');
 }
 
 // ---------------------------------------------------------------------------
@@ -282,14 +301,10 @@ for (const { era, position, label } of eraPositions) {
 
   let addsUp = true;
   let contiguous = true;
-  let draftedStartsPath = true;
+  let entryStartsPath = true;
   let noRepeats = true;
-  let outsideDrafts = 0;
-  let sameTeamDrafts = 0;
-  let everyOverlapExplained = true;
-  let ordinaryDraftsFit = true;
-  let everyStoryIsAnException = true;
-  let storyDrafts = 0;
+  let everyEntryIsOutside = true;
+  let everyEntryNeedsPosition = true;
   const counts: number[] = [];
 
   for (let i = 0; i < SEEDS; i++) {
@@ -305,44 +320,23 @@ for (const { era, position, label } of eraPositions) {
     }
     if (cursor !== seasons + 1) contiguous = false;
     if (new Set(path.stints.map((s) => s.team.id)).size !== path.stints.length) noRepeats = false;
-    if (path.drafted?.id !== path.stints[0]?.team.id) draftedStartsPath = false;
-    const need = path.drafted ? positionalNeed(position, path.drafted.id, era) : 0;
-    const isException = Boolean(path.drafted)
-      && (raided.includes(path.drafted!.id) || need < DRAFT_NEED_FLOOR);
-    if (path.drafted && raided.includes(path.drafted.id)) {
-      sameTeamDrafts++;
-      if (!path.draftStory) everyOverlapExplained = false;
-    } else if (path.drafted) {
-      outsideDrafts++;
-    }
-    if (!path.draftStory && isException) ordinaryDraftsFit = false;
-    if (path.draftStory) {
-      storyDrafts++;
-      if (!isException) everyStoryIsAnException = false;
+    if (path.entryTeam?.id !== path.stints[0]?.team.id) entryStartsPath = false;
+    if (!path.entryTeam || raided.includes(path.entryTeam.id)) everyEntryIsOutside = false;
+    if (!path.entryTeam || positionalNeed(position, path.entryTeam.id, era) < DRAFT_NEED_FLOOR) {
+      everyEntryNeedsPosition = false;
     }
     counts.push(path.stints.length);
   }
 
   check(`${label} the stints add up to the career`, addsUp, 'every season is accounted for');
   check(`${label} the timeline has no gaps`, contiguous, 'stints run 1 to the last season');
-  check(`${label} the drafting team starts the career`, draftedStartsPath,
-    'the first stint belongs to the team that selected him');
+  check(`${label} the entry team starts the career`, entryStartsPath,
+    'the first stint belongs to the team that drafted or signed him');
   check(`${label} he never rejoins a team`, noRepeats, 'no franchise appears twice');
-  const outsideRate = outsideDrafts / SEEDS;
-  check(
-    `${label} the drafting team usually comes from outside the run`,
-    outsideRate > 0.94,
-    `${(outsideRate * 100).toFixed(1)}% outside, ${sameTeamDrafts} rare same-team stories`,
-  );
-  check(`${label} every same-team draft explains the exception`, everyOverlapExplained,
-    'each overlap has an injury or succession story');
-  check(`${label} ordinary drafts fit the depth chart`, ordinaryDraftsFit,
-    `no unexplained draft had need below ${DRAFT_NEED_FLOOR.toFixed(2)} or came from the build`);
-  check(`${label} every story explains a real exception`, everyStoryIsAnException,
-    'story flags only appear for a strong room or franchise from the build');
-  const storyRate = storyDrafts / SEEDS;
-  check(`${label} depth-chart exceptions stay rare`, storyRate > 0.04 && storyRate < 0.10,
-    `${(storyRate * 100).toFixed(1)}% of drafts use an injury or succession story`);
+  check(`${label} the entry team always comes from outside the run`, everyEntryIsOutside,
+    'none of the franchises used for a trait can take him');
+  check(`${label} the entry team always needs the position`, everyEntryNeedsPosition,
+    `every entry team has need of at least ${DRAFT_NEED_FLOOR.toFixed(2)}`);
 
   const share = (n: number) => counts.filter((c) => c === n).length / counts.length;
   console.log(
@@ -380,7 +374,7 @@ for (const { era, position, label } of eraPositions) {
     mean(Array.from({ length: SEEDS }, (_, i) => {
       const seasons = careerLength(position, overall, seed(i));
       const path = careerPath(position, overall, seasons.seasons, raided, seed(i), era);
-      return path.drafted ? positionalNeed(position, path.drafted.id, era) : 0.5;
+      return path.entryTeam ? positionalNeed(position, path.entryTeam.id, era) : 0.5;
     }));
 
   const ordinary = drawnNeed(84);
