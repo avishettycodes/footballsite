@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run verify && tsc -b && vite build",
+    "build:sites": "npm run build:only && mkdir -p dist/server && cp sites-worker.js dist/server/index.js",
     "lint": "oxlint",
     "preview": "vite preview",
     "verify:data": "jiti scripts/verify-data.ts",
