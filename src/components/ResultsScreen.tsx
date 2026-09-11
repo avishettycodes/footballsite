@@ -301,7 +301,7 @@ export function ResultsScreen({
         */}
         <Section index="01" title="THE CAREER">
           <p className="text-[14px] leading-relaxed text-white/85">
-            <b className="text-white">{draftLine(draft, path.drafted)}</b>{' '}
+            <b className="text-white">{draftLine(draft, path.drafted, path.draftStory)}</b>{' '}
             {tenureLine(seasons, path.stints, length.cutShort)}{' '}
             {productionLine(position, stats)}
             {stage === 'done' && <> {honorsLine(career)}</>}
@@ -576,6 +576,9 @@ export function ResultsScreen({
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
               <span>AVERAGE OF THE {keys.length} <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
               <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
+              {career.breakdown.leaguePerfect && (
+                <span className="text-hazard">PERFECT ACTIVE-LEAGUE TIERS <b className="text-hazard">99</b></span>
+              )}
               {/* The bar is the league's own, so this label has to read it rather than the
                   constant. Printing 97+ over a count taken at 96 is the same report
                   contradicting itself this screen keeps getting caught doing. */}

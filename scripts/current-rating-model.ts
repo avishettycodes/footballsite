@@ -6,8 +6,9 @@ import type { AttributeKey, Player, Position } from '../src/data/types';
  *
  * One-to-one traits retain EA's Madden NFL 27 value exactly. Composite traits average
  * the Madden skills named below, then anchor the best active player at 99 while
- * preserving 50 as the neutral point. That keeps composite categories comparable
- * without turning, for example, Madden's 92 speed into a made-up 99.
+ * preserving 50 as the neutral point. The rescaling is limited to categories Madden
+ * does not publish directly: a 92 Madden speed still reads 92 on the card. The scoring
+ * engine owns the separate question of whether seven exceptional picks form a 99.
  */
 
 export type MaddenSource = {
@@ -182,7 +183,10 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
       const maximum = maxima.get(`${source.position}:${key}`) ?? 99;
       const direct = (
         (source.position === 'QB' && key === 'armStrength') ||
-        (source.position === 'RB' && (key === 'speed' || key === 'burst' || key === 'hands')) ||
+        // RB hands is a position-relative game category, not a claim that Madden gives
+        // McCaffrey literal 99 Catching. Keeping Speed and Acceleration exact is what
+        // prevents a merely high physical rating from being mislabeled as perfect.
+        (source.position === 'RB' && (key === 'speed' || key === 'burst')) ||
         (source.position === 'WR' && (key === 'speed' || key === 'release' || key === 'hands')) ||
         (source.position === 'TE' && (key === 'speed' || key === 'hands'))
       );

@@ -5,7 +5,6 @@ import type { SavedPlayer } from '../lib/hall';
 import type { Setup } from '../store/gameStore';
 import { makeSeed, parseSeedInput, seedFromUrl } from '../lib/rng';
 import { HallOfBuilds } from './HallOfBuilds';
-import { Leaderboard } from './Leaderboard';
 
 const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
@@ -89,7 +88,7 @@ export function StartScreen({
         >
           <div className="font-display text-xl tracking-tight uppercase">Pick up where you left off</div>
           <div className="font-mono text-[11px] text-white/55">
-            You walked out on a half finished player. Go back and give him the rest of himself.
+            You have a half-finished player waiting. Go back and finish the build.
           </div>
         </button>
       )}
@@ -149,7 +148,7 @@ export function StartScreen({
 
       {era === 'current' && (
         <p className="mt-3 font-mono text-[11px] text-white/45">
-          Players update every week based on the current depth charts.
+          Current players use a fixed 2026 Week 1 roster and ratings snapshot.
         </p>
       )}
 
@@ -291,7 +290,6 @@ export function StartScreen({
         {pasted === 'junk' ? 'Fix the seed first' : 'Build a player'}
       </button>
 
-      <Leaderboard hall={hall} era={era} />
       <HallOfBuilds hall={hall} onOpen={onOpenSaved} onDelete={onDeleteSaved} />
     </div>
   );

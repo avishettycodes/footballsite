@@ -124,7 +124,7 @@ export default function App() {
                 QUIT
               </button>
             )}
-            {!inRun && !viewing && (
+            {!inRun && !viewing && g.hall.length > 0 && (
               <a
                 href="#your-builds"
                 className="rounded bg-white/8 px-2 py-1 font-bold tracking-wider text-white/45 transition-colors hover:bg-white/15 hover:text-white/80"

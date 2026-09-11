@@ -111,12 +111,52 @@ export type OverallBreakdown = {
   overall: number;
   weightedMean: number;
   weakAnchor: number;
+  /** Current mode: every slot came from that trait's tiny best-in-league tier. */
+  leaguePerfect: boolean;
   weakest: { attribute: AttributeKey; value: number };
   /** Traits at 95 or better. Kept for the lookahead bot's tiebreak and nothing else. */
   eliteCount: number;
   /** Traits at SPIKE_AT or better. This is what OPOY asks for. */
   spikeCount: number;
 };
+
+/**
+ * CURRENT MODE'S 99 IS A PERFECT RELATIVE BUILD, NOT SEVEN INVENTED MADDEN 99s.
+ *
+ * Madden's literal speed/acceleration/arm values stay literal on the card. That leaves
+ * some positions with no 99 at all in an honest column (the fastest current tight end is
+ * a 91), so demanding seven displayed 99s would make the name of the game impossible.
+ * Instead, a build reaches 99 when every pick comes from a tiny top tier for that trait:
+ * the best three distinct values at QB and the best two everywhere else. Those tiers are
+ * read from the active dataset, so a weekly roster refresh moves the target with the
+ * league rather than leaving hand-tuned player exceptions behind.
+ *
+ * This is intentionally all-or-nothing. Falling one tier short uses the ordinary weighted
+ * score, which keeps 99 a leaderboard event instead of adding free points to every good
+ * build. `verify:current` proves a seven-distinct-player path exists at every position;
+ * `verify:99` measures how rarely the real wheel can deal one.
+ */
+const CURRENT_99_TIER_DEPTH: Record<Position, number> = { QB: 3, RB: 2, WR: 2, TE: 2 };
+const CURRENT_99_CUTOFFS = new Map<string, number>();
+
+export function current99Cutoff(position: Position, key: AttributeKey): number {
+  const cacheKey = `${position}:${key}`;
+  const cached = CURRENT_99_CUTOFFS.get(cacheKey);
+  if (cached !== undefined) return cached;
+  const distinct = [...new Set(
+    TEAMS.flatMap((team) => getPool(position, team.id, 'current'))
+      .map((player) => player.attributes[key] ?? 0),
+  )].sort((a, b) => b - a);
+  const cutoff = distinct[Math.min(CURRENT_99_TIER_DEPTH[position] - 1, distinct.length - 1)] ?? 99;
+  CURRENT_99_CUTOFFS.set(cacheKey, cutoff);
+  return cutoff;
+}
+
+export function isCurrent99Build(position: Position, build: Build): boolean {
+  return ATTRIBUTE_SETS[position].every(
+    (key) => (build[key] ?? 0) >= current99Cutoff(position, key),
+  );
+}
 
 export function computeOverall(position: Position, build: Build, era: Era = 'alltime'): OverallBreakdown {
   const keys = ATTRIBUTE_SETS[position];
@@ -136,14 +176,17 @@ export function computeOverall(position: Position, build: Build, era: Era = 'all
   // Worst hole counts double against the second worst.
   const weakAnchor = (shortfalls[0].adjusted * 2 + shortfalls[1].adjusted) / 3;
 
-  const overall = Math.round(
+  const ordinaryOverall = Math.round(
     weightedMean * (1 - WEAK_LINK_SHARE) + weakAnchor * WEAK_LINK_SHARE,
   );
+  const leaguePerfect = era === 'current' && isCurrent99Build(position, build);
+  const overall = leaguePerfect ? 99 : ordinaryOverall;
 
   return {
     overall: Math.max(0, Math.min(99, overall)),
     weightedMean: Math.round(weightedMean * 10) / 10,
     weakAnchor: Math.round(weakAnchor * 10) / 10,
+    leaguePerfect,
     // Reported as the raw number, since that is what the player actually picked.
     weakest: { attribute: shortfalls[0].key, value: build[shortfalls[0].key] ?? 0 },
     eliteCount: keys.filter((k) => (build[k] ?? 0) >= 95).length,

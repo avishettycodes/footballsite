@@ -7,7 +7,9 @@
   "rosterSources": [
     "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team}/depthcharts",
     "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team}/roster",
-    "https://www.profootballnetwork.com/nfl-hq/depth-charts"
+    "https://www.profootballnetwork.com/nfl-hq/depth-charts",
+    "https://www.seahawks.com/news/seahawks-sign-17-to-practice-squad-including-veterans-trevon-diggs-aj-finley-velus-jones-jr-rodney-thomas-ii",
+    "https://www.seahawks.com/news/seahawks-make-roster-moves-ahead-of-season-opener-vs-patriots"
   ],
   "eligibility": "Week 1 offensive depth chart and active 53-man roster; excludes practice squad, IR, PUP, NFI, reserve and suspended lists",
   "explicitExclusions": [
@@ -22,6 +24,10 @@
     {
       "name": "Lan Larison",
       "reason": "Practice-squad elevation, not on the 53-man roster"
+    },
+    {
+      "name": "Velus Jones Jr.",
+      "reason": "Seattle practice squad; temporary Week 1 elevation, not on the 53-man roster"
     }
   ],
   "players": [
@@ -5302,36 +5308,6 @@
           "stiffArm": 70,
           "strength": 72,
           "trucking": 75
-        }
-      }
-    },
-    {
-      "id": "now-sea-vjones",
-      "name": "Velus Jones Jr.",
-      "teamId": "sea",
-      "position": "RB",
-      "madden": {
-        "id": 22089,
-        "name": "Velus Jones Jr",
-        "team": null,
-        "position": "HB",
-        "overall": 68,
-        "height": 72,
-        "weight": 200,
-        "stats": {
-          "acceleration": 95,
-          "agility": 79,
-          "awareness": 62,
-          "bCVision": 79,
-          "breakTackle": 74,
-          "catching": 78,
-          "changeOfDirection": 75,
-          "jukeMove": 79,
-          "speed": 94,
-          "spinMove": 70,
-          "stiffArm": 64,
-          "strength": 64,
-          "trucking": 41
         }
       }
     },
@@ -14949,6 +14925,39 @@
           "speed": 94,
           "spinMove": 71,
           "strength": 72
+        }
+      }
+    },
+    {
+      "id": "now-sf-hodge",
+      "name": "KhaDarel Hodge",
+      "teamId": "sf",
+      "position": "WR",
+      "madden": {
+        "id": 13870,
+        "name": "KhaDarel Hodge",
+        "team": "San Francisco 49ers",
+        "position": "WR",
+        "overall": 71,
+        "height": 74,
+        "weight": 208,
+        "stats": {
+          "agility": 82,
+          "bCVision": 74,
+          "breakTackle": 73,
+          "catchInTraffic": 79,
+          "catching": 83,
+          "changeOfDirection": 79,
+          "deepRouteRunning": 76,
+          "jukeMove": 81,
+          "jumping": 88,
+          "mediumRouteRunning": 74,
+          "release": 70,
+          "shortRouteRunning": 75,
+          "spectacularCatch": 83,
+          "speed": 89,
+          "spinMove": 75,
+          "strength": 60
         }
       }
     },

@@ -14,8 +14,8 @@ export type Position = 'QB' | 'RB' | 'WR' | 'TE';
  * Two complete datasets, not one dataset with a filter on it, and that is the whole
  * design. All-time is every player in a franchise's history rated against everybody who
  * has ever played the position. Current is only the active Week 1 depth chart, with
- * one-to-one traits taken directly from Madden and composite traits ranked against the
- * other active players at that position.
+ * one-to-one traits retained from Madden and composite game categories ranked against
+ * the other active players at that position.
  *
  * CURRENT MEANS THE DEPTH CHART AND NOTHING ELSE. Everybody in `src/data/current/` is on
  * the active 53-man roster of the franchise he is filed under. No practice squad, injured

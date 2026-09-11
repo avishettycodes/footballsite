@@ -1,7 +1,7 @@
 import { ATTRIBUTE_LABELS, ATTRIBUTE_SETS } from '../data';
 import type { AttributeKey, Position, Team } from '../data';
 import { STAT_LABELS, commas } from './career';
-import type { CareerStats, DraftSlot, Stint } from './career';
+import type { CareerPath, CareerStats, DraftSlot, Stint } from './career';
 import { GATES, RECORD_YARDS, superBowlOdds } from './scoring';
 import type { AccoladeId, CareerResult } from './scoring';
 
@@ -55,16 +55,30 @@ export function draftBadge(draft: DraftSlot): string {
   return `RD ${draft.round} · PICK ${draft.pick} · ${ordinal(draft.overallPick).toUpperCase()} OVERALL`;
 }
 
-export function draftLine(draft: DraftSlot, team: Team | null): string {
+export function draftLine(
+  draft: DraftSlot,
+  team: Team | null,
+  story: CareerPath['draftStory'] = null,
+): string {
   const who = team ? team.city : 'Somebody';
+  let line: string;
   if (draft.undrafted) {
-    return `Nobody drafted him. ${who} signed him for nothing and found out later.`;
+    line = `Nobody drafted him. ${who} signed him for nothing and found out later.`;
+  } else if (draft.overallPick === 1) {
+    line = `${who} took him first overall.`;
+  } else if (draft.round === 1) {
+    line = `${who} spent the ${ordinal(draft.pick)} pick of the first round on him.`;
+  } else {
+    line = `${who} got him in the ${ROUND_WORDS[draft.round]} round, ${ordinal(draft.overallPick)} overall.`;
   }
-  if (draft.overallPick === 1) return `${who} took him first overall.`;
-  if (draft.round === 1) {
-    return `${who} spent the ${ordinal(draft.pick)} pick of the first round on him.`;
+
+  if (story === 'camp-injury') {
+    return `${line} Their starter went down in camp, and the depth chart changed overnight.`;
   }
-  return `${who} got him in the ${ROUND_WORDS[draft.round]} round, ${ordinal(draft.overallPick)} overall.`;
+  if (story === 'succession-plan') {
+    return `${line} The room looked settled, but this was the succession plan from day one.`;
+  }
+  return line;
 }
 
 /**

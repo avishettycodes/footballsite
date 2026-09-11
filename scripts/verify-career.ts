@@ -26,11 +26,11 @@
 import { ATTRIBUTE_SETS, ERAS, TEAMS, positionsWithData } from '../src/data';
 import type { AttributeKey, Position } from '../src/data';
 import {
-  CAREER_SHAPE, LAST_PICK, MAX_SEASONS, PICKS_PER_ROUND, ROUNDS,
+  CAREER_SHAPE, DRAFT_NEED_FLOOR, LAST_PICK, MAX_SEASONS, PICKS_PER_ROUND, ROUNDS,
   QB_RUSHING_RECORD, careerLength, careerPath, careerStats, draftSlot, positionalNeed,
 } from '../src/lib/career';
 import { GATES, RECORD_YARDS, computeOverall, superBowlOdds } from '../src/lib/scoring';
-import { emptyCaseLine, missedBecause, recordMissLine, ringMissLine } from '../src/lib/narrative';
+import { draftLine, emptyCaseLine, missedBecause, recordMissLine, ringMissLine } from '../src/lib/narrative';
 
 const SEEDS = Number(process.env.SEEDS ?? 4000);
 
@@ -260,6 +260,17 @@ if (positions.includes('QB') && positions.includes('RB')) {
     `QB averages pick ${Math.round(pick('QB'))}, RB ${Math.round(pick('RB'))}`);
 }
 
+{
+  const sample = { undrafted: false, round: 1, pick: 12, overallPick: 12 };
+  const team = TEAMS[0] ?? null;
+  check('an injury exception is visible in the draft story',
+    draftLine(sample, team, 'camp-injury').includes('starter went down'),
+    'the result names the injury that opened the job');
+  check('a succession exception is visible in the draft story',
+    draftLine(sample, team, 'succession-plan').includes('succession plan'),
+    'the result names the plan behind the crowded room');
+}
+
 // ---------------------------------------------------------------------------
 console.log('\nwhose uniforms he wore');
 // ---------------------------------------------------------------------------
@@ -268,10 +279,14 @@ for (const { era, position, label } of eraPositions) {
 
   let addsUp = true;
   let contiguous = true;
-  let draftedFromTheRun = true;
+  let draftedStartsPath = true;
   let noRepeats = true;
-  /** Careers containing at least one franchise he was never built from. */
-  let wandered = 0;
+  let outsideDrafts = 0;
+  let sameTeamDrafts = 0;
+  let everyOverlapExplained = true;
+  let ordinaryDraftsFit = true;
+  let everyStoryIsAnException = true;
+  let storyDrafts = 0;
   const counts: number[] = [];
 
   for (let i = 0; i < SEEDS; i++) {
@@ -281,61 +296,50 @@ for (const { era, position, label } of eraPositions) {
 
     if (path.stints.reduce((sum, s) => sum + s.seasons, 0) !== seasons) addsUp = false;
     let cursor = 1;
-    let left = false;
     for (const stint of path.stints) {
       if (stint.from !== cursor || stint.to !== cursor + stint.seasons - 1 || stint.seasons < 1) contiguous = false;
       cursor = stint.to + 1;
-      if (!raided.includes(stint.team.id)) left = true;
     }
-    if (left) wandered++;
     if (cursor !== seasons + 1) contiguous = false;
     if (new Set(path.stints.map((s) => s.team.id)).size !== path.stints.length) noRepeats = false;
-    if (path.drafted?.id !== path.stints[0]?.team.id) draftedFromTheRun = false;
-    // The first uniform is the tie back to the run and it is not negotiable.
-    if (path.drafted && !raided.includes(path.drafted.id)) draftedFromTheRun = false;
+    if (path.drafted?.id !== path.stints[0]?.team.id) draftedStartsPath = false;
+    const need = path.drafted ? positionalNeed(position, path.drafted.id, era) : 0;
+    const isException = Boolean(path.drafted)
+      && (raided.includes(path.drafted!.id) || need < DRAFT_NEED_FLOOR);
+    if (path.drafted && raided.includes(path.drafted.id)) {
+      sameTeamDrafts++;
+      if (!path.draftStory) everyOverlapExplained = false;
+    } else if (path.drafted) {
+      outsideDrafts++;
+    }
+    if (!path.draftStory && isException) ordinaryDraftsFit = false;
+    if (path.draftStory) {
+      storyDrafts++;
+      if (!isException) everyStoryIsAnException = false;
+    }
     counts.push(path.stints.length);
   }
 
   check(`${label} the stints add up to the career`, addsUp, 'every season is accounted for');
   check(`${label} the timeline has no gaps`, contiguous, 'stints run 1 to the last season');
-  check(`${label} the team that drafted him came out of the run`, draftedFromTheRun,
-    `${raided.length} franchises were raided, and he starts at one of them every time`);
+  check(`${label} the drafting team starts the career`, draftedStartsPath,
+    'the first stint belongs to the team that selected him');
   check(`${label} he never rejoins a team`, noRepeats, 'no franchise appears twice');
-
-  /**
-   * BOTH ENDS, like every other tail in this file. A tester asked whether it was a
-   * coincidence that his player always signed with a team he had stolen from, and it was
-   * not, because it used to be a rule. Now the stops after the first can come from
-   * anywhere, so the check is that the rest of the league really does turn up AND that
-   * the raid still decides most of the career. Either one alone passes on a broken model.
-   *
-   * IT IS SAMPLED AT 93 TO 97 RATHER THAN OFF THE SWEEP ABOVE, and that is the whole
-   * reason it works. Measured on the wide sweep this check could not fail at the top: it
-   * runs from 70 overall, most of those careers are too short to have a second stint at
-   * all, and a second stint is the only place wandering can happen. Setting the constant
-   * to 1, which means every stop after the first is a franchise from outside the run,
-   * still only reached 29% and passed an upper bound of 50%. Half the check was decoration.
-   * This band is what a sensible run actually produces, so both ends of it bite.
-   */
-  let wanderedForReal = 0;
-  const REAL_RUNS = 4000;
-  for (let i = 0; i < REAL_RUNS; i++) {
-    const overall = 93 + (i % 5);
-    const seasons = careerLength(position, overall, seed(i, 'REAL')).seasons;
-    const path = careerPath(position, overall, seasons, raided, seed(i, 'REAL'), era);
-    if (path.stints.some((st) => !raided.includes(st.team.id))) wanderedForReal++;
-  }
-  const wanderRate = wanderedForReal / REAL_RUNS;
+  const outsideRate = outsideDrafts / SEEDS;
   check(
-    `${label} some careers take him somewhere he was never built from`,
-    // 0.35 rather than something roomier, because the roomier version was decoration at
-    // running back. Backs get the shortest careers and therefore the fewest second
-    // stints, so even with the constant pinned at 1 the rate there tops out around 37%.
-    // An upper bound above that cannot fail at the position it most needs to.
-    wanderRate > 0.15 && wanderRate < 0.35,
-    `${(wanderRate * 100).toFixed(0)}% of careers at 93 to 97 include a franchise outside the run ` +
-    `(${((wandered / SEEDS) * 100).toFixed(0)}% across the whole rating sweep)`,
+    `${label} the drafting team usually comes from outside the run`,
+    outsideRate > 0.94,
+    `${(outsideRate * 100).toFixed(1)}% outside, ${sameTeamDrafts} rare same-team stories`,
   );
+  check(`${label} every same-team draft explains the exception`, everyOverlapExplained,
+    'each overlap has an injury or succession story');
+  check(`${label} ordinary drafts fit the depth chart`, ordinaryDraftsFit,
+    `no unexplained draft had need below ${DRAFT_NEED_FLOOR.toFixed(2)} or came from the build`);
+  check(`${label} every story explains a real exception`, everyStoryIsAnException,
+    'story flags only appear for a strong room or franchise from the build');
+  const storyRate = storyDrafts / SEEDS;
+  check(`${label} depth-chart exceptions stay rare`, storyRate > 0.04 && storyRate < 0.10,
+    `${(storyRate * 100).toFixed(1)}% of drafts use an injury or succession story`);
 
   const share = (n: number) => counts.filter((c) => c === n).length / counts.length;
   console.log(
@@ -385,16 +389,10 @@ for (const { era, position, label } of eraPositions) {
     ordinary > 0.55,
     `mean need ${ordinary.toFixed(2)} against 0.50 for a coin`,
   );
-  /**
-   * The Ty Simpson case. Nobody passes on the best player in the class over a depth
-   * chart, so at the top the board flattens back toward whoever is picking. Without this
-   * the model says a settled franchise never drafts a superstar, which is the opposite of
-   * what actually happens every April.
-   */
   check(
-    `${label} nobody passes on a superstar over a depth chart`,
-    superstar < ordinary - 0.03,
-    `need drops from ${ordinary.toFixed(2)} to ${superstar.toFixed(2)} at 98 overall`,
+    `${label} a superstar still has to fit the depth chart`,
+    superstar > 0.55 && Math.abs(superstar - ordinary) < 0.01,
+    `need stays ${ordinary.toFixed(2)} at 84 and ${superstar.toFixed(2)} at 98 overall`,
   );
 }
 

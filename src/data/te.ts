@@ -227,7 +227,7 @@ const POOLS: Record<string, Row[]> = {
     ['min-wiggins', 'Jermaine Wiggins', '2004–2006', 'Caught 71 passes in a season and looked like a man who ate well.', 84, 76, 54, 74, 58, 84, 70],
   ],
   ne: [
-    ['ne-gronk', 'Rob Gronkowski', '2010–2018', 'Blocked like a tackle, caught like a receiver, spiked it through the floor.', 92, 97, 78, 88, 92, 99, 99],
+    ['ne-gronk', 'Rob Gronkowski', '2010–2018', 'Blocked like a tackle, caught like a receiver, spiked it through the floor.', 92, 98, 78, 88, 92, 99, 99],
     ['ne-coates', 'Ben Coates', '1991–1999', 'Ninety six catches in 1994, which nobody at the position had done.', 92, 84, 70, 86, 78, 90, 90],
     ['ne-rfrancis', 'Russ Francis', '1975–1988', 'All World, they called him. He also flew planes and wrestled bears.', 88, 86, 80, 82, 80, 92, 95],
     ['ne-mcook', 'Marv Cook', '1989–1993', 'Two Pro Bowls on teams that won a combined nineteen games.', 86, 78, 66, 80, 66, 82, 80],
@@ -286,7 +286,7 @@ const POOLS: Record<string, Row[]> = {
   sf: [
     ['sf-kittle', 'George Kittle', '2017–', 'Nobody in the sport is harder to bring down after he catches it.', 90, 95, 84, 86, 99, 99, 84],
     ['sf-bjones', 'Brent Jones', '1987–1997', 'Four Pro Bowls running seam routes for two Hall of Fame quarterbacks.', 90, 76, 76, 90, 76, 88, 78],
-    ['sf-vdavis', 'Vernon Davis', '2006–2014', 'Ran a 4.38 at 254 pounds, which the combine had never seen before.', 80, 78, 97, 74, 84, 84, 78],
+    ['sf-vdavis', 'Vernon Davis', '2006–2014', 'Ran a 4.38 at 254 pounds, which the combine had never seen before.', 80, 78, 99, 74, 84, 84, 78],
     ['sf-kwalick', 'Ted Kwalick', '1969–1974', 'Three straight Pro Bowls and then he left for the money elsewhere.', 84, 72, 90, 78, 78, 82, 78],
     ['sf-rfrancis', 'Russ Francis', '1982–1987', 'Came out of retirement, won a ring, and went back to flying planes.', 84, 91, 68, 78, 74, 92, 95],
     ['sf-dwalker', 'Delanie Walker', '2006–2012', 'Blocked for six years behind Vernon Davis, then left and got paid.', 82, 88, 78, 76, 84, 94, 56],

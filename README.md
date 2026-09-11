@@ -17,8 +17,8 @@ npm run dev
 
 Then open http://localhost:5173. There is a debug view of the raw data at `?debug`.
 
-YOUR BUILDS uses the same browser storage as YOUR HALL. It needs no account, database or
-environment variables. Builds stay on the device that saved them.
+YOUR BUILDS needs no account, database or environment variables. Builds stay on the
+device that saved them.
 
 On wide desktop screens the layout reserves left and right advertisement rails. Ad code can
 mount into `#ad-slot-left` and `#ad-slot-right` without changing the game layout.
@@ -31,12 +31,11 @@ accolades and the Super Bowl roll are all in.
 
 **Two leagues, and they are two separate datasets rather than one with a filter on it.**
 All-time gives you everybody a franchise has ever had, rated against everybody who has
-ever played the position. Current gives you the men on a roster now, rated against each
-other, so the best quarterback playing today gets the 99 that Marino has in the other
-file. The same man therefore has two different cards and both are correct: Josh Allen's
-accuracy is an 84 against Brees and Montana and a 90 against the people he lines up
-opposite on Sunday. The switch is the first thing on the start screen, above the position,
-because it decides what everything after it means.
+ever played the position. Current is the separate 2026 Week 1 snapshot. Its card values
+start with Madden NFL 27, while its derived categories compare active players at the same
+position. A player can therefore have a different all-time card and current card without
+either dataset pretending to be the other. The switch is the first thing on the start
+screen, above the position, because it decides what everything after it means.
 
 A run picks its league at the start and keeps it. That is stored on the run rather than as
 a preference, since a career is scored against the supply of the pools it came out of and
@@ -69,10 +68,9 @@ the events that delete a run. The seed is deliberately not remembered, since a s
 specific run and refilling the box with it is the bug where deleting a seed did not delete
 the seed.
 
-Naming your player on the report saves him and puts the finished build in YOUR BUILDS. The
-list separates quarterbacks, running backs, receivers and tight ends, then ranks each
-position by overall. YOUR HALL keeps twenty players in that browser, newest first, and
-opening one replays the report without sitting through the reveal again.
+Naming your player on the report saves him and puts the finished build in YOUR BUILDS.
+The list keeps twenty players in that browser, newest first, and opening one replays the
+report without sitting through the reveal again.
 
 ## The career report
 
@@ -125,19 +123,16 @@ difference between a 95 and a 99 shows up in efficiency, touchdowns and years ra
 in six hundred attempts.
 
 **Whose uniforms he wore** is one to four franchises rather than every one you spun,
-weighted by which of them actually needed the position. Need is read off their own
-history: a franchise whose best ever at the spot is a journeyman is desperate, one with an
-all-time great on the wall is not. At the very top that stops mattering, because nobody
-passes on the best player in the class over a depth chart.
+weighted by which teams actually need the position. Need is read off their own history: a
+franchise whose best players at the spot are journeymen is desperate, while one with a
+great room is not. That still matters for a 99 because being the best player in the class
+does not make a full depth chart disappear.
 
-The team that drafted him always comes out of your run, and the stops after it do not.
-Every stop used to, and a tester worked that out inside one session and asked whether it
-was a coincidence. It was not, and it was not really a career either: you raid a median of
-seven franchises out of 32, so a rule saying every uniform comes from those seven is a
-rule somebody solves immediately, and once they have solved it the uniforms section is
-their spin history read back to them. Emmitt Smith finished in Arizona and Joe Montana in
-Kansas City, and nobody drafted either of them there. About a quarter of careers now
-include a franchise you never touched.
+The team that drafts him usually comes from outside the run. A franchise whose player
+supplied one of your traits is only selected as a rare story beat, and the report explains
+the exception with a camp injury or a succession plan. Every later stop is selected from
+the remaining league by the same positional-need model, so a career is not just the spin
+history read back in a different font.
 
 The star rule moved with it. "A player good enough gets extended, so he moves less" was
 written at 92, and nine sensible runs in ten finish above 92, so it fired on virtually
@@ -344,9 +339,9 @@ Two more, both asked for by the same player. Nothing on screen calls the pool "t
 any more, it says players, because "only the men on the current roster" is a sentence
 somebody quoted back twice. And the league switch no longer says ratings are "judged
 against the league today", which named a comparison without ever saying where the names
-come from. It now says the depth charts are read weekly, that ratings are relative to the
-players in the league right now, and that a missing name is a name not on the chart this
-week.
+come from. Current mode is tied to an explicit roster snapshot instead: 2026 Week 1. A
+later week requires a deliberate roster reconciliation and a new dated release; the
+static app does not promise an automatic weekly feed.
 
 `npm run verify:copy` enforces all of this on anything a player can read, which now
 includes the two lines the store says out loud when a run deadlocks or a spin comes back
@@ -367,9 +362,9 @@ since that is his name.
 
 ## The data
 
-The 1000 all-time ratings are hand written and subjective. The 490 current-player cards
-are a separate, source-backed dataset: the names come from the 2026 Week 1 active depth
-charts and the ratings come from EA SPORTS Madden NFL 27 launch ratings.
+The 1000 all-time ratings are hand written and subjective. The current-player cards are a
+separate, source-backed dataset: the names come from the 2026 Week 1 active depth charts
+and the ratings come from EA SPORTS Madden NFL 27 launch ratings.
 
 **A current room is the active 53-man depth chart and nothing else.** Practice squad,
 injured reserve, PUP, NFI, reserve and suspended players are excluded. A one-game injury
@@ -381,12 +376,24 @@ reaching back a few seasons, and reaching back put Aaron Rodgers on the Packers 
 where he plays for Pittsburgh. A mode whose entire promise is "the men on a roster now"
 cannot ship a card that says otherwise, whatever it does for the pool sizes.
 
-One-to-one traits use Madden exactly: speed is Speed, acceleration is Acceleration, arm
-strength is Throw Power, and release is Release. Categories that do not exist as one
-Madden field use documented averages. For example, contested catch averages Catch in
-Traffic, Spectacular Catch and Jumping. Composite categories are then anchored against
-the other active players at that position, with 50 held as the neutral point and the best
-active value set to 99. The complete formula is in `scripts/current-rating-model.ts`.
+Direct Madden physical fields stay exact. A Madden 92 Speed is 92 on the card, not a 99
+created because it happens to lead one pool. That applies to quarterback Throw Power,
+running back Speed and Acceleration, receiver Speed, Release and Catching, and tight end
+Speed and Catching. Categories that do not exist as one Madden field use documented
+averages. For example, contested catch averages Catch in Traffic, Spectacular Catch and
+Jumping. Those derived, position-relative categories are normalized against the other
+active players at the position with 50 held as the neutral point. Madden still determines
+their ordering; the scale only translates a composite into the game's shared vocabulary.
+The complete card formula is in `scripts/current-rating-model.ts`.
+
+Current mode's 99 overall is a scoring rule, not a rewrite of those card values. All seven
+picks must meet the cutoff for their own trait: one of the top three distinct displayed
+tiers at quarterback, or one of the top two at running back, receiver and tight end. The
+seven picks must still come from seven different players. Missing even one cutoff sends
+the build through the ordinary weighted-mean and weak-link formula. This keeps a 99
+possible at every position without calling Kene Nwangwu's Madden 92 Speed a 99 or handing
+perfect builds out on ordinary runs. The tier rule is in `src/lib/scoring.ts`, and
+`npm run verify:current` proves a legal path exists for every position.
 
 Player ids are unique across BOTH datasets, since a run stores the ids it has spent and a
 saved player keeps them forever. Current rows carry a `now-` prefix for that reason, and
@@ -432,8 +439,8 @@ making the same joke and cannot catch a line about the wrong building, which is 
 Cousins arrived in Las Vegas still talking about Atlanta.
 
 `scripts/fixtures/current-week-1.json` freezes the roster and the Madden inputs used for
-every card. `npm run verify:current` rebuilds all 3,430 displayed values from that fixture
-and fails on any roster or rating drift. To intentionally update a newly audited roster,
+every card. `npm run verify:current` rebuilds every displayed value from that fixture and
+fails on any roster or rating drift. To intentionally update a newly audited roster,
 download the official EA pages and run:
 
 ```bash
@@ -450,60 +457,11 @@ and five players on injured reserve were still in the file. A wrong name at the 
 list is obvious to a person and invisible to an assertion.
 
 The backwards pass is the useful half, and it comes with a rule: **a name it prints is
-either rated too low or best at something the card has no slot for, and you have to say
-which.** Both of those turned up in one pass.
-
-**CeeDee Lamb was rated too low, and his own blurb proved it.** The card said he caught 135
-passes in a season and does whatever he likes after the catch, and the numbers beside it had
-him eighth in catching and eighth in YAC. A card contradicting its own line is not a matter
-of taste. He reads 97 catching and 96 YAC now, level with Chase and Nacua rather than ahead
-of Jefferson.
-
-**Drake Maye was the same thing with a second tell.** He and Trevor Lawrence both came out of
-the backwards pass carrying nearly the same seven numbers: good everywhere, elite nowhere,
-which is what an afternoon of cautious writing produces. Only one of them was wrong. Maye led
-the league in completion percentage in his second year, his blurb says he was throwing people
-open, and the card had him at 90 accuracy. He reads 97. Lawrence did not move: a good starting
-quarterback with no elite trait is exactly what he is, and finding him a 99 to fix a list
-would be the failure this whole file warns about.
-
-**Bijan Robinson is the other kind, and he did not move either.** The complaint was that the
-second best card at the position tops out at 98 while a rookie holds two 99s, and the
-complaint is accurate. The backwards pass did not flag him: he is top five in juke, vision,
-acceleration and catching, and the players ahead of him are ahead on things they are really
-better at. What he is best at in this league is not going down when the first defender hits
-him, which is contact balance, which was deleted for moving with power at 0.93. That was the
-right call for the card and it still costs this one player the number he deserves. The
-finding is that the slot is missing, not that a number is wrong, so the fix is an attribute
-rather than a nudge and neither is being done today.
-
-### Speed at running back is ordered off the forty now
-
-The column had gone flat. Seven backs shared a 97 and eleven shared a 94, and inside those
-two numbers sat fifteen hundredths of real forty time: TreVeyon Henderson ran 4.43 and held
-the same 97 as Jahmyr Gibbs at 4.36, while Bijan Robinson at 4.46 sat three points off Gibbs
-and level with Derrick Henry. A column where a tenth of a second is worth nothing is rating
-reputation rather than speed.
-
-The top of the board is anchored on the time now, 99 at 4.32 and about two points for every
-four hundredths after it, and the 99 goes to whoever actually ran fastest. That is three
-players rather than one, because Achane, Tuten and Nwangwu all ran 4.32.
-
-```
-    4.32  99   Achane, Tuten, Nwangwu        4.39  95   Taylor, Hall
-    4.36  97   Gibbs                         4.43  93   Henderson
-    4.37  96   Singleton, Mitchell           4.46  91   Bijan Robinson, Hampton
-    4.38  96   Wright
-```
-
-**The forty is not the whole of speed**, so this stops at the players whose speed is the
-reason they are in the pool. Derrick Henry ran a 4.54 and is still pulling away from
-secondaries at 31, so his 94 is play speed and it stays. A card that clearly outruns its own
-forty keeps the football answer and the blurb should say why.
-
-Ten values changed, spread from 91 to 99 with no two piling onto the same number, which is
-the tally this project asks for after any batch edit. Bijan came DOWN, which is worth saying
-out loud, because this pass started from a complaint that his card was too weak.
+either underrated by the source model or best at something the card has no slot for, and
+you have to say which.** It is an audit prompt, not permission to hand-edit a favorite into
+the leaders. If the source data and formula support the order, the card stays. If the card
+contradicts them, the source mapping or the category formula changes and the fixture check
+records the consequence.
 
 Every position is seven picks now. They were uneven for a while, on the theory that a
 shorter build is a harder build, and tight end drew the short straw twice over: five
@@ -737,16 +695,16 @@ numbers rather than with a rate.
 
 ### Is a 99 overall reachable?
 
-Somebody asked whether a 99 tight end is possible at all, since no current tight end runs a
-99. The answer is yes at all four positions in both leagues, and the reasoning is not the
-obvious one. Half the overall is the weak link anchor, so the ceiling is set by the WORST
-slot a league can fill rather than the best, and every slot at every position has a 99
-somewhere in the current league. `npm run ceiling` prints the build and the names.
+Yes at all four positions, but current mode does not require seven literal 99 card values.
+Each pick must land in that trait's tiny qualifying tier: top three distinct values for a
+quarterback and top two for every other position. All seven different players must qualify
+at once. That combination earns 99 directly; anything short of it uses the ordinary
+overall formula.
 
-Reachable is not the same as gettable. The 99 at a slot usually lives in one room, so the
-run has to land there AND spend that particular pick there, seven times over. What the
-ceiling really answers is that no position is arithmetically walled off, which is the thing
-worth knowing.
+Reachable is not the same as common. A run must land on a qualifying room and spend the
+right pick there seven separate times without reusing a player. `npm run verify:current`
+constructs one legal path for each position, while the normal wheel keeps those paths rare
+enough for a leaderboard result to mean something.
 
 ## Deploying
 

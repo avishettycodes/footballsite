@@ -366,7 +366,7 @@ function playRun(
       for (const p of pool) for (const k of open) {
         const hypothetical: Partial<Record<AttributeKey, number>> = { ...filled, [k]: p.attributes[k] ?? 0 };
         for (const rest of open) if (rest !== k) hypothetical[rest] = premium[rest];
-        const r = computeOverall(g.position, hypothetical);
+        const r = computeOverall(g.position, hypothetical, g.era);
         const exact = r.weightedMean * (1 - WEAK_LINK_SHARE) + r.weakAnchor * WEAK_LINK_SHARE;
         // Ties break toward SPIKES first, then toward the bigger raw number. It used to
         // break toward traits at 95, which stopped tracking anything once OPOY started
@@ -386,7 +386,7 @@ function playRun(
       // reachable player through this roster grades below that, the roster is a net loss.
       const baseline: Partial<Record<AttributeKey, number>> = { ...filled };
       for (const rest of open) baseline[rest] = premium[rest];
-      const b = computeOverall(g.position, baseline);
+      const b = computeOverall(g.position, baseline, g.era);
       const bExact = b.weightedMean * (1 - WEAK_LINK_SHARE) + b.weakAnchor * WEAK_LINK_SHARE;
       wantsReroll = best < bExact + b.spikeCount / 100;
     }
@@ -418,7 +418,6 @@ const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length 
 const eraPositions = ERAS.flatMap((era) =>
   positionsWithData(era).map((position) => ({ era, position })),
 );
-const positions = eraPositions;
 
 /**
  * THE FLOORS BITE. A deterministic check before any of the statistical work.

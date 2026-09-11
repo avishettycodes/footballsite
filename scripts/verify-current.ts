@@ -6,6 +6,8 @@
 import fs from 'node:fs';
 import { ROSTERS } from '../src/data';
 import { ATTRIBUTE_SETS } from '../src/data/types';
+import type { AttributeKey, Player, Position } from '../src/data/types';
+import { computeOverall, current99Cutoff } from '../src/lib/scoring';
 import {
   calculateCurrentRatings,
   type CurrentRatingSource,
@@ -27,6 +29,40 @@ const expectedRatings = calculateCurrentRatings(fixture.players);
 const actualById = new Map(players.map((player) => [player.id, player]));
 const sourceById = new Map(fixture.players.map((player) => [player.id, player]));
 const errors: string[] = [];
+
+function findPlayable99(position: Position) {
+  const positionPlayers = players.filter((player) => player.position === position);
+  const candidates = new Map(ATTRIBUTE_SETS[position].map((key) => [
+    key,
+    positionPlayers
+      .filter((player) => (player.attributes[key] ?? 0) >= current99Cutoff(position, key))
+      .sort((a, b) => (b.attributes[key] ?? 0) - (a.attributes[key] ?? 0)),
+  ]));
+  const keys = [...ATTRIBUTE_SETS[position]].sort(
+    (a, b) => (candidates.get(a)?.length ?? 0) - (candidates.get(b)?.length ?? 0),
+  );
+  const used = new Set<string>();
+  const build: Partial<Record<AttributeKey, number>> = {};
+  const picks: Partial<Record<AttributeKey, Player>> = {};
+
+  const search = (index: number): boolean => {
+    if (index === keys.length) return computeOverall(position, build, 'current').overall === 99;
+    const key = keys[index];
+    for (const player of candidates.get(key) ?? []) {
+      if (used.has(player.id)) continue;
+      used.add(player.id);
+      build[key] = player.attributes[key];
+      picks[key] = player;
+      if (search(index + 1)) return true;
+      used.delete(player.id);
+      delete build[key];
+      delete picks[key];
+    }
+    return false;
+  };
+
+  return search(0) ? { build, picks } : null;
+}
 
 if (players.length !== fixture.players.length) {
   errors.push(`roster count is ${players.length}; source snapshot has ${fixture.players.length}`);
@@ -68,8 +104,23 @@ for (const exclusion of fixture.explicitExclusions) {
   }
 }
 
+const playable99s = new Map<Position, ReturnType<typeof findPlayable99>>();
+for (const position of ['QB', 'RB', 'WR', 'TE'] as const) {
+  const path = findPlayable99(position);
+  playable99s.set(position, path);
+  if (!path) errors.push(`${position} has no legal unique-player path to a 99 overall`);
+}
+
 console.log(`Current-mode source check — ${fixture.season} Week ${fixture.week} (${fixture.snapshotDate})`);
 console.log(`${players.length} active players, ${fixture.explicitExclusions.length} explicit reserve/PS exclusions`);
+for (const [position, path] of playable99s) {
+  if (!path) continue;
+  console.log(
+    `${position} playable 99: ` + ATTRIBUTE_SETS[position]
+      .map((key) => `${key} ${path.build[key]} (${path.picks[key]?.name})`)
+      .join(', '),
+  );
+}
 
 if (errors.length) {
   for (const error of errors) console.error(`ERROR: ${error}`);

@@ -127,7 +127,7 @@ for (const era of chosen) {
     );
     console.log(
       `  overall ${breakdown.overall}  (mean ${breakdown.weightedMean}, anchor ${breakdown.weakAnchor})  ` +
-      `${breakdown.overall >= 99 ? '99 IS REACHABLE' : `99 IS IMPOSSIBLE, held down by ${ATTRIBUTE_LABELS[floorKey]} ${build[floorKey]}`}`,
+      `${breakdown.overall >= 99 ? 'LEAGUE-WIDE UPPER BOUND IS 99 (run npm run verify:99 for a legal path)' : `99 IS IMPOSSIBLE, held down by ${ATTRIBUTE_LABELS[floorKey]} ${build[floorKey]}`}`,
     );
 
     const { tally, pct } = rates(position, build, era);

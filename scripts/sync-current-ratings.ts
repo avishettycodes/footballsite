@@ -105,12 +105,15 @@ const fixture = {
     'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team}/depthcharts',
     'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team}/roster',
     'https://www.profootballnetwork.com/nfl-hq/depth-charts',
+    'https://www.seahawks.com/news/seahawks-sign-17-to-practice-squad-including-veterans-trevon-diggs-aj-finley-velus-jones-jr-rodney-thomas-ii',
+    'https://www.seahawks.com/news/seahawks-make-roster-moves-ahead-of-season-opener-vs-patriots',
   ],
   eligibility: 'Week 1 offensive depth chart and active 53-man roster; excludes practice squad, IR, PUP, NFI, reserve and suspended lists',
   explicitExclusions: [
     { name: 'Brandon Aiyuk', reason: 'Reserve/Left Squad' },
     { name: 'Jeshaun Jones', reason: 'Suspended list' },
     { name: 'Lan Larison', reason: 'Practice-squad elevation, not on the 53-man roster' },
+    { name: 'Velus Jones Jr.', reason: 'Seattle practice squad; temporary Week 1 elevation, not on the 53-man roster' },
   ],
   players: sources,
 };

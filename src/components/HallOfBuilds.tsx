@@ -12,7 +12,7 @@ type Props = {
 };
 
 /**
- * THE HALL OF BUILDS on the start screen.
+ * YOUR BUILDS on the start screen.
  *
  * Deliberately below the build button rather than above it. Somebody arriving here
  * wants to make a player, and a returning player still has to scroll past the thing he
@@ -25,14 +25,14 @@ export function HallOfBuilds({ hall, onOpen, onDelete }: Props) {
   if (hall.length === 0) return null;
 
   return (
-    <section className="mt-10">
+    <section id="your-builds" className="mt-10 scroll-mt-20">
       {/*
         THE SUBTITLE IS GONE. It said to open one to read his career report again,
         exactly as it came out, and the note back was "so unnecessary bro". It was: the
         heading says what this is, the rows are obviously rows, and tapping one is the
         only thing you can do to it.
       */}
-      <h2 className="font-display text-2xl tracking-tight uppercase">Your hall</h2>
+      <h2 className="font-display text-2xl tracking-tight uppercase">Your builds</h2>
 
       <ul className="mt-3 space-y-2">
         {hall.map((player) => {

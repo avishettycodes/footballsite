@@ -223,6 +223,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-sf-samuel', 'Deebo Samuel', '2019–', 'A receiver who ran for eight touchdowns in a season, which nobody does.', 89, 82, 73, 78, 89, 94, 84],
     ['now-sf-watkins', 'Jordan Watkins', '2025–', 'Caught five touchdowns in one game at Ole Miss and nobody believed it.', 93, 84, 71, 67, 80, 79, 71],
     ['now-sf-stribling', 'De\'Zhaun Stribling', '2026–', 'Six foot two, and Ole Miss threw it up to him whenever the down was long.', 94, 84, 78, 77, 83, 84, 83],
+    ['now-sf-hodge', 'KhaDarel Hodge', '2026–', 'Ninth-year veteran whose roster spot starts with special teams.', 89, 83, 76, 70, 84, 82, 80],
     ['now-sf-cowing', 'Jacob Cowing', '2024–', 'Weighs 168 pounds and is the quickest man in the building over ten yards.', 93, 79, 77, 74, 81, 85, 51],
   ],
   sea: [

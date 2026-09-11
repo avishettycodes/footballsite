@@ -354,17 +354,10 @@ export function positionalNeed(position: Position, teamId: string, era: Era): nu
   return NEED[era]?.[position]?.[teamId] ?? 0.5;
 }
 
-/**
- * How much need actually decides it, which falls away at the top of the board.
- *
- * This is the Ty Simpson case. A team sitting on a settled depth chart does not pass on
- * a player everyone in the building thinks is the best in the class, so at the very top
- * need stops mattering and whoever is picking takes him. Below that it matters a lot,
- * because a team with an all-time great already on the wall is not spending a high pick
- * on his understudy.
- */
-function needBlend(overall: number): number {
-  return clamp((overall - 88) / 10, 0, 1);
+/** A weak room should be much likelier to spend the pick, but no team is impossible. */
+function needWeight(position: Position, team: Team, era: Era): number {
+  const need = positionalNeed(position, team.id, era);
+  return 0.06 + need * need * 3;
 }
 
 function weightedIndex(weights: number[], r: number): number {
@@ -388,6 +381,8 @@ export type Stint = {
 export type CareerPath = {
   drafted: Team | null;
   stints: Stint[];
+  /** Why a franchise from the build still took him despite its existing room. */
+  draftStory: 'camp-injury' | 'succession-plan' | null;
 };
 
 /**
@@ -420,32 +415,24 @@ function stintCount(overall: number, seasons: number, available: number, r: numb
 }
 
 /**
- * How often a stop after the first is a franchise he was never built from.
- *
- * Set so that a bit under a third of careers contain one. Much lower and it is a rounding
- * error nobody ever sees, much higher and the raid stops feeling like it decided
- * anything. It only ever applies from the second stint on, and most careers do not have a
- * second stint, which is why the number itself is larger than the share it produces.
+ * The weaker half of the league has a real opening at the position. A team below this
+ * line can still make the pick, but only as the exceptional version of the story (an
+ * injury or a succession plan) rather than as an unexplained depth-chart mismatch.
  */
-const WANDER = 0.45;
+export const DRAFT_NEED_FLOOR = 0.5;
+
+/** A depth-chart exception is an occasional plot turn, never the default answer. */
+const DRAFT_STORY_CHANCE = 0.07;
 
 /**
- * THE FRANCHISE THAT DRAFTED HIM IS ALWAYS ONE YOU RAIDED. Everything after that is not.
+ * THE FRANCHISE THAT DRAFTED HIM USUALLY WAS NOT PART OF THE BUILD.
  *
- * The tie back to the run is the point of the whole game, so the first uniform is not
- * negotiable: he comes into the league belonging to a team you actually stole from, and
- * for most players that is the only team there is.
- *
- * It used to be the rule for every stop, and a tester noticed inside one session and
- * asked whether it was a coincidence. It was not a coincidence and it was not really a
- * career either. You raid a median of seven franchises out of 32, so a rule that says
- * every stop comes from those seven is a rule somebody works out immediately, and once
- * they have worked it out the uniforms section is just your spin history read back.
- *
- * Real players get signed by teams that were never in the conversation. Emmitt Smith
- * finished in Arizona, Joe Montana in Kansas City, and nobody drafted either of them
- * there. So the stops after the first can come from anywhere in the league, which costs
- * nothing structurally and turns the tie back into a pattern rather than a law.
+ * Taking a trait from a player does not make his franchise need another player at that
+ * position. The first team therefore normally has BOTH properties that make the result
+ * believable: it was not part of the build and its depth chart actually needs him. A
+ * franchise that fails either test can still be the answer as a rare story beat, but the
+ * report then says what changed: an injury opened the job or the pick was a succession
+ * plan. Later stops can be anywhere in the league and are weighted by positional need.
  */
 export function careerPath(
   position: Position,
@@ -455,31 +442,40 @@ export function careerPath(
   seed: string,
   era: Era,
 ): CareerPath {
-  const pool = raidedTeamIds.map((id) => TEAMS_BY_ID[id]).filter(Boolean);
-  if (!pool.length) return { drafted: null, stints: [] };
-
   const roll = stream(seed, 'PATH');
-  const blend = needBlend(overall);
+  if (!TEAMS.length || seasons < 1) return { drafted: null, stints: [], draftStory: null };
 
-  const remaining = [...pool];
-  const elsewhere = TEAMS.filter((t) => !raidedTeamIds.includes(t.id));
-  const chosen: Team[] = [];
+  const raided = new Set(raidedTeamIds.filter((id) => Boolean(TEAMS_BY_ID[id])));
+  const clearFits = TEAMS.filter((team) =>
+    !raided.has(team.id) && positionalNeed(position, team.id, era) >= DRAFT_NEED_FLOOR,
+  );
+  const exceptions = TEAMS.filter((team) => !clearFits.includes(team));
+
+  const storyDraft = exceptions.length > 0
+    && clearFits.length > 0
+    && roll() < DRAFT_STORY_CHANCE;
+  const firstPool = storyDraft ? exceptions : (clearFits.length ? clearFits : TEAMS);
+  if (!firstPool.length) return { drafted: null, stints: [], draftStory: null };
+
+  const drafted = firstPool[weightedIndex(
+    firstPool.map((team) => needWeight(position, team, era)),
+    roll(),
+  )];
+  const draftStory = storyDraft
+    ? (positionalNeed(position, drafted.id, era) < DRAFT_NEED_FLOOR
+      ? 'succession-plan'
+      : 'camp-injury')
+    : null;
+
+  const chosen: Team[] = [drafted];
+  const remaining = TEAMS.filter((team) => team.id !== drafted.id);
   const count = stintCount(overall, seasons, TEAMS.length, roll());
-
-  for (let i = 0; i < count; i++) {
-    // The first stop is the one that has to come out of the run. After that the rest of
-    // the league can sign him, and it does so on the same read of who needs the position.
-    const wander = i > 0 && elsewhere.length > 0 && roll() < WANDER;
-    const from = wander ? elsewhere : remaining;
-    if (!from.length) break;
-    const weights = from.map((t) => {
-      const need = positionalNeed(position, t.id, era);
-      // 0.15 keeps a settled franchise in play rather than ruling it out. Teams do sign
-      // a second one, they just do not pay a premium for him.
-      const byNeed = 0.15 + need * need * 2;
-      return byNeed * (1 - blend) + blend;
-    });
-    chosen.push(...from.splice(weightedIndex(weights, roll()), 1));
+  while (chosen.length < count && remaining.length) {
+    const index = weightedIndex(
+      remaining.map((team) => needWeight(position, team, era)),
+      roll(),
+    );
+    chosen.push(...remaining.splice(index, 1));
   }
 
   // Seasons per stop. The first one gets the most, because that is where the rookie deal
@@ -502,7 +498,7 @@ export function careerPath(
     return { team, seasons: lengths[i], from, to: cursor - 1 };
   });
 
-  return { drafted: stints[0]?.team ?? null, stints };
+  return { drafted: stints[0]?.team ?? null, stints, draftStory };
 }
 
 // ---------------------------------------------------------------------------
