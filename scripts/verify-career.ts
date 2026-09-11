@@ -28,7 +28,7 @@ import type { AttributeKey, Position } from '../src/data';
 import {
   CAREER_SHAPE, DRAFT_NEED_FLOOR, GUARANTEED_UDFA_MAX_OVERALL, LAST_PICK, MAX_SEASONS,
   PICKS_PER_ROUND, ROUNDS, QB_RUSHING_RECORD, careerLength, careerPath, careerStats,
-  collegeFor, collegeTier, draftSlot, positionalNeed,
+  collegeFor, collegeTier, draftSlot, earliestDraftPick, positionalNeed,
 } from '../src/lib/career';
 import { GATES, RECORD_YARDS, computeOverall, superBowlOdds } from '../src/lib/scoring';
 import { draftLine, emptyCaseLine, missedBecause, recordMissLine, ringMissLine } from '../src/lib/narrative';
@@ -229,11 +229,7 @@ for (const position of positions) {
     earlier.map((p) => Math.round(p)).join(' -> '),
   );
 
-  /**
-   * THE PART THAT IS ACTUALLY WORTH CHECKING. A draft where the board is always right is
-   * not a draft, and it is what you get for free from any sane looking model, so it has
-   * to be asserted against from both ends.
-   */
+  /** Great players still need a downward tail, even though lower tiers now have floors. */
   const elite = at(96);
   const slid = elite.filter((s) => s.undrafted || s.round > 1).length / elite.length;
   check(
@@ -243,11 +239,10 @@ for (const position of positions) {
   );
 
   const journeyman = at(76);
-  const reached = journeyman.filter((s) => !s.undrafted && s.round === 1).length / journeyman.length;
   check(
-    `${position} teams still reach on the wrong ones`,
-    reached > 0.01 && reached < 0.35,
-    `${(reached * 100).toFixed(0)}% of 76 overall players went in round one`,
+    `${position} lower-tier prospects never jump their draft floor`,
+    journeyman.every((s) => s.undrafted || s.overallPick >= earliestDraftPick(76)),
+    `every drafted 76 overall went at pick ${earliestDraftPick(76)} or later`,
   );
 }
 
@@ -278,6 +273,11 @@ if (positions.includes('QB') && positions.includes('RB')) {
   check('low-end prospects are guaranteed UDFAs',
     guaranteedUdfas.every((slot) => slot.undrafted),
     `${guaranteedUdfas.length} of ${guaranteedUdfas.length} set cases went undrafted`);
+
+  const hailMary = draftSlot('QB', 83, 'HAILMARY-8ENB');
+  check('HAILMARY-8ENB cannot turn an 83 overall into a top-three pick',
+    hailMary.undrafted || hailMary.overallPick >= earliestDraftPick(83),
+    hailMary.undrafted ? 'the player went undrafted' : `the player went ${hailMary.overallPick}th overall`);
 
   const sample = { undrafted: false, round: 1, pick: 12, overallPick: 12, college: 'Georgia' };
   const udfa = { undrafted: true, round: 0, pick: 0, overallPick: 0, college: 'Toledo' };

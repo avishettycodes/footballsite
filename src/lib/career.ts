@@ -290,10 +290,10 @@ const DRAFT_LIFT: Record<Position, number> = { QB: 6, RB: -5, WR: 0, TE: -3 };
  * THE DRAFT IS A GUESS, AND IT IS A BAD ONE. That is the entire model here.
  *
  * The obvious version of this maps overall straight onto a pick number, and it produces
- * a league where every great player went in the top five and every bust went late. No
- * draft has ever looked like that. Tom Brady went 199th, Kurt Warner was stocking
- * shelves, and Ryan Leaf went second. What teams are actually drafting is their estimate
- * of a career that has not happened yet, so what sets the slot is the ESTIMATE.
+ * a league where every great player went in the top five. No draft has ever looked like
+ * that. Tom Brady went 199th and Kurt Warner was stocking shelves. What teams are
+ * actually drafting is their estimate of a career that has not happened yet, so what
+ * sets the slot is the ESTIMATE.
  *
  * The scale below is the part that took two attempts, and the failure is worth keeping
  * because it is invisible from the inside. The first version squashed the estimate onto
@@ -301,13 +301,15 @@ const DRAFT_LIFT: Record<Position, number> = { QB: 6, RB: -5, WR: 0, TE: -3 };
  * players came out pinned at the top of it, so 99% of them went in the first round and
  * exactly nobody slid. Meanwhile half of the 76 overall players were going in the first
  * round too, because the same squashing pushed the middle of the range up against the
- * top. It looked fine. It was a draft with no tail at either end.
+ * top. It looked fine until an 83 went third overall.
  *
  * This one is an exponential on the estimate with no ceiling in it, anchored on two
  * points a person can argue with: an estimate of 97 goes tenth, and every six or so
  * points below that roughly doubles the wait. Around 30% of the great ones now go after
  * round one, which is about the real rate, and it is not a special case anybody wrote.
- * It falls out of the guess being wrong.
+ * It falls out of the guess being wrong. The quality floor below only closes the other
+ * tail: an average player can still be drafted or go undrafted, but he cannot be treated
+ * like one of the three cleanest prospects in the class.
  */
 const ANCHOR_ESTIMATE = 97;
 const ANCHOR_PICK = 10;
@@ -317,6 +319,19 @@ const ESTIMATE_NOISE = 63;
 
 /** At this level the player is a UDFA in every seed, rather than a lucky first-rounder. */
 export const GUARANTEED_UDFA_MAX_OVERALL = 72;
+
+/**
+ * Earliest believable selection for each quality tier. Scouting noise may push anybody
+ * later, including all the way to UDFA, but it cannot pull an average career into the
+ * top of round one. These boundaries mirror the college tiers closely enough that the
+ * two lines on the report tell the same prospect story.
+ */
+export function earliestDraftPick(overall: number): number {
+  if (overall >= 93) return 1;
+  if (overall >= 87) return 10;
+  if (overall >= 78) return PICKS_PER_ROUND + 1;
+  return PICKS_PER_ROUND * 3 + 1;
+}
 
 export function draftSlot(position: Position, overall: number, seed: string): DraftSlot {
   const roll = stream(seed, 'DRAFT');
@@ -334,7 +349,11 @@ export function draftSlot(position: Position, overall: number, seed: string): Dr
     return { undrafted: true, round: 0, pick: 0, overallPick: 0, college };
   }
 
-  const at = Math.max(1, overallPick);
+  const floor = earliestDraftPick(overall);
+  // Remap rather than clamp so a run does not pile up exactly on the first legal pick.
+  const at = Math.max(floor, Math.round(
+    floor + (Math.max(1, overallPick) - 1) * ((LAST_PICK - floor) / (LAST_PICK - 1)),
+  ));
   return {
     undrafted: false,
     round: Math.ceil(at / PICKS_PER_ROUND),
