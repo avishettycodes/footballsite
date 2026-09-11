@@ -321,11 +321,8 @@ export default function App() {
             <div className="sticky top-20">
               <BuildSheet
                 position={g.position}
-                era={g.era}
                 slots={g.slots}
                 highlight={hover}
-                usedPlayerIds={g.usedPlayerIds}
-                blind={g.hardMode}
               />
             </div>
           </aside>
@@ -342,11 +339,8 @@ export default function App() {
               <div className="mt-2">
                 <BuildSheet
                   position={g.position}
-                  era={g.era}
                   slots={g.slots}
                   highlight={hover}
-                  usedPlayerIds={g.usedPlayerIds}
-                  blind={g.hardMode}
                 />
               </div>
             )}
