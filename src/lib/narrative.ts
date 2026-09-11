@@ -60,7 +60,7 @@ export function draftLine(
   team: Team | null,
   story: CareerPath['draftStory'] = null,
 ): string {
-  const who = team ? team.city : 'Somebody';
+  const who = team ? `${team.city} ${team.name}` : 'Somebody';
   let line: string;
   if (draft.undrafted) {
     line = `Nobody drafted him. ${who} signed him for nothing and found out later.`;
@@ -174,7 +174,8 @@ export function recordMissLine(position: Position, careerYards: number, run: Run
   const short = gate - careerYards;
   if (short <= gate * 0.05) return 'He finished just short of it.';
 
-  const projected = (careerYards / Math.max(1, run.seasons)) * run.expected;
+  const pace = careerYards / Math.max(1, run.seasons);
+  const projected = pace * run.expected;
   if (projected >= gate) {
     return run.cutShort
       ? 'He was on pace for it until his career ended.'
@@ -184,7 +185,12 @@ export function recordMissLine(position: Position, careerYards: number, run: Run
     return 'A full career at that rate and he would have been close.';
   }
 
-  if (short <= gate * 0.25) return 'A couple more healthy years and he would have had it.';
+  if (short <= gate * 0.25 && pace > 0) {
+    const seasonsNeeded = Math.ceil(short / pace);
+    return seasonsNeeded === 1
+      ? 'One more season at that pace and he would have had it.'
+      : `${seasonsNeeded} more seasons at that pace and he would have had it.`;
+  }
   return 'He never produced at the rate that record needs.';
 }
 

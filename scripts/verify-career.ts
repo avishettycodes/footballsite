@@ -269,6 +269,9 @@ if (positions.includes('QB') && positions.includes('RB')) {
   check('a succession exception is visible in the draft story',
     draftLine(sample, team, 'succession-plan').includes('succession plan'),
     'the result names the plan behind the crowded room');
+  check('the draft story names the franchise unambiguously',
+    !team || draftLine(sample, team).startsWith(`${team.city} ${team.name}`),
+    'the result uses the city and team name');
 }
 
 // ---------------------------------------------------------------------------

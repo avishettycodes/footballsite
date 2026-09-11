@@ -574,8 +574,8 @@ export function ResultsScreen({
               )}
             </p>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
-              <span>AVERAGE OF THE {keys.length} <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
-              <span>WORST TWO <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
+              <span>WEIGHTED SCORE <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
+              <span>WEAK-LINK SCORE <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
               {career.breakdown.leaguePerfect && (
                 <span className="text-hazard">PERFECT ACTIVE-LEAGUE TIERS <b className="text-hazard">99</b></span>
               )}
@@ -736,8 +736,8 @@ export function ResultsScreen({
 
       {stage === 'done' && (
         <p className="mt-4 text-center font-mono text-[10px] leading-relaxed text-white/35">
-          The seed replays this exact run, spin for spin, right down to the draft slot and
-          the year his knee went. Send it to somebody and they face the identical wheel.
+          Send this seed to somebody and they can take on the same challenge. Their picks
+          decide the player they build and the career that follows.
         </p>
       )}
 

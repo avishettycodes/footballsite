@@ -93,9 +93,11 @@ export default function App() {
                 {g.hardMode && (
                   <span className="rounded bg-red-500/20 px-2 py-1 font-bold text-red-400">HARD</span>
                 )}
-                <span className="rounded bg-white/8 px-2 py-1 text-white/60">
-                  {g.rerollsLeft} REROLL{g.rerollsLeft === 1 ? '' : 'S'}
-                </span>
+                {g.phase !== 'results' && (
+                  <span className="rounded bg-white/8 px-2 py-1 text-white/60">
+                    {g.rerollsLeft} REROLL{g.rerollsLeft === 1 ? '' : 'S'}
+                  </span>
+                )}
               </>
             )}
             {/* Short on purpose. At full length it took a whole extra row of a phone header. */}
@@ -115,7 +117,7 @@ export default function App() {
               One button changing its caution with the stakes is clearer than two buttons
               that both delete the same run.
             */}
-            {inRun && (
+            {inRun && g.phase !== 'results' && (
               <button
                 onClick={quitRun}
                 title="Walk away from this run"
