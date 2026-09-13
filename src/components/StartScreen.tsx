@@ -147,9 +147,13 @@ export function StartScreen({
       </button>
 
       {era === 'current' && (
-        <p className="mt-3 font-mono text-[11px] text-white/45">
-          Current players use a fixed 2026 Week 1 roster and ratings snapshot.
-        </p>
+        <div className="mt-3 rounded-lg border border-sky-400/20 bg-sky-400/6 px-3 py-2.5">
+          <p className="font-mono text-[11px] leading-relaxed text-white/55">
+            Current uses a fixed 2026 Week 1 roster and Madden ratings snapshot. A 99
+            means the best Madden-derived rating at that position, not necessarily a
+            literal 99 in Madden. Active rookies qualify and exact ties share 99.
+          </p>
+        </div>
       )}
 
       <h2 className="mt-8 font-display text-2xl tracking-tight uppercase">2 · Pick your position</h2>

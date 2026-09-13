@@ -264,6 +264,33 @@ for (const file of screens()) {
   }
 }
 
+/**
+ * CURRENT 99 HAS TO EXPLAIN ITSELF ON THE SCREEN WHERE THE LEAGUE IS PICKED.
+ *
+ * Madden can call the fastest tight end a 91 while this game calls him 99 because these
+ * cards are position-relative. Leaving that distinction in the README made the public
+ * number look invented. Rookie eligibility and ties caused the same confusion, so keep
+ * all three rules next to the Current switch and fail the build if they disappear.
+ */
+const currentRules: Problem[] = [];
+const startScreen = readFileSync('src/components/StartScreen.tsx', 'utf8');
+for (const [rule, pattern] of [
+  [
+    'a Current 99 is the best Madden-derived rating at the position',
+    /best Madden-derived rating at that position/i,
+  ],
+  [
+    'a Current 99 need not be a literal Madden 99',
+    /not necessarily a\s+literal 99 in Madden/i,
+  ],
+  ['active rookies qualify', /active rookies qualify/i],
+  ['exact ties share 99', /exact ties share 99/i],
+] as const) {
+  if (!pattern.test(startScreen)) {
+    currentRules.push({ where: 'src/components/StartScreen.tsx', what: `missing rule: ${rule}` });
+  }
+}
+
 function report(title: string, hint: string, items: Problem[]): boolean {
   if (!items.length) return false;
   console.log(`\n${title} (${items.length})`);
@@ -283,6 +310,7 @@ const failed = [
   report('duplicate blurbs', 'every player needs his own line', dupes),
   report('near-duplicate blurbs', 'these two are making the same joke, rewrite one', nearDupes),
   report('the old name on a screen', 'the game is called Build a 99 now', oldName),
+  report('missing Current rating rules', 'explain Current 99s beside the league switch', currentRules),
 ].some(Boolean);
 
 if (failed) process.exit(1);
