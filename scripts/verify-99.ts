@@ -221,6 +221,15 @@ for (const era of ERAS) {
       continue;
     }
 
+    for (const key of ATTRIBUTE_SETS[position]) {
+      const player = path[key]!;
+      if (player.attributes[key] !== 99) {
+        failures.push(
+          `${era} ${position} reaches a rounded 99 without a literal 99 card at ${key}`,
+        );
+      }
+    }
+
     const chance0 = optimalChance(position, era, 0);
     const chance2 = optimalChance(position, era, NORMAL_REROLLS);
     if (!(chance0 > 0)) failures.push(`${era} ${position} has zero exact chance with no rerolls`);

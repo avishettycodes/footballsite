@@ -23,12 +23,12 @@ const POOLS: Record<string, Row[]> = {
     ['now-atl-strand', 'Jack Strand', '2026–', 'Small school arm who spent the summer taking the last reps of every practice.', 88, 79, 83, 75, 82, 60, 70],
   ],
   bal: [
-    ['now-bal-lamar', 'Lamar Jackson', '2018–', 'Nobody has ever run this position like him, and now he throws it better too.', 93, 93, 90, 99, 99, 99, 95],
+    ['now-bal-lamar', 'Lamar Jackson', '2018–', 'Nobody has ever run this position like him, and now he throws it better too.', 93, 93, 90, 99, 98, 97, 95],
     ['now-bal-huntley', 'Tyler Huntley', '2020–', 'Made a Pro Bowl as an alternate without throwing a touchdown that season.', 86, 82, 81, 81, 89, 73, 78],
     ['now-bal-fagnano', 'Joe Fagnano', '2025–', 'Threw for 9,000 yards at Maine and Connecticut, which nobody was watching.', 86, 78, 81, 71, 83, 66, 72],
   ],
   buf: [
-    ['now-buf-allen', 'Josh Allen', '2018–', 'An MVP built like a tight end who has never once considered sliding.', 99, 94, 99, 99, 90, 99, 99],
+    ['now-buf-allen', 'Josh Allen', '2018–', 'An MVP built like a tight end who has never once considered sliding.', 98, 94, 99, 97, 90, 98, 97],
     ['now-buf-kallen', 'Kyle Allen', '2023–', 'Started 22 games for three bad teams and lost eighteen of them.', 84, 80, 81, 68, 79, 69, 73],
   ],
   car: [
@@ -37,12 +37,12 @@ const POOLS: Record<string, Row[]> = {
     ['now-car-king', 'Haynes King', '2026–', 'Played six college seasons, rebuilt both knees, and stayed mobile enough to keep a roster spot.', 87, 82, 83, 75, 93, 61, 71],
   ],
   chi: [
-    ['now-chi-caleb', 'Caleb Williams', '2024–', 'Paints his nails before games and throws ropes off his back foot when it breaks down.', 99, 86, 96, 99, 95, 86, 89],
+    ['now-chi-caleb', 'Caleb Williams', '2024–', 'Paints his nails before games and throws ropes off his back foot when it breaks down.', 99, 86, 96, 94, 95, 86, 89],
     ['now-chi-bagent', 'Tyson Bagent', '2023–', 'Came out of Division II, and his father wrestles arms for a living.', 86, 77, 79, 71, 86, 69, 75],
     ['now-chi-keenum', 'Case Keenum', '2025–', 'Has started for seven franchises and won a playoff game on a miracle.', 85, 80, 82, 79, 75, 72, 73],
   ],
   cin: [
-    ['now-cin-burrow', 'Joe Burrow', '2020–', 'Puts it on the numbers from 40 yards while a defensive end lands on him.', 88, 99, 95, 99, 86, 99, 99],
+    ['now-cin-burrow', 'Joe Burrow', '2020–', 'Puts it on the numbers from 40 yards while a defensive end lands on him.', 88, 99, 95, 97, 86, 95, 98],
     ['now-cin-flacco', 'Joe Flacco', '2026–', 'Won a Super Bowl MVP thirteen years ago and is still standing in there at 41.', 89, 85, 86, 61, 71, 79, 83],
   ],
   cle: [
@@ -60,7 +60,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-den-ehlinger', 'Sam Ehlinger', '2025–', 'Runs like a fullback and throws like a man who should stick to running.', 83, 74, 78, 72, 83, 66, 71],
   ],
   det: [
-    ['now-det-goff', 'Jared Goff', '2021–', 'Throws the prettiest ball in the sport from inside a perfectly clean pocket.', 90, 99, 87, 82, 77, 94, 90],
+    ['now-det-goff', 'Jared Goff', '2021–', 'Throws the prettiest ball in the sport from inside a perfectly clean pocket.', 90, 96, 87, 82, 77, 94, 90],
     ['now-det-dobbs', 'Joshua Dobbs', '2026–', 'An aerospace engineer who keeps getting hired to learn playbooks fast.', 85, 82, 83, 81, 87, 71, 75],
   ],
   gb: [
@@ -73,7 +73,7 @@ const POOLS: Record<string, Row[]> = {
   ],
   ind: [
     ['now-ind-djones', 'Daniel Jones', '2025–', 'Danny Dimes got run out of New York and is winning games in blue again.', 87, 89, 86, 83, 87, 83, 88],
-    ['now-ind-richardson', 'Anthony Richardson', '2023–', 'Ran for 200 yards in a game and completed 47 percent in the same month.', 99, 78, 86, 81, 95, 69, 72],
+    ['now-ind-richardson', 'Anthony Richardson', '2023–', 'Ran for 200 yards in a game and completed 47 percent in the same month.', 96, 78, 86, 81, 95, 69, 72],
     ['now-ind-leonard', 'Riley Leonard', '2025–', 'Ran Notre Dame to a title game on his legs and a lot of nerve.', 89, 80, 84, 77, 88, 73, 73],
   ],
   jax: [
@@ -81,7 +81,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-jax-ewers', 'Quinn Ewers', '2026–', 'Was the number one recruit in America before he had a driving licence.', 86, 80, 81, 68, 79, 77, 77],
   ],
   kc: [
-    ['now-kc-mahomes', 'Patrick Mahomes', '2017–', 'Has won three rings before turning 30 and finds something when the play is dead.', 99, 92, 93, 93, 90, 99, 99],
+    ['now-kc-mahomes', 'Patrick Mahomes', '2017–', 'Has won three rings before turning 30 and finds something when the play is dead.', 97, 92, 93, 93, 90, 98, 99],
     ['now-kc-fields', 'Justin Fields', '2026–', 'Still the fastest quarterback alive and still nobody knows where the ball is going.', 91, 82, 86, 81, 99, 66, 72],
     ['now-kc-nussmeier', 'Garrett Nussmeier', '2026–', 'His father coached quarterbacks for twenty years and you can see it in the feet.', 88, 80, 83, 72, 79, 70, 78],
   ],
@@ -91,16 +91,16 @@ const POOLS: Record<string, Row[]> = {
     ['now-lv-oconnell', 'Aidan O\'Connell', '2023–', 'A fourth round pick from Purdue who keeps being the answer nobody wanted.', 86, 82, 83, 70, 79, 75, 78],
   ],
   lac: [
-    ['now-lac-herbert', 'Justin Herbert', '2020–', 'Six foot six with a cannon, and he threw for 400 with broken rib cartilage.', 99, 92, 93, 88, 86, 93, 92],
+    ['now-lac-herbert', 'Justin Herbert', '2020–', 'Six foot six with a cannon, and he threw for 400 with broken rib cartilage.', 96, 92, 93, 88, 86, 93, 92],
     ['now-lac-lance', 'Trey Lance', '2025–', 'Fourth franchise before his 26th birthday, and the arm still looks the part.', 91, 79, 85, 77, 92, 58, 65],
   ],
   lar: [
-    ['now-lar-stafford', 'Matthew Stafford', '2021–', 'Fires it into windows nobody else sees and won a ring at 34 doing it.', 95, 99, 99, 81, 75, 99, 95],
+    ['now-lar-stafford', 'Matthew Stafford', '2021–', 'Fires it into windows nobody else sees and won a ring at 34 doing it.', 95, 98, 98, 81, 75, 99, 95],
     ['now-lar-bennett', 'Stetson Bennett', '2023–', 'Won two national titles as a walk on and then vanished for a whole season.', 87, 79, 82, 72, 90, 74, 76],
     ['now-lar-simpson', 'Ty Simpson', '2026–', 'Waited three years behind two starters at Alabama and then looked ready.', 90, 84, 86, 82, 86, 78, 81],
   ],
   mia: [
-    ['now-mia-willis', 'Malik Willis', '2026–', 'Won two starts nobody expected in Green Bay and got handed a job for it.', 93, 80, 86, 82, 99, 78, 82],
+    ['now-mia-willis', 'Malik Willis', '2026–', 'Won two starts nobody expected in Green Bay and got handed a job for it.', 93, 80, 86, 82, 96, 78, 82],
     ['now-mia-mccord', 'Kyle McCord', '2026–', 'Threw for 4,779 yards at Syracuse and slid to the sixth round for it.', 87, 80, 84, 65, 78, 76, 79],
     ['now-mia-cook', 'Brady Cook', '2026–', 'Played a whole season at Missouri on a shoulder nobody thought would hold.', 88, 78, 82, 72, 89, 66, 70],
   ],
@@ -145,9 +145,9 @@ const POOLS: Record<string, Row[]> = {
     ['now-sf-rourke', 'Kurtis Rourke', '2026–', 'Played a whole season at Indiana on a torn knee and told almost nobody.', 90, 78, 83, 67, 78, 72, 73],
   ],
   sea: [
-    ['now-sea-darnold', 'Sam Darnold', '2025–', 'Fifth franchise, and he finally landed somewhere that wanted him to be himself.', 91, 92, 99, 83, 83, 85, 89],
+    ['now-sea-darnold', 'Sam Darnold', '2025–', 'Fifth franchise, and he finally landed somewhere that wanted him to be himself.', 91, 92, 97, 83, 83, 85, 89],
     ['now-sea-lock', 'Drew Lock', '2023–', 'Won a Sunday night game in relief and it was the highlight of his career.', 89, 81, 83, 72, 85, 73, 79],
-    ['now-sea-milroe', 'Jalen Milroe', '2025–', 'The fastest man in the draft played quarterback, and they took him anyway.', 92, 76, 86, 76, 99, 65, 71],
+    ['now-sea-milroe', 'Jalen Milroe', '2025–', 'The fastest man in the draft played quarterback, and they took him anyway.', 92, 76, 86, 76, 96, 65, 71],
   ],
   tb: [
     ['now-tb-mayfield', 'Baker Mayfield', '2023–', 'Nobody wanted him at all in 2023 and he throws for 4,000 yards a season now.', 95, 88, 92, 86, 87, 88, 90],

@@ -10,6 +10,7 @@ import type { AttributeKey, Player, Position } from '../src/data/types';
 import { computeOverall } from '../src/lib/scoring';
 import {
   calculateCurrentRatings,
+  CURRENT_99_LEADERS,
   type CurrentRatingSource,
 } from './current-rating-model';
 
@@ -113,6 +114,19 @@ for (const exclusion of fixture.explicitExclusions) {
 
 const playable99s = new Map<Position, ReturnType<typeof findPlayable99>>();
 for (const position of ['QB', 'RB', 'WR', 'TE'] as const) {
+  const leaderIds = ATTRIBUTE_SETS[position].map((key) => CURRENT_99_LEADERS[position][key]);
+  if (leaderIds.some((id) => !id) || new Set(leaderIds).size !== ATTRIBUTE_SETS[position].length) {
+    errors.push(`${position} must name seven distinct 99 leaders`);
+  }
+  for (const key of ATTRIBUTE_SETS[position]) {
+    const rated99 = players.filter(
+      (player) => player.position === position && player.attributes[key] === 99,
+    );
+    if (rated99.length !== 1 || rated99[0]?.id !== CURRENT_99_LEADERS[position][key]) {
+      errors.push(`${position} ${key} must have exactly its named league leader at 99`);
+    }
+  }
+
   const path = findPlayable99(position);
   playable99s.set(position, path);
   if (!path) errors.push(`${position} has no legal unique-player path to a 99 overall`);

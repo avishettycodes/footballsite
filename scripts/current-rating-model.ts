@@ -4,15 +4,18 @@ import type { AttributeKey, Player, Position } from '../src/data/types';
 /**
  * Current-mode ratings model, frozen for the 2026 Week 1 refresh.
  *
- * Madden supplies every ordering. Composite traits average the skills named below and
- * are translated onto the game's scale with 50 held as the neutral point. Direct traits
- * retain their Madden number except at the very top: the best three distinct source
- * tiers at QB and the best two everywhere else are the position's true 99 tier.
+ * Madden supplies the baseline ordering. Composite traits average the skills named below
+ * and are translated onto the game's scale with 50 held as the neutral point. Direct
+ * traits retain their Madden number below 99. At the very top, a small explicit registry
+ * names the one player judged best in the league at each trait and only that player gets
+ * the 99.
  *
  * That last step is deliberately done here instead of in the scoring engine. A card that
  * helps build a 99 must show 99, and the same weighted/weak-link calculation must grade
- * Current and All-Time. The tier is still tiny, Madden still decides who belongs to it,
- * and `verify:99` proves the wheel makes assembling seven of them genuinely rare.
+ * Current and All-Time. The registry also guarantees seven different leaders at every
+ * position, so a real 99 is possible without letting one card fill two slots. The choices
+ * stay auditable below, and `verify:99` proves the wheel makes assembling all seven
+ * genuinely rare.
  */
 
 export type MaddenSource = {
@@ -32,6 +35,51 @@ export type CurrentRatingSource = {
   teamId: string;
   position: Position;
   madden: MaddenSource;
+};
+
+/**
+ * A 99 means BEST IN THE LEAGUE, not merely part of an elite band. These are deliberately
+ * one player per trait and seven different players per position. Madden-derived values
+ * establish the shortlist; the final choice resolves collisions where the same superstar
+ * leads several columns and keeps the game's seven-card promise physically playable.
+ */
+export const CURRENT_99_LEADERS: Record<Position, Partial<Record<AttributeKey, string>>> = {
+  QB: {
+    armStrength: 'now-chi-caleb',
+    accuracy: 'now-cin-burrow',
+    deepBall: 'now-buf-allen',
+    pocketPresence: 'now-bal-lamar',
+    mobility: 'now-kc-fields',
+    processing: 'now-lar-stafford',
+    clutch: 'now-kc-mahomes',
+  },
+  RB: {
+    speed: 'now-det-gibbs',
+    burst: 'now-jax-tuten',
+    juke: 'now-atl-bijan',
+    power: 'now-gb-jacobs',
+    vision: 'now-ind-jtaylor',
+    hands: 'now-sf-cmc',
+    size: 'now-bal-henry',
+  },
+  WR: {
+    speed: 'now-kc-worthy',
+    hands: 'now-det-brown',
+    routeRunning: 'now-sea-smithnjigba',
+    release: 'now-cin-chase',
+    contestedCatch: 'now-lar-nacua',
+    yac: 'now-dal-lamb',
+    size: 'now-sf-evans',
+  },
+  TE: {
+    hands: 'now-ari-mcbride',
+    blocking: 'now-min-oliver',
+    speed: 'now-nyj-sadiq',
+    routeRunning: 'now-lv-bowers',
+    yac: 'now-cle-fannin',
+    toughness: 'now-sf-kittle',
+    size: 'now-pit-washington',
+  },
 };
 
 const mean = (...values: number[]) =>
@@ -189,7 +237,7 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
         (source.position === 'QB' && key === 'armStrength') ||
         // RB hands is a position-relative game category, not a claim that Madden gives
         // McCaffrey literal 99 Catching. Direct physical fields stay exact below the
-        // small source-led tier that is promoted to the game's displayed 99.
+        // single league leader promoted to the game's displayed 99.
         (source.position === 'RB' && (key === 'speed' || key === 'burst')) ||
         (source.position === 'WR' && (key === 'speed' || key === 'release' || key === 'hands')) ||
         (source.position === 'TE' && (key === 'speed' || key === 'hands'))
@@ -201,27 +249,12 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
     return [source.id, attributes];
   }));
 
-  const perfectTierDepth: Record<Position, number> = { QB: 3, RB: 2, WR: 2, TE: 2 };
-  const perfectCutoffs = new Map<string, number>();
-  for (const position of ['QB', 'RB', 'WR', 'TE'] as const) {
-    for (const key of ATTRIBUTE_SETS[position]) {
-      const distinct = [...new Set(sources
-        .filter((source) => source.position === position)
-        .map((source) => scaled.get(source.id)?.[key] ?? 0))]
-        .sort((a, b) => b - a);
-      perfectCutoffs.set(
-        `${position}:${key}`,
-        distinct[Math.min(perfectTierDepth[position] - 1, distinct.length - 1)] ?? 99,
-      );
-    }
-  }
-
   return new Map(sources.map((source) => {
     const attributes = { ...scaled.get(source.id) } as Player['attributes'];
     for (const key of ATTRIBUTE_SETS[source.position]) {
-      if ((attributes[key] ?? 0) >= (perfectCutoffs.get(`${source.position}:${key}`) ?? 99)) {
-        attributes[key] = 99;
-      }
+      attributes[key] = CURRENT_99_LEADERS[source.position][key] === source.id
+        ? 99
+        : Math.min(98, attributes[key] ?? 0);
     }
     return [source.id, attributes];
   }));

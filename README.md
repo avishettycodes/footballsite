@@ -376,19 +376,20 @@ reaching back a few seasons, and reaching back put Aaron Rodgers on the Packers 
 where he plays for Pittsburgh. A mode whose entire promise is "the men on a roster now"
 cannot ship a card that says otherwise, whatever it does for the pool sizes.
 
-Direct Madden fields keep their source value below the elite tier. Categories that do not
+Direct Madden fields keep their source value below 99. Categories that do not
 exist as one Madden field use documented averages. For example, contested catch averages
 Catch in Traffic, Spectacular Catch and Jumping, then translates the result onto the
 game's shared scale with 50 held as the neutral point. Madden determines every ordering.
 
-At the very top, the best three distinct source tiers at quarterback and the best two at
-running back, receiver and tight end display as 99. That small position-relative tier is
-what makes a literal seven-99 Current build possible without inventing players or changing
-who leads a category. There is no scoring shortcut: Current and All-Time both go through
-the same weighted-mean and weak-link formula, and every qualifying card shows the number
-it contributes. The complete card formula is in `scripts/current-rating-model.ts`;
+At the very top, 99 means the player is the game's pick for best in the NFL at that trait.
+There is exactly one Current 99 per position and trait, and the seven leaders at a position
+are seven different players. That makes a literal seven-99 build possible without handing
+the same superstar two slots or calling everybody near the top perfect. There is no
+scoring shortcut: Current and All-Time both go through the same weighted-mean and weak-link
+formula, and every card shows the number it contributes. The explicit, auditable leader
+list and complete card formula are in `scripts/current-rating-model.ts`;
 `npm run verify:current` proves each position has a legal seven-player path, and
-`npm run verify:99` proves the real wheel keeps it rare.
+`npm run verify:99` calculates exactly how rare the real wheel makes it.
 
 Player ids are unique across BOTH datasets, since a run stores the ids it has spent and a
 saved player keeps them forever. Current rows carry a `now-` prefix for that reason, and
@@ -690,11 +691,10 @@ numbers rather than with a rate.
 
 ### Is a 99 overall reachable?
 
-Yes at all four positions, and Current mode now requires a genuine scoring path rather
-than a special 99 override. The source-led elite tier displays as 99 on its cards: the top
-three distinct source values for a quarterback trait and the top two for every other
-position. A perfect Current build therefore shows seven 99 picks from seven different
-players, has a raw and weighted average of 99, and reaches 99 through the ordinary overall
+Yes at all four positions, and Current mode requires a genuine scoring path rather than a
+special 99 override. Each trait has exactly one league leader rated 99, and every position's
+seven leaders are different players. A perfect Current build therefore shows seven 99
+picks, has a raw and weighted average of 99, and reaches 99 through the ordinary overall
 formula used by All-Time mode. Its weak-link score is 99 too; the scale has no hidden
 hundredth point above what the cards can show.
 

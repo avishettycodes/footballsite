@@ -15,9 +15,9 @@ export type Position = 'QB' | 'RB' | 'WR' | 'TE';
  * design. All-time is every player in a franchise's history rated against everybody who
  * has ever played the position. Current is only the active Week 1 depth chart, with
  * one-to-one traits retained from Madden and composite game categories ranked against
- * the other active players at that position. The tiny source-led elite tier for each
- * trait is the current league's displayed 99 tier, so a Current 99 uses the same scoring
- * formula as an All-Time 99 instead of receiving an override.
+ * the other active players at that position. Each trait has one explicitly audited league
+ * leader at 99, so a Current 99 uses the same scoring formula as an All-Time 99 instead of
+ * receiving an override or treating a whole tier as perfect.
  *
  * CURRENT MEANS THE DEPTH CHART AND NOTHING ELSE. Everybody in `src/data/current/` is on
  * the active 53-man roster of the franchise he is filed under. No practice squad, injured

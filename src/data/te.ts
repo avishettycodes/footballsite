@@ -227,7 +227,7 @@ const POOLS: Record<string, Row[]> = {
     ['min-wiggins', 'Jermaine Wiggins', '2004–2006', 'Caught 71 passes in a season and looked like a man who ate well.', 84, 76, 54, 74, 58, 84, 70],
   ],
   ne: [
-    ['ne-gronk', 'Rob Gronkowski', '2010–2018', 'Blocked like a tackle, caught like a receiver, spiked it through the floor.', 92, 98, 78, 88, 92, 99, 99],
+    ['ne-gronk', 'Rob Gronkowski', '2010–2018', 'Blocked like a tackle, caught like a receiver, spiked it through the floor.', 92, 99, 78, 88, 92, 99, 99],
     ['ne-coates', 'Ben Coates', '1991–1999', 'Ninety six catches in 1994, which nobody at the position had done.', 92, 84, 70, 86, 78, 90, 90],
     ['ne-rfrancis', 'Russ Francis', '1975–1988', 'All World, they called him. He also flew planes and wrestled bears.', 88, 86, 80, 82, 80, 92, 95],
     ['ne-mcook', 'Marv Cook', '1989–1993', 'Two Pro Bowls on teams that won a combined nineteen games.', 86, 78, 66, 80, 66, 82, 80],
