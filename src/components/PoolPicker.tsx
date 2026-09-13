@@ -9,8 +9,7 @@ type Selection = { player: Player; attribute: AttributeKey } | null;
 type Props = {
   position: Position;
   pool: Player[];
-  usedPlayerIds: string[];
-  slots: Partial<Record<AttributeKey, unknown>>;
+  slots: Partial<Record<AttributeKey, { playerId?: string }>>;
   onSteal: (playerId: string, attribute: AttributeKey) => void;
   onHover: (attribute: AttributeKey | null) => void;
   /**
@@ -28,7 +27,7 @@ type Props = {
   blind?: boolean;
 };
 
-export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHover, blind = false }: Props) {
+export function PoolPicker({ position, pool, slots, onSteal, onHover, blind = false }: Props) {
   const [selection, setSelection] = useState<Selection>(null);
   const keys = ATTRIBUTE_SETS[position];
 
@@ -42,7 +41,7 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
       )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {pool.map((player) => {
-          const spent = usedPlayerIds.includes(player.id);
+          const donated = keys.filter((key) => slots[key]?.playerId === player.id);
           const team = getTeam(player.teamId);
           /*
             Every card is a pitch and a punchline, and an unmarked row of seven bars is
@@ -61,11 +60,9 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
             <article
               key={player.id}
               className={`overflow-hidden rounded-lg border bg-turf-800 transition-all ${
-                spent
-                  ? 'border-white/5 opacity-40 grayscale'
-                  : selection?.player.id === player.id
-                    ? 'border-hazard shadow-[0_0_0_1px_var(--color-hazard)]'
-                    : 'border-white/10 hover:border-white/25'
+                selection?.player.id === player.id
+                  ? 'border-hazard shadow-[0_0_0_1px_var(--color-hazard)]'
+                  : 'border-white/10 hover:border-white/25'
               }`}
             >
               <div className="h-1 w-full" style={{ backgroundColor: team.primary }} />
@@ -76,9 +73,14 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
                 <span className="shrink-0 font-mono text-[10px] text-white/40">{player.years}</span>
               </div>
               <p className="px-4 pt-1 text-[12px] leading-snug text-white/55 italic">
-                {spent ? 'You already took something off him. Move on.' : player.blurb}
+                {player.blurb}
               </p>
-              {!spent && !blind && (
+              {donated.length > 0 && (
+                <p className="px-4 pt-1.5 font-mono text-[10px] tracking-wide text-sky-300">
+                  ALREADY DONATED {donated.map((key) => ATTRIBUTE_LABELS[key]).join(', ')}
+                </p>
+              )}
+              {!blind && (
                 <p className="flex flex-wrap items-center gap-x-3 px-4 pt-1.5 font-mono text-[10px] tracking-wide">
                   <span className="inline-flex items-center gap-1" style={{ color: ratingColor(bestValue) }}>
                     <CaretUp className="h-2.5 w-2.5" />
@@ -97,7 +99,7 @@ export function PoolPicker({ position, pool, usedPlayerIds, slots, onSteal, onHo
                 {keys.map((key) => {
                   const value = player.attributes[key] ?? 0;
                   const taken = Boolean(slots[key]);
-                  const disabled = spent || taken;
+                  const disabled = taken;
                   const active =
                     selection?.player.id === player.id && selection.attribute === key;
                   return (

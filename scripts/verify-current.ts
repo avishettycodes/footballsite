@@ -10,7 +10,7 @@ import type { AttributeKey, Player, Position } from '../src/data/types';
 import { computeOverall } from '../src/lib/scoring';
 import {
   calculateCurrentRatings,
-  CURRENT_99_LEADERS,
+  rawCurrentRatings,
   type CurrentRatingSource,
 } from './current-rating-model';
 
@@ -49,7 +49,6 @@ function findPlayable99(position: Position) {
   const keys = [...ATTRIBUTE_SETS[position]].sort(
     (a, b) => (candidates.get(a)?.length ?? 0) - (candidates.get(b)?.length ?? 0),
   );
-  const used = new Set<string>();
   const build: Partial<Record<AttributeKey, number>> = {};
   const picks: Partial<Record<AttributeKey, Player>> = {};
 
@@ -57,12 +56,9 @@ function findPlayable99(position: Position) {
     if (index === keys.length) return computeOverall(position, build, 'current').overall === 99;
     const key = keys[index];
     for (const player of candidates.get(key) ?? []) {
-      if (used.has(player.id)) continue;
-      used.add(player.id);
       build[key] = player.attributes[key];
       picks[key] = player;
       if (search(index + 1)) return true;
-      used.delete(player.id);
       delete build[key];
       delete picks[key];
     }
@@ -114,16 +110,22 @@ for (const exclusion of fixture.explicitExclusions) {
 
 const playable99s = new Map<Position, ReturnType<typeof findPlayable99>>();
 for (const position of ['QB', 'RB', 'WR', 'TE'] as const) {
-  const leaderIds = ATTRIBUTE_SETS[position].map((key) => CURRENT_99_LEADERS[position][key]);
-  if (leaderIds.some((id) => !id) || new Set(leaderIds).size !== ATTRIBUTE_SETS[position].length) {
-    errors.push(`${position} must name seven distinct 99 leaders`);
-  }
+  const positionSources = fixture.players.filter((source) => source.position === position);
   for (const key of ATTRIBUTE_SETS[position]) {
+    const rawValues = positionSources.map((source) => ({
+      id: source.id,
+      value: rawCurrentRatings(source.madden, position)[key],
+    }));
+    const rawMaximum = Math.max(...rawValues.map(({ value }) => value));
+    const expectedLeaderIds = rawValues
+      .filter(({ value }) => value === rawMaximum)
+      .map(({ id }) => id)
+      .sort();
     const rated99 = players.filter(
       (player) => player.position === position && player.attributes[key] === 99,
-    );
-    if (rated99.length !== 1 || rated99[0]?.id !== CURRENT_99_LEADERS[position][key]) {
-      errors.push(`${position} ${key} must have exactly its named league leader at 99`);
+    ).map((player) => player.id).sort();
+    if (rated99.join('|') !== expectedLeaderIds.join('|')) {
+      errors.push(`${position} ${key} 99s must exactly match the Madden-derived leader(s)`);
     }
   }
 

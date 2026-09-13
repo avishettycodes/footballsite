@@ -293,7 +293,7 @@ export function recordLabel(position: Position): string {
  * THE RECORD IS THE RARE ONE NOW and the Hall of Fame followed it down, which is the
  * shape this list should have had all along. Chasing a real man's career total is the
  * thing worth sending somebody a seed about. All-Pro sitting up near 90% is not a bug in
- * the gate: you built a player out of the best trait on seven different rosters, so of
+ * the gate: you built a player out of the best trait on seven roster landings, so of
  * course he is a good player. What should be rare is being the best there has ever been,
  * and that is what the bottom half of this table now measures.
  *

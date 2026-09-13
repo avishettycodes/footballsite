@@ -23,12 +23,12 @@ const POOLS: Record<string, Row[]> = {
     ['now-atl-strand', 'Jack Strand', '2026–', 'Small school arm who spent the summer taking the last reps of every practice.', 88, 79, 83, 75, 82, 60, 70],
   ],
   bal: [
-    ['now-bal-lamar', 'Lamar Jackson', '2018–', 'Nobody has ever run this position like him, and now he throws it better too.', 93, 93, 90, 99, 98, 97, 95],
+    ['now-bal-lamar', 'Lamar Jackson', '2018–', 'Nobody has ever run this position like him, and now he throws it better too.', 93, 93, 90, 99, 99, 97, 95],
     ['now-bal-huntley', 'Tyler Huntley', '2020–', 'Made a Pro Bowl as an alternate without throwing a touchdown that season.', 86, 82, 81, 81, 89, 73, 78],
     ['now-bal-fagnano', 'Joe Fagnano', '2025–', 'Threw for 9,000 yards at Maine and Connecticut, which nobody was watching.', 86, 78, 81, 71, 83, 66, 72],
   ],
   buf: [
-    ['now-buf-allen', 'Josh Allen', '2018–', 'An MVP built like a tight end who has never once considered sliding.', 98, 94, 99, 97, 90, 98, 97],
+    ['now-buf-allen', 'Josh Allen', '2018–', 'An MVP built like a tight end who has never once considered sliding.', 99, 94, 99, 97, 90, 99, 97],
     ['now-buf-kallen', 'Kyle Allen', '2023–', 'Started 22 games for three bad teams and lost eighteen of them.', 84, 80, 81, 68, 79, 69, 73],
   ],
   car: [
@@ -37,12 +37,12 @@ const POOLS: Record<string, Row[]> = {
     ['now-car-king', 'Haynes King', '2026–', 'Played six college seasons, rebuilt both knees, and stayed mobile enough to keep a roster spot.', 87, 82, 83, 75, 93, 61, 71],
   ],
   chi: [
-    ['now-chi-caleb', 'Caleb Williams', '2024–', 'Paints his nails before games and throws ropes off his back foot when it breaks down.', 99, 86, 96, 94, 95, 86, 89],
+    ['now-chi-caleb', 'Caleb Williams', '2024–', 'Paints his nails before games and throws ropes off his back foot when it breaks down.', 97, 86, 96, 94, 95, 86, 89],
     ['now-chi-bagent', 'Tyson Bagent', '2023–', 'Came out of Division II, and his father wrestles arms for a living.', 86, 77, 79, 71, 86, 69, 75],
     ['now-chi-keenum', 'Case Keenum', '2025–', 'Has started for seven franchises and won a playoff game on a miracle.', 85, 80, 82, 79, 75, 72, 73],
   ],
   cin: [
-    ['now-cin-burrow', 'Joe Burrow', '2020–', 'Puts it on the numbers from 40 yards while a defensive end lands on him.', 88, 99, 95, 97, 86, 95, 98],
+    ['now-cin-burrow', 'Joe Burrow', '2020–', 'Puts it on the numbers from 40 yards while a defensive end lands on him.', 88, 99, 95, 97, 86, 95, 99],
     ['now-cin-flacco', 'Joe Flacco', '2026–', 'Won a Super Bowl MVP thirteen years ago and is still standing in there at 41.', 89, 85, 86, 61, 71, 79, 83],
   ],
   cle: [
@@ -81,8 +81,8 @@ const POOLS: Record<string, Row[]> = {
     ['now-jax-ewers', 'Quinn Ewers', '2026–', 'Was the number one recruit in America before he had a driving licence.', 86, 80, 81, 68, 79, 77, 77],
   ],
   kc: [
-    ['now-kc-mahomes', 'Patrick Mahomes', '2017–', 'Has won three rings before turning 30 and finds something when the play is dead.', 97, 92, 93, 93, 90, 98, 99],
-    ['now-kc-fields', 'Justin Fields', '2026–', 'Still the fastest quarterback alive and still nobody knows where the ball is going.', 91, 82, 86, 81, 99, 66, 72],
+    ['now-kc-mahomes', 'Patrick Mahomes', '2017–', 'Has won three rings before turning 30 and finds something when the play is dead.', 97, 92, 93, 93, 90, 99, 96],
+    ['now-kc-fields', 'Justin Fields', '2026–', 'Still the fastest quarterback alive and still nobody knows where the ball is going.', 91, 82, 86, 81, 97, 66, 72],
     ['now-kc-nussmeier', 'Garrett Nussmeier', '2026–', 'His father coached quarterbacks for twenty years and you can see it in the feet.', 88, 80, 83, 72, 79, 70, 78],
   ],
   lv: [
@@ -95,7 +95,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-lac-lance', 'Trey Lance', '2025–', 'Fourth franchise before his 26th birthday, and the arm still looks the part.', 91, 79, 85, 77, 92, 58, 65],
   ],
   lar: [
-    ['now-lar-stafford', 'Matthew Stafford', '2021–', 'Fires it into windows nobody else sees and won a ring at 34 doing it.', 95, 98, 98, 81, 75, 99, 95],
+    ['now-lar-stafford', 'Matthew Stafford', '2021–', 'Fires it into windows nobody else sees and won a ring at 34 doing it.', 95, 98, 98, 81, 75, 97, 95],
     ['now-lar-bennett', 'Stetson Bennett', '2023–', 'Won two national titles as a walk on and then vanished for a whole season.', 87, 79, 82, 72, 90, 74, 76],
     ['now-lar-simpson', 'Ty Simpson', '2026–', 'Waited three years behind two starters at Alabama and then looked ready.', 90, 84, 86, 82, 86, 78, 81],
   ],

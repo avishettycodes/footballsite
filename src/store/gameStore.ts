@@ -95,6 +95,7 @@ export type RunState = {
   slots: Partial<Record<AttributeKey, FilledSlot>>;
   /** Pick order, for the results card narrative. */
   pickOrder: AttributeKey[];
+  /** Pick history. A player can appear more than once after repeated team landings. */
   usedPlayerIds: string[];
   visitedTeamIds: string[];
   rerollsLeft: number;
@@ -105,7 +106,7 @@ export type RunState = {
   spinNonce: number;
   /** True when the reel just put you back on a roster you have already raided. */
   repeatVisit: boolean;
-  /** Set when a spin hit an exhausted pool and the game gave the spin back. */
+  /** Short run event notice; retained in persisted state for backward compatibility. */
   lastEventMessage: string | null;
   startedAt: number;
   /** What you named your creation. */
@@ -148,7 +149,6 @@ type GameStore = RunState & {
 
   // selectors
   remainingSlots: () => AttributeKey[];
-  isPlayerUsed: (playerId: string) => boolean;
   currentPool: () => Player[];
   hasSavedRun: () => boolean;
 };
@@ -176,58 +176,25 @@ const emptyRun = (): RunState => ({
 });
 
 /**
- * DEADLOCK RULE
- * -------------
- * Two constraints can strand a run: a player may be used once, and a slot may be filled
- * once. If the reel lands on a franchise whose entire pool is already spent, there is
- * nothing legal to take and the run would be dead.
+ * REPEAT-PLAYER RULE
+ * ------------------
+ * The wheel may land on the same franchise more than once. When it does, the same player
+ * may donate another still-open trait. This is necessary for truthful league-leader data:
+ * Madden can rank one player first in several categories, and inventing a different 99
+ * merely to preserve a one-use rule would make the ratings false.
  *
- * The rule:
- *   1. If the landing franchise's pool is exhausted (every player already used), the
- *      game announces it and respins for FREE. It does not cost a reroll, and the
- *      respin is drawn from the franchises that still have somebody left, so one retry
- *      is always enough.
- *   2. Otherwise you must take something. Not liking the pool is not a deadlock, it is
- *      the game. Escaping a live pool costs a reroll, and hard mode does not give you
- *      any.
- *
- * HARD MODE USED TO CARRY HALF OF THIS AND NO LONGER DOES. It excluded already-visited
- * franchises from the reel, which meant the exhausted-pool case was nearly unreachable:
- * you could not land on the same roster twice, so you could not drain one. Repeats are
- * now allowed in every mode, on purpose, because landing on the Browns twice and having
- * to live with it is the funnier game. That puts the whole weight of the no-strand
- * guarantee on rule 1 above, so it is worth being precise about why it holds.
- *
- * The thinnest pool in the game holds 7 players and a run makes exactly 7 picks, so
- * draining one means landing on the same short roster every single spin. It is reachable
- * rather than impossible, which is the point of testing it. It still cannot strand:
- * `eligible` is every franchise with an unused player, and rule 1 redraws from that set,
- * so the only way to fail is for all 32 pools to be empty at once. That needs 200-odd
- * picks in a 7-pick run. `npm run verify:run` fuzzes every position in both modes and
- * asserts it never happens.
+ * Each landing still fills exactly one slot, and every slot can only be filled once. A
+ * repeat therefore never gives anything for free: chasing three Trey McBride traits means
+ * actually landing on Arizona three times. Every nonempty roster always has a legal pick,
+ * so repeated teams cannot deadlock a seven-pick run.
  */
-function drawTeam(state: RunState): { teamId: string | null; rngState: number; freeRespin: boolean } {
-  const { position, usedPlayerIds, era } = state;
-
-  const hasUnused = (teamId: string) =>
-    getPool(position, teamId, era).some((p) => !usedPlayerIds.includes(p.id));
-
-  // Every franchise is always in the wheel. Hard mode takes away your reroll and hides
-  // the pool's ratings, and it has never crossed teams off, so a repeat is a legal and
-  // frequently funny outcome.
-  const allowed = TEAMS.map((t) => t.id);
-  const eligible = allowed.filter(hasUnused);
-
-  if (eligible.length === 0) return { teamId: null, rngState: state.rngState, freeRespin: false };
-
-  const first = nextPick(state.rngState, allowed);
-  if (hasUnused(first.value)) {
-    return { teamId: first.value, rngState: first.state, freeRespin: false };
-  }
-
-  // Exhausted pool. Respin from franchises that still have somebody, at no cost.
-  const retry = nextPick(first.state, eligible);
-  return { teamId: retry.value, rngState: retry.state, freeRespin: true };
+function drawTeam(state: RunState): { teamId: string | null; rngState: number } {
+  const allowed = TEAMS
+    .filter((team) => getPool(state.position, team.id, state.era).length > 0)
+    .map((team) => team.id);
+  if (allowed.length === 0) return { teamId: null, rngState: state.rngState };
+  const draw = nextPick(state.rngState, allowed);
+  return { teamId: draw.value, rngState: draw.state };
 }
 
 export const useGame = create<GameStore>()(
@@ -275,11 +242,11 @@ export const useGame = create<GameStore>()(
         const state = get();
         if (state.phase !== 'ready') return;
 
-        const { teamId, rngState, freeRespin } = drawTeam(state);
+        const { teamId, rngState } = drawTeam(state);
         if (!teamId) {
           set({
             phase: 'stuck',
-            lastEventMessage: 'Every roster is picked clean, which really should not be possible. Sorry.',
+            lastEventMessage: 'No franchise has a roster for this position. Sorry.',
           });
           return;
         }
@@ -290,9 +257,7 @@ export const useGame = create<GameStore>()(
           phase: 'spinning',
           spinNonce: state.spinNonce + 1,
           repeatVisit: false,
-          lastEventMessage: freeRespin
-            ? 'Nobody was left on that roster, so you got that spin back for free.'
-            : null,
+          lastEventMessage: null,
         });
       },
 
@@ -325,7 +290,6 @@ export const useGame = create<GameStore>()(
       takeAttribute: (playerId, attribute) => {
         const state = get();
         if (state.phase !== 'picking') return;
-        if (state.usedPlayerIds.includes(playerId)) return;
         if (state.slots[attribute]) return;
 
         const player = getPool(state.position, state.currentTeamId ?? '', state.era).find((p) => p.id === playerId);
@@ -421,7 +385,6 @@ export const useGame = create<GameStore>()(
         const s = get();
         return ATTRIBUTE_SETS[s.position].filter((k) => !s.slots[k]);
       },
-      isPlayerUsed: (playerId) => get().usedPlayerIds.includes(playerId),
       currentPool: () => {
         const s = get();
         return s.currentTeamId ? getPool(s.position, s.currentTeamId, s.era) : [];

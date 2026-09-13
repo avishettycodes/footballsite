@@ -301,7 +301,7 @@ function playRun(
     if (g.phase === 'spinning') { g.landSpin(); continue; }
     if (g.phase !== 'picking') break;
 
-    const pool = getPool(g.position, g.currentTeamId!, g.era).filter((p) => !g.usedPlayerIds.includes(p.id));
+    const pool = getPool(g.position, g.currentTeamId!, g.era);
     const open = ATTRIBUTE_SETS[g.position].filter((k) => !g.slots[k]) as AttributeKey[];
     if (!pool.length || !open.length) break;
 

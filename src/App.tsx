@@ -220,7 +220,6 @@ export default function App() {
                     targetTeamId={g.currentTeamId}
                     spinNonce={g.spinNonce}
                     visitedTeamIds={g.visitedTeamIds}
-                    usedPlayerIds={g.usedPlayerIds}
                     soundOn={g.soundOn}
                     onLanded={g.landSpin}
                   />
@@ -267,7 +266,6 @@ export default function App() {
                 <PoolPicker
                   position={g.position}
                   pool={pool}
-                  usedPlayerIds={g.usedPlayerIds}
                   slots={g.slots}
                   blind={g.hardMode}
                   onSteal={(playerId, attribute) => { if (g.soundOn) lock(); g.takeAttribute(playerId, attribute); }}

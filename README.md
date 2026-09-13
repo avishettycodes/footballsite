@@ -304,7 +304,7 @@ since the receiver slope had to widen to keep that trophy telling a 95 and a 97 
 all. The thresholds themselves were not touched. They are still four real careers.
 
 All-Pro sitting near 90% is not a broken gate. You built a player out of the best trait on
-seven different rosters, so of course he is good. What should be rare is being the best
+seven roster landings, so of course he is good. What should be rare is being the best
 there has ever been, and that is the bottom half of the table: a record one run in twenty,
 a Hall of Fame call one in six, a grand slam one in thirty.
 
@@ -381,18 +381,18 @@ exist as one Madden field use documented averages. For example, contested catch 
 Catch in Traffic, Spectacular Catch and Jumping, then translates the result onto the
 game's shared scale with 50 held as the neutral point. Madden determines every ordering.
 
-At the very top, 99 means the player is the game's pick for best in the NFL at that trait.
-There is exactly one Current 99 per position and trait, and the seven leaders at a position
-are seven different players. That makes a literal seven-99 build possible without handing
-the same superstar two slots or calling everybody near the top perfect. There is no
-scoring shortcut: Current and All-Time both go through the same weighted-mean and weak-link
-formula, and every card shows the number it contributes. The explicit, auditable leader
-list and complete card formula are in `scripts/current-rating-model.ts`;
-`npm run verify:current` proves each position has a legal seven-player path, and
+At the very top, 99 means the player has the highest raw Madden-derived value in that
+position and trait. Ties remain ties, so every co-leader gets 99; nobody is promoted to
+resolve a collision. If the same real player leads several traits, the wheel must land on
+his franchise again before he can donate another one. There is no scoring shortcut:
+Current and All-Time both go through the same weighted-mean and weak-link formula, and
+every card shows the number it contributes. The complete, auditable formula is in
+`scripts/current-rating-model.ts`; `npm run verify:current` proves every Current 99 exactly
+matches a source leader and that each position has a legal seven-pick path, and
 `npm run verify:99` calculates exactly how rare the real wheel makes it.
 
-Player ids are unique across BOTH datasets, since a run stores the ids it has spent and a
-saved player keeps them forever. Current rows carry a `now-` prefix for that reason, and
+Player ids are unique across BOTH datasets, since saved builds use them to identify every
+donor. Current rows carry a `now-` prefix for that reason, and
 where two men on one roster share a surname the id carries the first name too.
 
 ### Refreshing the current pools
@@ -692,16 +692,16 @@ numbers rather than with a rate.
 ### Is a 99 overall reachable?
 
 Yes at all four positions, and Current mode requires a genuine scoring path rather than a
-special 99 override. Each trait has exactly one league leader rated 99, and every position's
-seven leaders are different players. A perfect Current build therefore shows seven 99
-picks, has a raw and weighted average of 99, and reaches 99 through the ordinary overall
-formula used by All-Time mode. Its weak-link score is 99 too; the scale has no hidden
-hundredth point above what the cards can show.
+special 99 override. Every Madden-derived trait leader (including exact ties) is rated 99.
+A perfect Current build therefore shows seven 99 picks, has a raw and weighted average of
+99, and reaches 99 through the ordinary overall formula used by All-Time mode. Its weak-link
+score is 99 too; the scale has no hidden hundredth point above what the cards can show.
 
 Reachable is not the same as common. A run must land on a qualifying room and spend the
-right pick there seven separate times without reusing a player. `npm run verify:current`
-constructs one seven-99 legal path for each position, while `npm run verify:99` calculates
-the exact odds and keeps them rare enough for a leaderboard result to mean something.
+right pick there seven separate times. When one player leads multiple traits, each trait
+requires another landing on his franchise. `npm run verify:current` constructs one seven-99
+legal path for each position, while `npm run verify:99` calculates the exact odds and keeps
+them rare enough for a leaderboard result to mean something.
 
 ## Deploying
 
@@ -741,10 +741,10 @@ contested catch and size at receiver, and on hands and route running at tight en
   seed box as the same seed, and a paste with no seed in it has to be rejected out loud
   rather than filed down into a legal seed that plays a different game.
 - **run** drives the real store through complete games and fuzzes 1500 seeds per
-  position across both difficulty modes to prove no run can strand. Because a greedy
-  player never actually drains a roster, it also forces the deadlock case on purpose,
-  marking every franchise but one as spent and asserting the free respin carries the run
-  every time. It proves the Super Bowl roll cannot be re-rolled by refreshing.
+  position across both difficulty modes to prove no run can strand. It explicitly proves
+  that a repeated franchise landing can take a different open trait from the same player,
+  which is required when one real source leader tops several categories. It also proves
+  the Super Bowl roll cannot be re-rolled by refreshing.
 - **scoring** plays thousands of games with four bot policies of increasing skill and
   asserts that every accolade gets more likely as you move up that ladder. If careless
   play ever out-earns careful play, it fails. It also reports what careers this pool

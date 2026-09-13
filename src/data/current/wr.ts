@@ -167,7 +167,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-mia-rmiller', 'Ryan Miller', '2026–', 'Went undrafted, got cut twice, and he keeps turning up on somebody\'s roster.', 88, 78, 67, 67, 80, 84, 84],
   ],
   min: [
-    ['now-min-jefferson', 'Justin Jefferson', '2020–', 'No cornerback alive has an answer, and every one of them has tried.', 91, 91, 96, 94, 98, 98, 73],
+    ['now-min-jefferson', 'Justin Jefferson', '2020–', 'No cornerback alive has an answer, and every one of them has tried.', 91, 91, 96, 94, 99, 98, 73],
     ['now-min-felton', 'Tai Felton', '2025–', 'Was Maryland\'s leading receiver and has been thrown to twice so far.', 93, 81, 73, 70, 83, 86, 68],
     ['now-min-addison', 'Jordan Addison', '2023–', 'Runs the cleanest deep route in the league and weighs about 170 pounds.', 90, 89, 87, 74, 88, 91, 59],
     ['now-min-jennings', 'Jauan Jennings', '2026–', 'Blocks like a lineman and catches everything on a team that needed both.', 88, 87, 80, 81, 92, 84, 87],
@@ -218,7 +218,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-pit-wetjen', 'Kaden Wetjen', '2026–', 'Returned kicks at Iowa, and that is exactly what he does here.', 90, 77, 65, 66, 79, 86, 64],
   ],
   sf: [
-    ['now-sf-evans', 'Mike Evans', '2026–', 'Eleven straight thousand yard seasons, and he moved for the first time at 33.', 89, 93, 88, 90, 98, 87, 99],
+    ['now-sf-evans', 'Mike Evans', '2026–', 'Eleven straight thousand yard seasons, and he moved for the first time at 33.', 89, 93, 88, 90, 99, 87, 99],
     ['now-sf-robinson', 'Demarcus Robinson', '2025–', 'Ten seasons in the league and he still wins one jump ball a week.', 87, 86, 78, 77, 86, 85, 76],
     ['now-sf-samuel', 'Deebo Samuel', '2019–', 'A receiver who ran for eight touchdowns in a season, which nobody does.', 89, 82, 73, 78, 89, 94, 84],
     ['now-sf-watkins', 'Jordan Watkins', '2025–', 'Caught five touchdowns in one game at Ole Miss and nobody believed it.', 93, 84, 71, 67, 80, 79, 71],

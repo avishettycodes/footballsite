@@ -35,11 +35,10 @@ export default function DataInspector() {
   const leaders = useMemo(
     () =>
       ATTRIBUTE_SETS[position].map((key) => {
-        const best = ROSTERS[era].filter((p) => p.position === position).reduce(
-          (a, b) => ((b.attributes[key] ?? 0) > (a?.attributes[key] ?? -1) ? b : a),
-          undefined as (typeof ROSTERS)[Era][number] | undefined,
-        );
-        return { key, best, value: best?.attributes[key] ?? 0 };
+        const positionPlayers = ROSTERS[era].filter((p) => p.position === position);
+        const value = Math.max(...positionPlayers.map((player) => player.attributes[key] ?? 0));
+        const best = positionPlayers.filter((player) => player.attributes[key] === value);
+        return { key, best, value };
       }),
     [position, era],
   );
@@ -176,8 +175,8 @@ export default function DataInspector() {
             League leaders for {position}
           </h2>
           <p className="mb-3 font-mono text-[11px] text-white/40">
-            The best number anyone in the league has for each slot. A perfect build takes
-            every one of them.
+            Every player tied for the best number in a slot. A repeated team landing can
+            take another open trait from the same leader.
           </p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {leaders.map(({ key, best, value }) => (
@@ -187,7 +186,7 @@ export default function DataInspector() {
                 </div>
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-display text-base tracking-tight uppercase">
-                    {best?.name}
+                    {best.map((player) => player.name).join(' · ')}
                   </span>
                   <span
                     className="font-mono text-lg font-bold tabular-nums"
@@ -197,7 +196,7 @@ export default function DataInspector() {
                   </span>
                 </div>
                 <div className="font-mono text-[10px] text-white/35">
-                  {best ? getTeam(best.teamId).abbr : ''}
+                  {best.map((player) => getTeam(player.teamId).abbr).join(' · ')}
                 </div>
               </div>
             ))}

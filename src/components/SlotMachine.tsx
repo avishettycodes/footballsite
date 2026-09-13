@@ -36,13 +36,12 @@ type Props = {
   targetTeamId: string;
   spinNonce: number;
   visitedTeamIds: string[];
-  usedPlayerIds: string[];
   soundOn: boolean;
   onLanded: () => void;
 };
 
 export function SlotMachine({
-  position, era, targetTeamId, spinNonce, visitedTeamIds, usedPlayerIds, soundOn, onLanded,
+  position, era, targetTeamId, spinNonce, visitedTeamIds, soundOn, onLanded,
 }: Props) {
   const reelRef = useRef<HTMLDivElement>(null);
   const [reel, setReel] = useState<Team[]>([]);
@@ -135,9 +134,9 @@ export function SlotMachine({
           {reel.map((team, i) => {
             // Nothing is locked out of the wheel any more. A franchise you have already
             // raided still comes around, which is the point, so it is marked rather than
-            // greyed out. Only a genuinely empty roster is dimmed.
+            // greyed out. A repeated landing can take another open trait, even from the
+            // same player, so the roster never becomes exhausted during a run.
             const raided = visitedTeamIds.includes(team.id) && i < REEL_LEN - 1;
-            const empty = getPool(position, team.id, era).every((p) => usedPlayerIds.includes(p.id));
             /*
               The reel is the single largest block of team colour in the game and you
               stare at it for the length of every spin, so it is the worst place to have
@@ -162,7 +161,6 @@ export function SlotMachine({
                   height: ITEM_H,
                   backgroundColor: team.primary,
                   boxShadow: `inset 0 -4px 0 ${team.secondary}`,
-                  opacity: empty ? 0.32 : 1,
                 }}
               >
                 <div className="min-w-0">
@@ -176,7 +174,7 @@ export function SlotMachine({
                     className="font-mono text-[10px] tracking-[0.2em]"
                     style={{ color: ink, opacity: 0.6 }}
                   >
-                    {empty ? 'NOBODY LEFT' : raided ? 'BEEN HERE ALREADY' : `${getPool(position, team.id, era).length} ${position}`}
+                    {raided ? 'BEEN HERE ALREADY' : `${getPool(position, team.id, era).length} ${position}`}
                   </div>
                 </div>
                 <div

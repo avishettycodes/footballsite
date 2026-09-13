@@ -25,8 +25,8 @@
  *      rather than characters.
  *
  * SCOPE IS THE THING THIS FILE KEEPS GETTING WRONG. Twice now a player-facing string
- * has lived somewhere the scan did not look: the deadlock and free-respin messages sit
- * in the store, and the career summary sentences sit in a lib. Both are read out loud
+ * has lived somewhere the scan did not look: run event messages sit in the store, and
+ * the career summary sentences sit in a lib. Both are read out loud
  * to a player and neither was covered. If you write a sentence somebody will read on
  * screen, the file it lives in belongs in one of the lists below.
  */
@@ -39,11 +39,9 @@ const SCREEN_FILES = ['src/App.tsx', 'src/DataInspector.tsx', 'src/lib/narrative
 /** Only the strings players read, not the calibration commentary around them. */
 const PARTIAL_FILES: Record<string, RegExp> = {
   'src/lib/scoring.ts': /\b(label|requirement):/,
-  // The store speaks to the player twice, when a run deadlocks and when a spin comes
-  // back free. Both go straight onto the screen and neither was ever checked.
+  // The store can speak to the player when a run cannot find a roster. It goes straight
+  // onto the screen and was not always checked.
   // Any single-quoted sentence: a capital letter and enough length to be prose. The
-  // free-respin line sits on the far side of a ternary, so keying on the property name
-  // missed it entirely.
   'src/store/gameStore.ts': /'[A-Z][^']{15,}'/,
 };
 

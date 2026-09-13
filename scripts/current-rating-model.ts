@@ -6,16 +6,14 @@ import type { AttributeKey, Player, Position } from '../src/data/types';
  *
  * Madden supplies the baseline ordering. Composite traits average the skills named below
  * and are translated onto the game's scale with 50 held as the neutral point. Direct
- * traits retain their Madden number below 99. At the very top, a small explicit registry
- * names the one player judged best in the league at each trait and only that player gets
- * the 99.
+ * traits retain their Madden number below 99. At the very top, every player tied for the
+ * highest raw Madden-derived value gets 99. Nobody is promoted just to make a path work.
  *
  * That last step is deliberately done here instead of in the scoring engine. A card that
  * helps build a 99 must show 99, and the same weighted/weak-link calculation must grade
- * Current and All-Time. The registry also guarantees seven different leaders at every
- * position, so a real 99 is possible without letting one card fill two slots. The choices
- * stay auditable below, and `verify:99` proves the wheel makes assembling all seven
- * genuinely rare.
+ * Current and All-Time. When one real leader tops multiple traits, a repeated landing on
+ * his franchise can take another trait from him. `verify:99` proves that truthful path is
+ * possible and that the wheel still makes assembling all seven genuinely rare.
  */
 
 export type MaddenSource = {
@@ -35,51 +33,6 @@ export type CurrentRatingSource = {
   teamId: string;
   position: Position;
   madden: MaddenSource;
-};
-
-/**
- * A 99 means BEST IN THE LEAGUE, not merely part of an elite band. These are deliberately
- * one player per trait and seven different players per position. Madden-derived values
- * establish the shortlist; the final choice resolves collisions where the same superstar
- * leads several columns and keeps the game's seven-card promise physically playable.
- */
-export const CURRENT_99_LEADERS: Record<Position, Partial<Record<AttributeKey, string>>> = {
-  QB: {
-    armStrength: 'now-chi-caleb',
-    accuracy: 'now-cin-burrow',
-    deepBall: 'now-buf-allen',
-    pocketPresence: 'now-bal-lamar',
-    mobility: 'now-kc-fields',
-    processing: 'now-lar-stafford',
-    clutch: 'now-kc-mahomes',
-  },
-  RB: {
-    speed: 'now-det-gibbs',
-    burst: 'now-jax-tuten',
-    juke: 'now-atl-bijan',
-    power: 'now-gb-jacobs',
-    vision: 'now-ind-jtaylor',
-    hands: 'now-sf-cmc',
-    size: 'now-bal-henry',
-  },
-  WR: {
-    speed: 'now-kc-worthy',
-    hands: 'now-det-brown',
-    routeRunning: 'now-sea-smithnjigba',
-    release: 'now-cin-chase',
-    contestedCatch: 'now-lar-nacua',
-    yac: 'now-dal-lamb',
-    size: 'now-sf-evans',
-  },
-  TE: {
-    hands: 'now-ari-mcbride',
-    blocking: 'now-min-oliver',
-    speed: 'now-nyj-sadiq',
-    routeRunning: 'now-lv-bowers',
-    yac: 'now-cle-fannin',
-    toughness: 'now-sf-kittle',
-    size: 'now-pit-washington',
-  },
 };
 
 const mean = (...values: number[]) =>
@@ -237,7 +190,7 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
         (source.position === 'QB' && key === 'armStrength') ||
         // RB hands is a position-relative game category, not a claim that Madden gives
         // McCaffrey literal 99 Catching. Direct physical fields stay exact below the
-        // single league leader promoted to the game's displayed 99.
+        // actual league leader promoted to the game's displayed 99.
         (source.position === 'RB' && (key === 'speed' || key === 'burst')) ||
         (source.position === 'WR' && (key === 'speed' || key === 'release' || key === 'hands')) ||
         (source.position === 'TE' && (key === 'speed' || key === 'hands'))
@@ -252,7 +205,9 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
   return new Map(sources.map((source) => {
     const attributes = { ...scaled.get(source.id) } as Player['attributes'];
     for (const key of ATTRIBUTE_SETS[source.position]) {
-      attributes[key] = CURRENT_99_LEADERS[source.position][key] === source.id
+      const rawValue = raw.get(source.id)?.[key] ?? 0;
+      const maximum = maxima.get(`${source.position}:${key}`) ?? 99;
+      attributes[key] = rawValue === maximum
         ? 99
         : Math.min(98, attributes[key] ?? 0);
     }
