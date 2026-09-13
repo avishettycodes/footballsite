@@ -11,10 +11,12 @@
  * then the position has a bar it cannot clear and this project calls that a bug wearing a
  * difficulty costume.
  *
- * The second came from the same conversation: is a 99 overall possible at all, given that
- * no tight end in the current league runs a 99. It is a sharper question than it looks,
- * because the overall is half weighted mean and half weak link anchor, so the ceiling is
- * set by the WORST slot the league can fill rather than by the best.
+ * The second came from the same conversation: is a 99 overall possible at all when a
+ * position's source data does not hand every trait a literal 99. It is a sharper question
+ * than it looks, because the overall is half weighted mean and half weak link anchor, so
+ * the ceiling is set by the WORST slot the league can fill rather than by the best. Current
+ * mode now answers it in the card model: its tiny source-led elite tiers display as 99,
+ * and the ordinary scoring formula still has to grade the finished build.
  *
  * WHAT PERFECT MEANS HERE. The ceiling build takes the highest number in the league at
  * every slot. It ignores the two constraints a real run plays under, that a player can be

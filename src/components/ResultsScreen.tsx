@@ -576,9 +576,6 @@ export function ResultsScreen({
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[10px] text-white/45">
               <span>WEIGHTED SCORE <b className="text-white/75">{career.breakdown.weightedMean}</b></span>
               <span>WEAK-LINK SCORE <b className="text-white/75">{career.breakdown.weakAnchor}</b></span>
-              {career.breakdown.leaguePerfect && (
-                <span className="text-hazard">PERFECT ACTIVE-LEAGUE TIERS <b className="text-hazard">99</b></span>
-              )}
               {/* The bar is the league's own, so this label has to read it rather than the
                   constant. Printing 97+ over a count taken at 96 is the same report
                   contradicting itself this screen keeps getting caught doing. */}

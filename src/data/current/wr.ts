@@ -58,7 +58,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-chi-zthomas', 'Zavion Thomas', '2026–', 'Returned punts at LSU, and that is still the whole of the job here.', 96, 81, 70, 73, 81, 90, 66],
   ],
   cin: [
-    ['now-cin-chase', 'Ja\'Marr Chase', '2021–', 'Won the triple crown, and he has never once lost to a cornerback he knows.', 96, 98, 98, 99, 98, 98, 78],
+    ['now-cin-chase', 'Ja\'Marr Chase', '2021–', 'Won the triple crown, and he has never once lost to a cornerback he knows.', 96, 99, 99, 99, 99, 99, 78],
     ['now-cin-higgins', 'Tee Higgins', '2020–', 'Would be the best man on almost any other roster in the league.', 90, 97, 83, 90, 96, 85, 91],
     ['now-cin-iosivas', 'Andrei Iosivas', '2023–', 'Was a decathlete at Princeton and scored nine touchdowns anyway.', 92, 82, 76, 66, 84, 85, 84],
     ['now-cin-cyoung', 'Colbie Young', '2025–', 'Six foot four out of Georgia, and he plays every snap like a power forward.', 89, 79, 75, 74, 84, 84, 91],
@@ -74,7 +74,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-cle-concepcion', 'KC Concepcion', '2026–', 'Was the best freshman in the ACC and then went to the SEC for money.', 91, 76, 79, 78, 84, 90, 71],
   ],
   dal: [
-    ['now-dal-pickens', 'George Pickens', '2025–', 'Makes a catch every week that nobody else in the sport could make.', 91, 92, 87, 83, 98, 91, 79],
+    ['now-dal-pickens', 'George Pickens', '2025–', 'Makes a catch every week that nobody else in the sport could make.', 91, 92, 87, 83, 99, 91, 79],
     ['now-dal-cbrown', 'Camden Brown', '2026–', 'A big Auburn target who made the roster by winning contested catches all summer.', 88, 83, 70, 71, 85, 82, 79],
     ['now-dal-lamb', 'CeeDee Lamb', '2020–', 'Caught 135 passes in a season and does whatever he likes after the catch.', 89, 88, 95, 97, 97, 99, 79],
     ['now-dal-mingo', 'Jonathan Mingo', '2025–', 'Carolina spent a second round pick on him and got a fourth back two years later.', 90, 80, 77, 74, 85, 80, 87],
@@ -92,7 +92,7 @@ const POOLS: Record<string, Row[]> = {
   det: [
     ['now-det-teslaa', 'Isaac TeSlaa', '2025–', 'Third round pick out of Arkansas who was a walk on at Hillsdale first.', 91, 83, 73, 72, 89, 82, 87],
     ['now-det-tmartin', 'Tay Martin', '2026–', 'After bouncing through five practice squads, he finally claimed an active roster spot.', 89, 78, 70, 72, 81, 83, 71],
-    ['now-det-williams', 'Jameson Williams', '2022–', 'Twelfth overall pick with 4.3 speed who took three years to be trusted.', 98, 82, 84, 75, 81, 94, 69],
+    ['now-det-williams', 'Jameson Williams', '2022–', 'Twelfth overall pick with 4.3 speed who took three years to be trusted.', 99, 82, 84, 75, 81, 94, 69],
     ['now-det-brown', 'Amon-Ra St. Brown', '2021–', 'Fourth round pick who catches 115 passes a year out of the slot.', 90, 99, 96, 89, 93, 92, 76],
   ],
   gb: [
@@ -152,7 +152,7 @@ const POOLS: Record<string, Row[]> = {
   lar: [
     ['now-lar-adams', 'Davante Adams', '2025–', 'Thirty two years old and still the best release anybody has seen.', 89, 88, 91, 96, 95, 96, 77],
     ['now-lar-mumpfield', 'Konata Mumpfield', '2025–', 'Fifth round rookie out of Pittsburgh with the surest hands on the roster.', 86, 83, 76, 74, 82, 83, 66],
-    ['now-lar-nacua', 'Puka Nacua', '2023–', 'Broke the rookie receiving record as an afterthought on day three.', 93, 98, 96, 92, 99, 97, 84],
+    ['now-lar-nacua', 'Puka Nacua', '2023–', 'Broke the rookie receiving record as an afterthought on day three.', 93, 99, 96, 92, 99, 97, 84],
     ['now-lar-atwell', 'Tutu Atwell', '2021–', 'Weighs 165 pounds and they spent a second round pick on him anyway.', 93, 83, 78, 59, 81, 85, 49],
     ['now-lar-cjdaniels', 'CJ Daniels', '2026–', 'Played for three schools and caught touchdowns at every one of them.', 87, 82, 69, 70, 81, 83, 77],
     ['now-lar-whittington', 'Jordan Whittington', '2024–', 'Blocks like an extra lineman and catches enough to stay on the field.', 89, 86, 73, 71, 81, 85, 78],
@@ -167,7 +167,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-mia-rmiller', 'Ryan Miller', '2026–', 'Went undrafted, got cut twice, and he keeps turning up on somebody\'s roster.', 88, 78, 67, 67, 80, 84, 84],
   ],
   min: [
-    ['now-min-jefferson', 'Justin Jefferson', '2020–', 'No cornerback alive has an answer, and every one of them has tried.', 91, 91, 96, 94, 99, 98, 73],
+    ['now-min-jefferson', 'Justin Jefferson', '2020–', 'No cornerback alive has an answer, and every one of them has tried.', 91, 91, 96, 94, 99, 99, 73],
     ['now-min-felton', 'Tai Felton', '2025–', 'Was Maryland\'s leading receiver and has been thrown to twice so far.', 93, 81, 73, 70, 83, 86, 68],
     ['now-min-addison', 'Jordan Addison', '2023–', 'Runs the cleanest deep route in the league and weighs about 170 pounds.', 90, 89, 87, 74, 88, 91, 59],
     ['now-min-jennings', 'Jauan Jennings', '2026–', 'Blocks like a lineman and catches everything on a team that needed both.', 88, 87, 80, 81, 92, 84, 87],
@@ -210,7 +210,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-phi-moore', 'Elijah Moore', '2026–', 'Fourth franchise before 27 for a man with second round talent.', 91, 83, 73, 66, 84, 91, 61],
   ],
   pit: [
-    ['now-pit-metcalf', 'DK Metcalf', '2025–', 'Weighs 235 pounds and ran down a defensive back from behind on television.', 94, 87, 84, 87, 93, 86, 97],
+    ['now-pit-metcalf', 'DK Metcalf', '2025–', 'Weighs 235 pounds and ran down a defensive back from behind on television.', 94, 87, 84, 87, 93, 86, 99],
     ['now-pit-pittman', 'Michael Pittman Jr.', '2026–', 'Six foot four, and he arrived to catch the ball on third and seven again.', 88, 89, 82, 87, 93, 84, 92],
     ['now-pit-wilson', 'Roman Wilson', '2024–', 'Third round pick who missed his entire rookie season with an ankle.', 93, 82, 73, 71, 85, 84, 66],
     ['now-pit-skowronek', 'Ben Skowronek', '2024–', 'Blocks like an offensive lineman and catches about eight passes a year.', 85, 88, 72, 73, 85, 77, 90],
@@ -227,7 +227,7 @@ const POOLS: Record<string, Row[]> = {
     ['now-sf-cowing', 'Jacob Cowing', '2024–', 'Weighs 168 pounds and is the quickest man in the building over ten yards.', 93, 79, 77, 74, 81, 85, 51],
   ],
   sea: [
-    ['now-sea-smithnjigba', 'Jaxon Smith-Njigba', '2022–', 'Broke the Big Ten record in one game and now leads the league in yards.', 93, 97, 99, 98, 95, 94, 76],
+    ['now-sea-smithnjigba', 'Jaxon Smith-Njigba', '2022–', 'Broke the Big Ten record in one game and now leads the league in yards.', 93, 97, 99, 99, 95, 94, 76],
     ['now-sea-foster', 'Montorie Foster Jr.', '2025–', 'Went undrafted out of Missouri and has caught a handful of meaningful passes.', 88, 80, 70, 69, 82, 82, 65],
     ['now-sea-shaheed', 'Rashid Shaheed', '2026–', 'Arrived in Seattle at 27 as the fastest man on a roster full of them.', 95, 85, 80, 72, 82, 91, 65],
     ['now-sea-horton', 'Tory Horton', '2025–', 'Fifth round rookie who returned two punts for touchdowns before October.', 93, 85, 77, 75, 83, 85, 79],

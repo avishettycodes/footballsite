@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import { ROSTERS } from '../src/data';
 import { ATTRIBUTE_SETS } from '../src/data/types';
 import type { AttributeKey, Player, Position } from '../src/data/types';
-import { computeOverall, current99Cutoff } from '../src/lib/scoring';
+import { computeOverall } from '../src/lib/scoring';
 import {
   calculateCurrentRatings,
   type CurrentRatingSource,
@@ -32,10 +32,17 @@ const errors: string[] = [];
 
 function findPlayable99(position: Position) {
   const positionPlayers = players.filter((player) => player.position === position);
+  const maxima = Object.fromEntries(ATTRIBUTE_SETS[position].map((key) => [
+    key,
+    Math.max(...positionPlayers.map((player) => player.attributes[key] ?? 0)),
+  ]));
   const candidates = new Map(ATTRIBUTE_SETS[position].map((key) => [
     key,
     positionPlayers
-      .filter((player) => (player.attributes[key] ?? 0) >= current99Cutoff(position, key))
+      .filter((player) => computeOverall(position, {
+        ...maxima,
+        [key]: player.attributes[key] ?? 0,
+      }, 'current').overall === 99)
       .sort((a, b) => (b.attributes[key] ?? 0) - (a.attributes[key] ?? 0)),
   ]));
   const keys = [...ATTRIBUTE_SETS[position]].sort(
@@ -109,6 +116,29 @@ for (const position of ['QB', 'RB', 'WR', 'TE'] as const) {
   const path = findPlayable99(position);
   playable99s.set(position, path);
   if (!path) errors.push(`${position} has no legal unique-player path to a 99 overall`);
+  if (path && ATTRIBUTE_SETS[position].some((key) => path.build[key] !== 99)) {
+    errors.push(`${position} reaches 99 without seven displayed 99 ratings`);
+  }
+  if (path) {
+    const breakdown = computeOverall(position, path.build, 'current');
+    if (breakdown.overall !== 99 || breakdown.weightedMean !== 99 || breakdown.weakAnchor !== 99) {
+      errors.push(
+        `${position} 99 is not a true 99 ` +
+        `(overall ${breakdown.overall}, mean ${breakdown.weightedMean}, anchor ${breakdown.weakAnchor})`,
+      );
+    }
+  }
+
+  // Current and All-Time must grade the same numbers identically. This catches the old
+  // mode-only shortcut even if every current pool still happens to contain a legal 99.
+  const ordinaryBuild = Object.fromEntries(
+    ATTRIBUTE_SETS[position].map((key, index) => [key, index === 0 ? 90 : 99]),
+  );
+  const currentOverall = computeOverall(position, ordinaryBuild, 'current').overall;
+  const alltimeOverall = computeOverall(position, ordinaryBuild, 'alltime').overall;
+  if (currentOverall !== alltimeOverall) {
+    errors.push(`${position} scoring changes by mode (${currentOverall} current, ${alltimeOverall} all-time)`);
+  }
 }
 
 console.log(`Current-mode source check — ${fixture.season} Week ${fixture.week} (${fixture.snapshotDate})`);
@@ -127,4 +157,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log('Roster and all Madden-derived ratings match the audited snapshot.');
+console.log('Roster and all source-derived ratings match the audited snapshot.');

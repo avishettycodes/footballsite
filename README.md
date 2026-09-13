@@ -376,24 +376,19 @@ reaching back a few seasons, and reaching back put Aaron Rodgers on the Packers 
 where he plays for Pittsburgh. A mode whose entire promise is "the men on a roster now"
 cannot ship a card that says otherwise, whatever it does for the pool sizes.
 
-Direct Madden physical fields stay exact. A Madden 92 Speed is 92 on the card, not a 99
-created because it happens to lead one pool. That applies to quarterback Throw Power,
-running back Speed and Acceleration, receiver Speed, Release and Catching, and tight end
-Speed and Catching. Categories that do not exist as one Madden field use documented
-averages. For example, contested catch averages Catch in Traffic, Spectacular Catch and
-Jumping. Those derived, position-relative categories are normalized against the other
-active players at the position with 50 held as the neutral point. Madden still determines
-their ordering; the scale only translates a composite into the game's shared vocabulary.
-The complete card formula is in `scripts/current-rating-model.ts`.
+Direct Madden fields keep their source value below the elite tier. Categories that do not
+exist as one Madden field use documented averages. For example, contested catch averages
+Catch in Traffic, Spectacular Catch and Jumping, then translates the result onto the
+game's shared scale with 50 held as the neutral point. Madden determines every ordering.
 
-Current mode's 99 overall is a scoring rule, not a rewrite of those card values. All seven
-picks must meet the cutoff for their own trait: one of the top three distinct displayed
-tiers at quarterback, or one of the top two at running back, receiver and tight end. The
-seven picks must still come from seven different players. Missing even one cutoff sends
-the build through the ordinary weighted-mean and weak-link formula. This keeps a 99
-possible at every position without calling Kene Nwangwu's Madden 92 Speed a 99 or handing
-perfect builds out on ordinary runs. The tier rule is in `src/lib/scoring.ts`, and
-`npm run verify:current` proves a legal path exists for every position.
+At the very top, the best three distinct source tiers at quarterback and the best two at
+running back, receiver and tight end display as 99. That small position-relative tier is
+what makes a literal seven-99 Current build possible without inventing players or changing
+who leads a category. There is no scoring shortcut: Current and All-Time both go through
+the same weighted-mean and weak-link formula, and every qualifying card shows the number
+it contributes. The complete card formula is in `scripts/current-rating-model.ts`;
+`npm run verify:current` proves each position has a legal seven-player path, and
+`npm run verify:99` proves the real wheel keeps it rare.
 
 Player ids are unique across BOTH datasets, since a run stores the ids it has spent and a
 saved player keeps them forever. Current rows carry a `now-` prefix for that reason, and
@@ -695,16 +690,18 @@ numbers rather than with a rate.
 
 ### Is a 99 overall reachable?
 
-Yes at all four positions, but current mode does not require seven literal 99 card values.
-Each pick must land in that trait's tiny qualifying tier: top three distinct values for a
-quarterback and top two for every other position. All seven different players must qualify
-at once. That combination earns 99 directly; anything short of it uses the ordinary
-overall formula.
+Yes at all four positions, and Current mode now requires a genuine scoring path rather
+than a special 99 override. The source-led elite tier displays as 99 on its cards: the top
+three distinct source values for a quarterback trait and the top two for every other
+position. A perfect Current build therefore shows seven 99 picks from seven different
+players, has a raw and weighted average of 99, and reaches 99 through the ordinary overall
+formula used by All-Time mode. Its weak-link score is 99 too; the scale has no hidden
+hundredth point above what the cards can show.
 
 Reachable is not the same as common. A run must land on a qualifying room and spend the
 right pick there seven separate times without reusing a player. `npm run verify:current`
-constructs one legal path for each position, while the normal wheel keeps those paths rare
-enough for a leaderboard result to mean something.
+constructs one seven-99 legal path for each position, while `npm run verify:99` calculates
+the exact odds and keeps them rare enough for a leaderboard result to mean something.
 
 ## Deploying
 
@@ -825,6 +822,7 @@ wrong rather than the scoring.
 ## Not affiliated with anybody
 
 This is a fan project. It has nothing to do with the NFL and no team has endorsed it.
-Team names are here so you know whose history you are digging through. Every rating was
-written by hand for fun and none of it comes from a real scouting source. If you disagree
-with a number, you are probably right.
+Team names are here so you know whose history you are digging through. All-Time ratings
+were written by hand for fun; Current ratings are derived from the source model documented
+above. None of it is a real scouting source. If you disagree with a number, you are
+probably right.

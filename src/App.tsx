@@ -397,9 +397,10 @@ export default function App() {
 
       <footer className="mt-8 border-t border-white/10 px-4 py-6 text-center font-mono text-[10px] leading-relaxed text-white/30">
         Build a 99 is a fan project. It has nothing to do with the NFL and no team has endorsed
-        it. Team names are here so you know whose history you are digging through. Every
-        rating was written by hand for fun, and none of it comes from a real scouting source.
-        If you disagree with a number, you are probably right.
+        it. Team names are here so you know whose history you are digging through. All-Time
+        ratings were written by hand for fun; Current ratings are derived from the documented
+        source model. None of it is a real scouting source. If you disagree with a number,
+        you are probably right.
         <br />
         {/*
           THE DATA INSPECTOR IS NOT LINKED ANY MORE, and it has not been deleted either.

@@ -4,11 +4,15 @@ import type { AttributeKey, Player, Position } from '../src/data/types';
 /**
  * Current-mode ratings model, frozen for the 2026 Week 1 refresh.
  *
- * One-to-one traits retain EA's Madden NFL 27 value exactly. Composite traits average
- * the Madden skills named below, then anchor the best active player at 99 while
- * preserving 50 as the neutral point. The rescaling is limited to categories Madden
- * does not publish directly: a 92 Madden speed still reads 92 on the card. The scoring
- * engine owns the separate question of whether seven exceptional picks form a 99.
+ * Madden supplies every ordering. Composite traits average the skills named below and
+ * are translated onto the game's scale with 50 held as the neutral point. Direct traits
+ * retain their Madden number except at the very top: the best three distinct source
+ * tiers at QB and the best two everywhere else are the position's true 99 tier.
+ *
+ * That last step is deliberately done here instead of in the scoring engine. A card that
+ * helps build a 99 must show 99, and the same weighted/weak-link calculation must grade
+ * Current and All-Time. The tier is still tiny, Madden still decides who belongs to it,
+ * and `verify:99` proves the wheel makes assembling seven of them genuinely rare.
  */
 
 export type MaddenSource = {
@@ -176,7 +180,7 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
     }
   }
 
-  return new Map(sources.map((source) => {
+  const scaled = new Map(sources.map((source) => {
     const attributes: Player['attributes'] = {};
     for (const key of ATTRIBUTE_SETS[source.position]) {
       const value = raw.get(source.id)?.[key] ?? 0;
@@ -184,8 +188,8 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
       const direct = (
         (source.position === 'QB' && key === 'armStrength') ||
         // RB hands is a position-relative game category, not a claim that Madden gives
-        // McCaffrey literal 99 Catching. Keeping Speed and Acceleration exact is what
-        // prevents a merely high physical rating from being mislabeled as perfect.
+        // McCaffrey literal 99 Catching. Direct physical fields stay exact below the
+        // small source-led tier that is promoted to the game's displayed 99.
         (source.position === 'RB' && (key === 'speed' || key === 'burst')) ||
         (source.position === 'WR' && (key === 'speed' || key === 'release' || key === 'hands')) ||
         (source.position === 'TE' && (key === 'speed' || key === 'hands'))
@@ -193,6 +197,31 @@ export function calculateCurrentRatings(sources: CurrentRatingSource[]) {
       attributes[key] = direct || maximum <= 50
         ? value
         : Math.max(0, Math.min(99, Math.round(50 + ((value - 50) * 49) / (maximum - 50))));
+    }
+    return [source.id, attributes];
+  }));
+
+  const perfectTierDepth: Record<Position, number> = { QB: 3, RB: 2, WR: 2, TE: 2 };
+  const perfectCutoffs = new Map<string, number>();
+  for (const position of ['QB', 'RB', 'WR', 'TE'] as const) {
+    for (const key of ATTRIBUTE_SETS[position]) {
+      const distinct = [...new Set(sources
+        .filter((source) => source.position === position)
+        .map((source) => scaled.get(source.id)?.[key] ?? 0))]
+        .sort((a, b) => b - a);
+      perfectCutoffs.set(
+        `${position}:${key}`,
+        distinct[Math.min(perfectTierDepth[position] - 1, distinct.length - 1)] ?? 99,
+      );
+    }
+  }
+
+  return new Map(sources.map((source) => {
+    const attributes = { ...scaled.get(source.id) } as Player['attributes'];
+    for (const key of ATTRIBUTE_SETS[source.position]) {
+      if ((attributes[key] ?? 0) >= (perfectCutoffs.get(`${source.position}:${key}`) ?? 99)) {
+        attributes[key] = 99;
+      }
     }
     return [source.id, attributes];
   }));
